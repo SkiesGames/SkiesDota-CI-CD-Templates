@@ -1,0 +1,14 @@
+.common_before_script: &common_before_script
+  - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-client -y )'
+  - eval $(ssh-agent -s)
+  - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+  - mkdir -p ~/.ssh
+  - chmod 700 ~/.ssh
+  - ssh-keyscan -H "$NODE_1_IP" >> ~/.ssh/known_hosts
+  - pip install ansible
+  - apt-get update && apt-get install -y rsync
+
+.generate_inventory: &generate_inventory
+  - |
+    echo "[node1]" > ansible/inventory.ini
+    echo "$NODE_1_IP ansible_user=$NODE_1_USER ansible_python_interpreter=/usr/bin/python3" >> ansible/inventory.ini
