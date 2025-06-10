@@ -7,6 +7,9 @@ RUN apt-get update && \
         curl \
         jq \
         sshpass \
+        docker-credential-helper \
     && pip install ansible \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p ~/.docker \
+    && echo '{"credsStore": "gitlab"}' > ~/.docker/config.json
