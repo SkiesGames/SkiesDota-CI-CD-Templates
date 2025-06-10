@@ -10,8 +10,8 @@ build_base_ansible_image:
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
     - pwd
     - ls -la
-    - cat Dockerfile
-    - docker build -t $CI_REGISTRY_IMAGE/ansible:latest -f Dockerfile .
+    - cat " Dockerfile"
+    - docker build -t $CI_REGISTRY_IMAGE/ansible:latest .
     - docker push $CI_REGISTRY_IMAGE/ansible:latest
   rules:
     - when: manual
