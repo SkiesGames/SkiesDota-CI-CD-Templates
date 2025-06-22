@@ -1,0 +1,16 @@
+- name: Ensure UFW is installed
+  ansible.builtin.apt:
+    name: ufw
+    state: present
+    update_cache: yes
+
+- name: Ensure UFW is enabled
+  ansible.builtin.ufw:
+    state: enabled
+
+- name: Open required ports
+  ansible.builtin.ufw:
+    rule: allow
+    port: "{{ item.port }}"
+    proto: "{{ item.proto }}"
+  loop: "{{ ports }}" 

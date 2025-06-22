@@ -1,0 +1,29 @@
+- name: Start SSH agent
+  ansible.builtin.command: ssh-agent -s
+  register: ssh_agent_output
+  changed_when: false
+
+- name: Set SSH agent environment
+  ansible.builtin.set_fact:
+    ssh_agent_pid: "{{ ssh_agent_output.stdout | regex_search('SSH_AGENT_PID=(\\d+)', '\\1') | first }}"
+    ssh_auth_sock: "{{ ssh_agent_output.stdout | regex_search('SSH_AUTH_SOCK=([^;]+)', '\\1') | first }}"
+
+- name: Add SSH key to agent
+  ansible.builtin.command: "ssh-add -"
+  args:
+    stdin: "{{ lookup('env', 'SSH_PRIVATE_KEY') | regex_replace('\r', '') }}"
+  environment:
+    SSH_AUTH_SOCK: "{{ ssh_auth_sock }}"
+    SSH_AGENT_PID: "{{ ssh_agent_pid }}"
+
+- name: Ensure .ssh directory exists
+  ansible.builtin.file:
+    path: "~/.ssh"
+    state: directory
+    mode: '0700'
+
+- name: Add known hosts
+  ansible.builtin.known_hosts:
+    host: "{{ item }}"
+    state: present
+  loop: "{{ lookup('env', 'ANSIBLE_HOSTS').split('\n') | select('string') | list }}"

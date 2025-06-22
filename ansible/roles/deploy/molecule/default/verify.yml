@@ -1,0 +1,70 @@
+---
+- name: Verify Deploy Integration
+  hosts: all
+  become: true
+  tasks:
+    # Test 1: Verify file synchronization worked correctly
+    - name: Verify project files were synchronized
+      ansible.builtin.stat:
+        path: "{{ app_dir }}/{{ item }}"
+      register: synced_files
+      loop:
+        - app.py
+        - requirements.txt
+        - docker-compose.yml
+
+    - name: Verify all project files are present
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+        fail_msg: "Project file {{ item.item }} was not synchronized"
+      loop: "{{ synced_files.results }}"
+
+    # Test 2: Verify environment file was created with correct content
+    - name: Verify .env file exists and has correct permissions
+      ansible.builtin.stat:
+        path: "{{ app_dir }}/.env"
+      register: env_file
+
+    - name: Verify .env file is present
+      ansible.builtin.assert:
+        that:
+          - env_file.stat.exists
+          - env_file.stat.mode | int == 384  # 0600 in decimal
+        fail_msg: ".env file was not created or has wrong permissions"
+
+    - name: Verify .env file content
+      ansible.builtin.command: cat "{{ app_dir }}/.env"
+      register: env_content
+      changed_when: false
+
+    - name: Verify .env file contains expected variables
+      ansible.builtin.assert:
+        that:
+          - "'DATABASE_URL=postgresql://user:pass@localhost/db' in env_content.stdout"
+          - "'REDIS_URL=redis://localhost:6379' in env_content.stdout"
+          - "'API_KEY=test_api_key_12345' in env_content.stdout"
+        fail_msg: ".env file does not contain expected environment variables"
+
+    # Test 3: Verify Docker Compose integration
+    - name: Verify docker-compose.yml was synchronized
+      ansible.builtin.stat:
+        path: "{{ app_dir }}/docker-compose.yml"
+      register: compose_file
+
+    - name: Verify docker-compose.yml exists
+      ansible.builtin.assert:
+        that:
+          - compose_file.stat.exists
+        fail_msg: "docker-compose.yml was not synchronized"
+
+    # Test 4: Integration test - verify all components work together
+    - name: Verify deploy role integration
+      ansible.builtin.assert:
+        that:
+          - synced_files.results | length == 3  # All project files
+          - env_file.stat.exists  # Environment file
+          - env_file.stat.mode | int == 384  # Correct permissions
+          - env_content.stdout_lines | length == 3  # All env vars
+          - compose_file.stat.exists  # Docker compose file
+        fail_msg: "Deploy role integration test failed - not all components are working together"

@@ -1,0 +1,8 @@
+- name: Include deliver certificates tasks
+  ansible.builtin.import_tasks: deliver_certificates.yml
+
+- name: Include set up certificates tasks
+  ansible.builtin.import_tasks: set_up_certificates.yml
+
+- name: Include remove certificates tasks
+  ansible.builtin.import_tasks: remove_certificates.yml

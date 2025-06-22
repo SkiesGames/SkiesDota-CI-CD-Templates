@@ -1,0 +1,17 @@
+- name: Copy SSL certificate
+  ansible.builtin.copy:
+    content: "{{ lookup('env', 'CERTIFICATE_CRT') }}"
+    dest: "{{ app_dir }}/certificate.crt"
+    mode: '0644'
+
+- name: Copy SSL CA certificate
+  ansible.builtin.copy:
+    content: "{{ lookup('env', 'CERTIFICATE_CA_CRT') }}"
+    dest: "{{ app_dir }}/certificate_ca.crt"
+    mode: '0644'
+
+- name: Copy SSL private key
+  ansible.builtin.copy:
+    content: "{{ lookup('env', 'CERTIFICATE_KEY') }}"
+    dest: "{{ app_dir }}/certificate.key"
+    mode: '0600' 

@@ -1,0 +1,5 @@
+- name: Copy .env file
+  ansible.builtin.copy:
+    content: "{{ lookup('env', 'ENV_FILE_CONTENTS') }}"
+    dest: "{{ app_dir }}/.env"
+    mode: '0600'

@@ -1,0 +1,13 @@
+- name: Check if indexes exist
+  ansible.builtin.docker_container:
+    name: mongodb
+    command: mongosh --eval "db.active_actions.getIndexes().length > 1"
+  register: indexes_status
+  changed_when: false
+  failed_when: false
+
+- name: Create MongoDB indexes
+  ansible.builtin.docker_container:
+    name: mongodb
+    command: mongosh --eval "{{ lookup('file', 'setup_indexes.js') | replace('\n', ' ') }}"
+  when: indexes_status.stdout | trim | lower != "true"

@@ -1,0 +1,14 @@
+build_test_image:
+  stage: build_test_image
+  image: docker:latest
+  services:
+    - docker:dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375/
+    DOCKER_TLS_CERTDIR: ""
+  script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
+    - docker build -f Dockerfile.test -t $CI_REGISTRY_IMAGE/ansible-test:latest .
+    - docker push $CI_REGISTRY_IMAGE/ansible-test:latest
+  rules:
+    - when: manual 

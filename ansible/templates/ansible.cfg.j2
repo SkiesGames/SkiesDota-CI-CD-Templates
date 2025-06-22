@@ -1,0 +1,9 @@
+[defaults]
+host_key_checking = {{ 'False' if initial_setup | default(false) else 'True' }}
+retry_files_enabled = True
+retry_files_save_path = ~/.ansible/retry-files
+stdout_callback = yaml
+display_skipped_hosts = false
+display_ok_hosts = false
+display_failed_stderr = true
+display_args_to_stdout = true 

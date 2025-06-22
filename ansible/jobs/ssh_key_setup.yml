@@ -1,0 +1,13 @@
+add_ssh_key:
+  stage: add_ssh_key
+  image: $CI_REGISTRY_IMAGE/ansible:latest
+  script:
+    - !reference [.generate_initial_ssh_setup_inventory]
+    - !reference [.execute_playbook]
+  variables:
+    playbook_path: ansible/playbooks/ssh_key_set_up.yml
+    initial_setup: true
+  rules:
+    - when: manual
+  allow_failure: false
+  

@@ -1,0 +1,9 @@
+test_mongodb:
+  extends: .molecule_test
+  variables:
+    ROLE_NAME: mongodb
+
+test_deploy_integration:
+  extends: .molecule_test
+  variables:
+    ROLE_NAME: deploy

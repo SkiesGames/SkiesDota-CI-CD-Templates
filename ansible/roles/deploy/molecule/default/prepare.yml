@@ -1,0 +1,41 @@
+---
+- name: Prepare Deploy Integration Test Environment
+  hosts: all
+  become: true
+  tasks:
+    - name: Set up realistic test environment
+      ansible.builtin.set_fact:
+        CI_PROJECT_DIR: "/tmp/test_project"
+        app_dir: "/tmp/test_app"
+        ENV_FILE_CONTENTS: "DATABASE_URL=postgresql://user:pass@localhost/db\nREDIS_URL=redis://localhost:6379\nAPI_KEY=test_api_key_12345"
+
+    - name: Create test project structure
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ CI_PROJECT_DIR }}"
+        - "{{ app_dir }}"
+
+    - name: Create realistic test files
+      ansible.builtin.copy:
+        content: "{{ item.content }}"
+        dest: "{{ CI_PROJECT_DIR }}/{{ item.file }}"
+        mode: '0644'
+      loop:
+        - { file: "app.py", content: "from flask import Flask\napp = Flask(__name__)\n@app.route('/')\ndef hello():\n    return 'Hello World!'" }
+        - { file: "requirements.txt", content: "flask==2.0.1\ngunicorn==20.1.0" }
+        - { file: "docker-compose.yml", content: "version: '3.8'\nservices:\n  web:\n    build: .\n    ports:\n      - '5000:5000'\n    environment:\n      - FLASK_ENV=production" }
+
+    - name: Install Docker for integration testing
+      ansible.builtin.package:
+        name: docker-ce
+        state: present
+      ignore_errors: true
+
+    - name: Start Docker service
+      ansible.builtin.service:
+        name: docker
+        state: started
+      ignore_errors: true 

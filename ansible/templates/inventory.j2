@@ -1,0 +1,4 @@
+[all]
+{% for host in lookup('env', 'ANSIBLE_HOSTS').split('\n') | select('string') | list %}
+{{ host }} ansible_user={{ lookup('env', 'ANSIBLE_USER') }} ansible_python_interpreter=/usr/bin/python3
+{% endfor %}

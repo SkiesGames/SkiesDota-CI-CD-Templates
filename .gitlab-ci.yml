@@ -1,5 +1,9 @@
 include:
-  - local: '/ansible/build_base_ansible_image.yml'
+  - local: '/ansible/images_jobs/build_base_ansible_image.yml'
+  - local: '/ansible/images_jobs/build_test_image.yml'
+  - local: '/ansible/test_jobs/jobs.yml'
 
 stages:
   - build_base_ansible_image
+  - build_test_image
+  - test

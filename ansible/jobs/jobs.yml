@@ -2,13 +2,16 @@
   image: $CI_REGISTRY_IMAGE/ansible:latest
   before_script:
     - !reference [.common_before_script]
+    - !reference [.generate_inventory]
 
 bootstrap:
   extends: .base_ansible
   stage: bootstrap
   script:
-    - !reference [.generate_inventory]
-    - ansible-playbook -i ansible/inventory.ini ansible/playbooks/bootstrap.yml
+    - !reference [.execute_playbook]
+  variables:
+    playbook_path: ansible/playbooks/bootstrap.yml
+    manual_job: true
   rules:
     - when: manual
 
@@ -16,9 +19,13 @@ deploy:
   extends: .base_ansible
   stage: deploy
   script:
-    - !reference [.generate_inventory]
-    - ansible-playbook -i ansible/inventory.ini ansible/playbooks/deploy.yml
+    - !reference [.execute_playbook]
+  variables:
+    playbook_path: ansible/playbooks/deploy.yml
+    manual_job: false
   rules:
     - if: '$CI_COMMIT_BRANCH == "main" && $AUTO_DEPLOY == "true"'
       when: always
     - when: manual
+      variables:
+        manual_job: true

@@ -1,0 +1,8 @@
+- name: Manage SSH keys
+  hosts: all
+  gather_facts: false
+  roles:
+    - role: ssh
+      tasks_from: generate_and_deliver
+    - role: gitlab_variable
+      tasks_from: upload_ssh_key
