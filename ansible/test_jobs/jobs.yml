@@ -1,9 +1,29 @@
+.base_molecule:
+  stage: test
+  image: $CI_REGISTRY_IMAGE/ansible-test:latest
+  services:
+    - docker:dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375/
+    DOCKER_TLS_CERTDIR: ""
+  before_script:
+    - cd ansible/roles/${ROLE_NAME}
+  script:
+    - molecule test
+  after_script:
+    - molecule destroy --all
+  rules:
+    - changes:
+        - ansible/roles/${ROLE_NAME}/**/*
+      when: always
+    - when: manual
+
 test_mongodb:
-  extends: .molecule_test
+  extends: .base_molecule
   variables:
     ROLE_NAME: mongodb
 
 test_deploy_integration:
-  extends: .molecule_test
+  extends: .base_molecule
   variables:
     ROLE_NAME: deploy

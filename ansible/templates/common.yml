@@ -53,24 +53,3 @@
     ansible.builtin.debug:
       msg: "{{ playbook_result.stdout_lines }}"
     when: playbook_result is defined
-
-# Simple molecule test template - only runs when role changes or manually
-.molecule_test: &molecule_test
-  stage: test
-  image: $CI_REGISTRY_IMAGE/ansible-test:latest
-  services:
-    - docker:dind
-  variables:
-    DOCKER_HOST: tcp://docker:2375/
-    DOCKER_TLS_CERTDIR: ""
-  before_script:
-    - cd ansible/roles/${ROLE_NAME}
-  script:
-    - molecule test
-  after_script:
-    - molecule destroy --all
-  rules:
-    - changes:
-        - ansible/roles/${ROLE_NAME}/**/*
-      when: always
-    - when: manual

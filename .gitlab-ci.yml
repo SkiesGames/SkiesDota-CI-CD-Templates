@@ -1,10 +1,31 @@
+# GitLab CI/CD Pipeline for Ansible Infrastructure Automation
+# 
+# This pipeline provides a comprehensive CI/CD workflow for Ansible-based infrastructure
+# management, including Docker image building, role testing, and deployment automation.
+#
+# WORKFLOW OVERVIEW:
+# 1. Build Docker Images: Create Ansible runner and testing images
+# 2. Test Ansible Roles: Run Molecule tests for role validation
+#
+# INCLUDED COMPONENTS:
+# - Image Building Jobs: Docker image creation for CI/CD runners
+# - Test Jobs: Molecule-based role testing with comprehensive validation
+#
+# 
+# 
+# 
+# Include external job definitions
 include:
-  - local: '/ansible/templates/common.yml'
+  # Docker Image Building Jobs
+  # These jobs build the base Ansible runner and testing images used by all other jobs
   - local: '/ansible/images_jobs/build_base_ansible_image.yml'
   - local: '/ansible/images_jobs/build_test_image.yml'
+  
+  # Role Testing Jobs
+  # Molecule-based testing for Ansible roles with comprehensive validation
   - local: '/ansible/test_jobs/jobs.yml'
 
 stages:
-  - build_base_ansible_image
-  - build_test_image
-  - test
+  - build_base_ansible_image  # Build base Ansible runner image
+  - build_test_image          # Build testing image with Molecule
+  - test                      # Run role tests and validation
