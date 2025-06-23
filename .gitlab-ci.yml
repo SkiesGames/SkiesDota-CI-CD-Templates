@@ -26,6 +26,6 @@ include:
   - local: '/ansible/test_jobs/jobs.yml'
 
 stages:
-  - build_base_ansible_image  # Build base Ansible runner image
-  - build_test_image          # Build testing image with Molecule
-  - test                      # Run role tests and validation
+  - build_base_ansible_image  # Build base Ansible runner image (independent)
+  - build_test_image          # Build testing image (independent, cached)
+  - test                      # Run role tests (independent, uses cached image)
