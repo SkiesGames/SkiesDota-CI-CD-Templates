@@ -22,8 +22,9 @@ RUN apt-get update && \
 # Set working directory
 WORKDIR /workspace
 
-# Create molecule user for better security
-RUN useradd -m -s /bin/bash molecule && \
+# Create docker group and molecule user for better security
+RUN groupadd -r docker && \
+    useradd -m -s /bin/bash molecule && \
     usermod -aG docker molecule
 
 # Switch to molecule user
