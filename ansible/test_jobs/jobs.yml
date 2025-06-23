@@ -17,7 +17,9 @@
         - ansible/roles/${ROLE_NAME}/**/*
       when: always
     - when: manual
-needs: []
+  needs:
+    - job: build_test_image
+      optional: true
 
 test_mongodb:
   extends: .base_molecule

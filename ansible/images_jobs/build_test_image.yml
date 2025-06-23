@@ -6,10 +6,21 @@ build_test_image:
   variables:
     DOCKER_HOST: tcp://docker:2375/
     DOCKER_TLS_CERTDIR: ""
+    DOCKER_BUILDKIT: 1
   script:
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
-    - docker build -f Dockerfile.test -t $CI_REGISTRY_IMAGE/ansible-test:latest .
+    # Pull existing image for layer caching
+    - docker pull $CI_REGISTRY_IMAGE/ansible-test:latest || echo "No existing image found"
+    # Build with cache from existing image
+    - docker build -f Dockerfile.test --cache-from $CI_REGISTRY_IMAGE/ansible-test:latest -t $CI_REGISTRY_IMAGE/ansible-test:latest .
     - docker push $CI_REGISTRY_IMAGE/ansible-test:latest
   rules:
+    - changes:
+        - Dockerfile.test
+      when: always
     - when: manual
-  needs: [] 
+  needs: []
+  cache:
+    key: "docker-test-image"
+    paths:
+      - .docker-cache/ 
