@@ -1,5 +1,5 @@
 build_base_ansible_image:
-  stage: build_base_ansible_image
+  stage: build
   image: docker:latest
   services:
     - docker:dind

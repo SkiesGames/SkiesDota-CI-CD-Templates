@@ -11,7 +11,9 @@
 # - Image Building Jobs: Docker image creation for CI/CD runners
 # - Test Jobs: Molecule-based role testing with comprehensive validation
 #
-# 
+# DEPENDENCY HANDLING:
+# - Test jobs optionally depend on build_test_image when Dockerfile.test changes
+# - Manual triggers bypass dependency checks
 # 
 # 
 # Include external job definitions
@@ -26,6 +28,5 @@ include:
   - local: '/ansible/test_jobs/jobs.yml'
 
 stages:
-  - build_base_ansible_image  # Build base Ansible runner image (independent, cached)
-  - build_test_image          # Build testing image (independent, cached)
-  - test                      # Run role tests (independent)
+  - build                    # Build Docker images (independent)
+  - test                     # Run role tests (independent)
