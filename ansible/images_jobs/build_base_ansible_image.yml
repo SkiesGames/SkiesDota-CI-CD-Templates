@@ -12,3 +12,4 @@ build_base_ansible_image:
     - docker push $CI_REGISTRY_IMAGE/ansible:latest
   rules:
     - when: manual
+  needs: []

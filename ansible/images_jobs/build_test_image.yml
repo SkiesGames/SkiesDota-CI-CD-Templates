@@ -11,4 +11,5 @@ build_test_image:
     - docker build -f Dockerfile.test -t $CI_REGISTRY_IMAGE/ansible-test:latest .
     - docker push $CI_REGISTRY_IMAGE/ansible-test:latest
   rules:
-    - when: manual 
+    - when: manual
+  needs: [] 
