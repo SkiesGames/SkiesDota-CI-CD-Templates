@@ -6,15 +6,25 @@
   variables:
     DOCKER_HOST: tcp://docker:2375/
     DOCKER_TLS_CERTDIR: ""
+    MOLECULE_PREPARE_PLAYBOOK: prepare.yml
+    MOLECULE_PLAYBOOK: converge.yml
+    MOLECULE_VERIFY_PLAYBOOK: verify.yml
   before_script:
-    - cd ansible/roles/${ROLE_NAME}
+    - cd ansible/roles/${MOLECULE_ROLE_NAME}
+    # Create molecule directory structure
+    - mkdir -p molecule/default
+    # Copy templates to molecule directory with environment variable substitution
+    - envsubst < ../../templates/molecule.yml.j2 > molecule/default/molecule.yml
+    - envsubst < ../../templates/converge.yml.j2 > molecule/default/converge.yml
+    # Create requirements.yml if it doesn't exist
+    - touch requirements.yml
   script:
     - molecule test
   after_script:
     - molecule destroy --all
   rules:
     - changes:
-        - ansible/roles/${ROLE_NAME}/**/*
+        - ansible/roles/${MOLECULE_ROLE_NAME}/**/*
       when: always
     - when: manual
   needs: []
@@ -22,4 +32,4 @@
 test_mongodb:
   extends: .base_molecule
   variables:
-    ROLE_NAME: mongodb
+    MOLECULE_ROLE_NAME: mongodb
