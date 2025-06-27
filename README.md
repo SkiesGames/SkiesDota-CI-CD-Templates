@@ -30,9 +30,9 @@ include:
 ## Available Jobs
 
 ### Core Jobs
-- `bootstrap`: Initial server setup and configuration
-- `deploy`: Application deployment and updates
-- `add_ssh_key`: SSH key generation and distribution
+- `bootstrap`: Initial server setup and configuration (manual trigger)
+- `deploy`: Application deployment and updates (auto on main branch or manual)
+- `add_ssh_key`: SSH key generation and distribution (manual trigger)
 
 ### Image Building Jobs
 - `build_base_ansible_image`: Builds the base Ansible runner image
@@ -40,7 +40,6 @@ include:
 
 ### Testing Jobs
 - `test_mongodb`: Tests the MongoDB role with Molecule
-- `test_deploy_integration`: Tests the deploy role integration
 
 ## Shared Templates
 
@@ -53,7 +52,7 @@ include:
 - `.common_before_script`: Sets up SSH, Ansible, and dependencies
 - `.generate_inventory`: Generates Ansible inventory files
 - `.execute_playbook`: Executes Ansible playbooks with safety checks
-- `.molecule_test`: Template for Molecule-based role testing
+- `.test_common_before_script`: Sets up Molecule test environment
 
 ## Initial SSH Setup
 
@@ -82,7 +81,7 @@ After successful setup, `ANSIBLE_HOSTS_PASSWORD` can be removed as subsequent ru
 ```
 ├── ansible/
 │   ├── images_jobs/     # Docker image building jobs
-│   │   └── jobs.yml     # Consolidated image building jobs with base template
+│   │   └── jobs.yml     # Image building jobs with base template
 │   ├── jobs/           # Main CI/CD job definitions
 │   │   ├── jobs.yml    # Core deployment jobs
 │   │   └── ssh_key_setup.yml  # SSH key management
