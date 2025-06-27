@@ -1,0 +1,16 @@
+---
+- name: Setup CI/CD Environment
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Setup SSH environment
+      ansible.builtin.import_role:
+        name: ssh
+        tasks_from: setup_agent
+
+    - name: Configure Ansible
+      ansible.builtin.template:
+        src: ansible.cfg.j2
+        dest: ~/.ansible/ansible.cfg
+        mode: '0644' 

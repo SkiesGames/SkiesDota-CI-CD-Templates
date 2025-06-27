@@ -1,0 +1,34 @@
+.common_before_script: &common_before_script
+  - mkdir -p ~/.ansible ~/.ssh
+  - chmod 700 ~/.ssh
+  - ansible-playbook -i ansible/inventory.ini ansible/playbooks/setup_ci_env.yml
+
+.test_common_before_script: &test_common_before_script
+  - cd ansible/roles/$MOLECULE_ROLE_NAME
+  - mkdir -p molecule/default
+  - cp ../../templates/molecule.yml.j2 molecule/default/molecule.yml
+  - cp ../../templates/converge.yml.j2 molecule/default/converge.yml
+  - touch requirements.yml
+
+.generate_inventory: &generate_inventory
+  - ansible-playbook ansible/playbooks/generate_inventory.yml
+
+.generate_initial_ssh_setup_inventory: &generate_initial_ssh_setup_inventory
+  - ansible-playbook ansible/playbooks/generate_initial_inventory.yml
+
+.execute_playbook: &execute_playbook
+  - |
+    if [ "$CI_JOB_MANUAL" = "true" ]; then
+      echo "Running pre-flight check..."
+      ansible-playbook --check --diff -i ansible/inventory.ini $playbook_path
+      if [ $? -ne 0 ]; then
+        echo "Pre-flight check detected changes. Please review the changes above."
+        exit 1
+      fi
+    fi
+  - |
+    echo "Executing playbook..."
+    ansible-playbook --diff -i ansible/inventory.ini $playbook_path --retry-files-enabled
+
+
+

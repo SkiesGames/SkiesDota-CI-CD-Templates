@@ -19,8 +19,8 @@
 # Include external job definitions
 include:
   # Common Templates
-  # Reusable YAML anchors and templates for common functionality
-  - local: '/ansible/templates/common.yml'
+  # Reusable shell anchors and templates for common functionality
+  - local: '/common.gitlab-ci.yml'
   
   # Docker Image Building Jobs
   # These jobs build the base Ansible runner and testing images used by all other jobs

@@ -20,6 +20,8 @@ Include this template in your project's `.gitlab-ci.yml`:
 ```yaml
 include:
   - project: 'SkiesGames/SkiesDotaGitlab-CI-Templates'
+    file: '/common.gitlab-ci.yml'
+  - project: 'SkiesGames/SkiesDotaGitlab-CI-Templates'
     file: '/ansible/jobs.yml'
   - project: 'SkiesGames/SkiesDotaGitlab-CI-Templates'
     file: '/ansible/jobs/ssh_key_setup.yml'
@@ -90,6 +92,7 @@ After successful setup, `ANSIBLE_HOSTS_PASSWORD` can be removed as subsequent ru
 │   └── test_jobs/      # Testing job definitions
 ├── Dockerfile          # Base Ansible image
 ├── Dockerfile.test     # Testing image with Molecule
+├── common.gitlab-ci.yml # Shared CI/CD templates and anchors
 └── .gitlab-ci.yml      # Main CI/CD pipeline
 ```
 

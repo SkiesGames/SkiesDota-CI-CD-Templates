@@ -11,7 +11,6 @@ bootstrap:
     - !reference [.execute_playbook]
   variables:
     playbook_path: ansible/playbooks/bootstrap.yml
-    manual_job: true
   rules:
     - when: manual
 
@@ -22,10 +21,7 @@ deploy:
     - !reference [.execute_playbook]
   variables:
     playbook_path: ansible/playbooks/deploy.yml
-    manual_job: false
   rules:
     - if: '$CI_COMMIT_BRANCH == "main" && $AUTO_DEPLOY == "true"'
       when: always
     - when: manual
-      variables:
-        manual_job: true

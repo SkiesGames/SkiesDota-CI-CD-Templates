@@ -1,0 +1,11 @@
+---
+- name: Generate Inventory
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Generate inventory file
+      ansible.builtin.template:
+        src: inventory.j2
+        dest: ansible/inventory.ini
+        mode: '0644' 

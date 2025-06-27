@@ -18,22 +18,6 @@ Ansible configuration template for CI/CD environments.
 **Variables:**
 - `initial_setup`: Boolean for SSH key setup phase
 
-#### common.yml
-Shared YAML anchors and references for GitLab CI jobs.
-
-**Features:**
-- `.common_before_script`: SSH and Ansible setup
-- `.generate_inventory`: Dynamic inventory generation
-- `.execute_playbook`: Safe playbook execution with checks
-- `.molecule_test`: Molecule testing template
-
-**Usage:**
-```yaml
-include:
-  - project: 'SkiesGames/SkiesDotaGitlab-CI-Templates'
-    file: '/ansible/templates/common.yml'
-```
-
 ### Inventory Templates
 
 #### inventory.j2
