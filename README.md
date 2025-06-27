@@ -20,10 +20,7 @@ Include this template in your project's `.gitlab-ci.yml`:
 ```yaml
 include:
   - project: 'SkiesGames/SkiesDotaGitlab-CI-Templates'
-    file: '/ansible/common.yml'
-  - project: 'SkiesGames/SkiesDotaGitlab-CI-Templates'
     file: '/ansible/jobs.yml'
-  # For SSH key setup:
   - project: 'SkiesGames/SkiesDotaGitlab-CI-Templates'
     file: '/ansible/jobs/ssh_key_setup.yml'
 ```
@@ -43,8 +40,14 @@ include:
 - `test_mongodb`: Tests the MongoDB role with Molecule
 - `test_deploy_integration`: Tests the deploy role integration
 
-## Shared Blocks
+## Shared Templates
 
+### Base Templates
+- `.base_ansible`: Base template for all Ansible jobs with SSH and inventory setup
+- `.base_image`: Base template for Docker image building jobs with caching and registry integration
+- `.base_molecule`: Base template for Molecule-based role testing
+
+### Shared Blocks
 - `.common_before_script`: Sets up SSH, Ansible, and dependencies
 - `.generate_inventory`: Generates Ansible inventory files
 - `.execute_playbook`: Executes Ansible playbooks with safety checks
@@ -77,7 +80,10 @@ After successful setup, `ANSIBLE_HOSTS_PASSWORD` can be removed as subsequent ru
 ```
 ├── ansible/
 │   ├── images_jobs/     # Docker image building jobs
+│   │   └── jobs.yml     # Consolidated image building jobs with base template
 │   ├── jobs/           # Main CI/CD job definitions
+│   │   ├── jobs.yml    # Core deployment jobs
+│   │   └── ssh_key_setup.yml  # SSH key management
 │   ├── playbooks/      # Ansible playbooks
 │   ├── roles/          # Reusable Ansible roles
 │   ├── templates/      # Jinja2 templates

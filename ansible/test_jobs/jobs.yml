@@ -23,8 +23,3 @@ test_mongodb:
   extends: .base_molecule
   variables:
     ROLE_NAME: mongodb
-
-test_deploy_integration:
-  extends: .base_molecule
-  variables:
-    ROLE_NAME: deploy

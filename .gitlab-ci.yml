@@ -20,8 +20,7 @@
 include:
   # Docker Image Building Jobs
   # These jobs build the base Ansible runner and testing images used by all other jobs
-  - local: '/ansible/images_jobs/build_base_ansible_image.yml'
-  - local: '/ansible/images_jobs/build_test_image.yml'
+  - local: '/ansible/images_jobs/jobs.yml'
   
   # Role Testing Jobs
   # Molecule-based testing for Ansible roles with comprehensive validation
