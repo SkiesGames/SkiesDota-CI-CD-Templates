@@ -11,7 +11,12 @@
   script:
     - molecule test
   after_script:
-    - molecule destroy --all
+    - |
+      # Clean up molecule environments safely
+      cd ansible/roles/$MOLECULE_ROLE_NAME
+      if [ -f molecule/default/molecule.yml ]; then
+        molecule destroy --all || echo "Molecule destroy failed, but continuing..."
+      fi
   rules:
     - changes:
         - ansible/roles/${MOLECULE_ROLE_NAME}/**/*

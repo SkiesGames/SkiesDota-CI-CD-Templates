@@ -6,6 +6,7 @@ RUN apt-get update && \
         curl \
         gnupg \
         lsb-release \
+        sudo \
     && curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg \
     && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list \
     && apt-get update \
@@ -25,7 +26,14 @@ WORKDIR /workspace
 # Create docker group and molecule user for better security
 RUN groupadd -r docker && \
     useradd -m -s /bin/bash molecule && \
-    usermod -aG docker molecule
+    usermod -aG docker molecule && \
+    echo "molecule ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# Create necessary directories with proper permissions
+RUN mkdir -p /home/molecule/.ansible/tmp && \
+    chown -R molecule:molecule /home/molecule && \
+    mkdir -p /tmp/.ansible-molecule && \
+    chown -R molecule:molecule /tmp/.ansible-molecule
 
 # Switch to molecule user
 USER molecule

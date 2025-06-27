@@ -8,6 +8,8 @@
   - mkdir -p molecule/default
   - cp ../../templates/molecule.yml.j2 molecule/default/molecule.yml
   - test -f molecule/default/converge.yml || cp ../../templates/converge.yml.j2 molecule/default/converge.yml
+  - test -f molecule/default/prepare.yml || echo "Using default prepare.yml"
+  - test -f molecule/default/verify.yml || echo "Using default verify.yml"
 
 .generate_inventory: &generate_inventory
   - ansible-playbook ansible/playbooks/generate_inventory.yml

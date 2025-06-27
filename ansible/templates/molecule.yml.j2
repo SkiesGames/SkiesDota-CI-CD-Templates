@@ -11,16 +11,21 @@ platforms:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       DOCKER_HOST: unix:///var/run/docker.sock
+    user: molecule
 
 provisioner:
   name: ansible
   config_options:
     defaults:
       callback_whitelist: profile_tasks
+      remote_tmp: /tmp/.ansible-${USER}
+      local_tmp: /tmp/.ansible-local-${USER}
+      host_key_checking: false
   inventory:
     group_vars:
       all:
         ansible_python_interpreter: /usr/bin/python3
+        ansible_connection: docker
   playbooks:
     prepare: ${MOLECULE_PREPARE_PLAYBOOK:-prepare.yml}
     converge: ${MOLECULE_PLAYBOOK:-converge.yml}

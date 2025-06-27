@@ -5,15 +5,25 @@
   register: rs_status
   changed_when: false
   failed_when: false
+  delegate_to: localhost
+
+- name: Wait for MongoDB to be ready before replica set initialization
+  ansible.builtin.wait_for:
+    port: 27017
+    timeout: 30
+    delay: 5
+  delegate_to: localhost
 
 - name: Initialize MongoDB replica set
   ansible.builtin.docker_container:
     name: mongodb 
     command: mongosh --eval "{{ lookup('template', 'init_replica_set.js') | replace('\n', ' ') }}"
   when: "'PRIMARY' not in rs_status.stdout"
+  delegate_to: localhost
 
 - name: Wait for replica set initialization
   ansible.builtin.wait_for:
     port: 27017
     timeout: 60
   when: "'PRIMARY' not in rs_status.stdout"
+  delegate_to: localhost
