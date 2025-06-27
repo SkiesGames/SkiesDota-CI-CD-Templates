@@ -10,6 +10,36 @@
       dest: ~/.ansible/ansible.cfg
       mode: '0644'
 
+.test_common_before_script: &test_common_before_script
+  - name: Change to role directory
+    ansible.builtin.shell:
+      cmd: cd ansible/roles/{{ MOLECULE_ROLE_NAME }}
+    changed_when: false
+
+  - name: Create molecule directory structure
+    ansible.builtin.file:
+      path: molecule/default
+      state: directory
+      mode: '0755'
+
+  - name: Copy molecule.yml template with environment substitution
+    ansible.builtin.template:
+      src: ../../templates/molecule.yml.j2
+      dest: molecule/default/molecule.yml
+      mode: '0644'
+
+  - name: Copy converge.yml template with environment substitution
+    ansible.builtin.template:
+      src: ../../templates/converge.yml.j2
+      dest: molecule/default/converge.yml
+      mode: '0644'
+
+  - name: Create requirements.yml if it doesn't exist
+    ansible.builtin.file:
+      path: requirements.yml
+      state: touch
+      mode: '0644'
+
 .generate_inventory: &generate_inventory
   - name: Generate inventory file
     ansible.builtin.template:
@@ -53,3 +83,6 @@
     ansible.builtin.debug:
       msg: "{{ playbook_result.stdout_lines }}"
     when: playbook_result is defined
+
+
+

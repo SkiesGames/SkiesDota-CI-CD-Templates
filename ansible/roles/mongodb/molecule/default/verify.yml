@@ -39,7 +39,7 @@
           - rs_config.stdout | trim == "rs0"
         fail_msg: "Replica set ID is not correctly configured"
 
-    - name: Check if indexes were created (verify role execution)
+   - name: Check if indexes were created (verify role execution)
       ansible.builtin.docker_container:
         name: mongodb
         command: mongosh --eval "db.active_actions.getIndexes().length"
