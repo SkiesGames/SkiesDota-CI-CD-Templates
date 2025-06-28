@@ -11,22 +11,18 @@
   script:
     - molecule test
   after_script:
-    - |
-      # Clean up molecule environments safely
-      cd ansible/roles/$MOLECULE_ROLE_NAME
-      if [ -f molecule/default/molecule.yml ]; then
-        molecule destroy --all || echo "Molecule destroy failed, but continuing..."
-      fi
+    - !reference [.test_common_after_script]
   rules:
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+      when: manual
+      needs: []
+    - changes:
+        - ansible/roles/${MOLECULE_ROLE_NAME}/**/*
+        - Dockerfile.test
+      when: always
+      needs:
+        - build_test_image
     - changes:
         - ansible/roles/${MOLECULE_ROLE_NAME}/**/*
       when: always
-    - when: manual
-  needs:
-    - job: build_test_image
-      optional: true
-
-test_mongodb:
-  extends: .base_molecule
-  variables:
-    MOLECULE_ROLE_NAME: mongodb
+      needs: []

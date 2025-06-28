@@ -11,6 +11,14 @@
   - test -f molecule/default/prepare.yml || echo "Using default prepare.yml"
   - test -f molecule/default/verify.yml || echo "Using default verify.yml"
 
+.test_common_after_script: &test_common_after_script
+  - |
+    # Clean up molecule environments safely
+    cd ansible/roles/$MOLECULE_ROLE_NAME
+    if [ -f molecule/default/molecule.yml ]; then
+      molecule destroy --all || echo "Molecule destroy failed, but continuing..."
+    fi
+
 .generate_inventory: &generate_inventory
   - ansible-playbook ansible/playbooks/generate_inventory.yml
 
