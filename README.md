@@ -111,15 +111,21 @@ After successful setup, `ANSIBLE_HOSTS_PASSWORD` can be removed as subsequent ru
 ## Testing
 
 All roles include Molecule-based testing with:
-- Docker-based test environments
+- Docker-based test environments using root user for simplicity
 - Comprehensive verification tests
 - Integration testing for complex roles
+- Automatic test execution on role changes
 
 Run tests locally:
 ```bash
 cd ansible/roles/[role_name]
 molecule test
 ```
+
+**Recent Fixes:**
+- Simplified test container configuration to run as root (resolves user permission issues)
+- Streamlined Dockerfile.test for better compatibility
+- Fixed Molecule configuration for Docker-in-Docker environments
 
 ## Contributing
 

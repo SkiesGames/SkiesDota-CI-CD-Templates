@@ -23,20 +23,5 @@ RUN apt-get update && \
 # Set working directory
 WORKDIR /workspace
 
-# Create docker group and molecule user for better security
-RUN groupadd -r docker && \
-    useradd -m -s /bin/bash molecule && \
-    usermod -aG docker molecule && \
-    echo "molecule ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-
-# Create necessary directories with proper permissions
-RUN mkdir -p /home/molecule/.ansible/tmp && \
-    chown -R molecule:molecule /home/molecule && \
-    mkdir -p /tmp/.ansible-molecule && \
-    chown -R molecule:molecule /tmp/.ansible-molecule
-
-# Switch to molecule user
-USER molecule
-
 # Default command
 CMD ["molecule"] 
