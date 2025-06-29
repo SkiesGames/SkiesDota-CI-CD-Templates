@@ -30,27 +30,30 @@
         state: absent
       ignore_errors: true
 
-    - name: Start MongoDB container (standalone first)
+    - name: Start MongoDB container (simple configuration)
       ansible.builtin.docker_container:
         name: mongodb
-        image: mongo:7.0
+        image: mongo:6.0
         state: started
         ports:
           - "27017:27017"
-        command: mongod --bind_ip_all --dbpath /data/db
+        command: mongod --bind_ip_all
         restart_policy: unless-stopped
         env:
           MONGO_INITDB_DATABASE: test
-        volumes:
-          - /tmp/mongodb_data:/data/db
-        ulimits:
-          - "nofile:64000:64000"
 
-    - name: Wait for MongoDB to be ready (standalone)
-      ansible.builtin.wait_for:
-        port: 27017
-        timeout: 60
-        delay: 10
+    - name: Wait a moment for container to start
+      ansible.builtin.pause:
+        seconds: 10
+
+    - name: Check MongoDB container status
+      ansible.builtin.docker_container_info:
+        name: mongodb
+      register: container_info
+
+    - name: Display container status
+      ansible.builtin.debug:
+        var: container_info
 
     - name: Check MongoDB container logs
       ansible.builtin.command: docker logs mongodb
@@ -61,23 +64,31 @@
       ansible.builtin.debug:
         var: mongodb_logs.stdout_lines
 
-    - name: Initialize replica set
-      ansible.builtin.docker_container:
-        name: mongodb
-        command: >
-          mongosh --eval "rs.initiate({_id: 'rs0', members: [{_id: 0, host: 'localhost:27017'}]})"
-      register: rs_init_result
+    - name: Check if port 27017 is listening
+      ansible.builtin.command: netstat -tlnp | grep 27017
+      register: port_check
       changed_when: false
+      ignore_errors: true
 
-    - name: Display replica set initialization result
+    - name: Display port check result
       ansible.builtin.debug:
-        var: rs_init_result
+        var: port_check
 
-    - name: Wait for replica set to be ready
+    - name: Wait for MongoDB to be ready (with longer timeout)
       ansible.builtin.wait_for:
         port: 27017
-        timeout: 30
-        delay: 5
+        timeout: 120
+        delay: 15
+
+    - name: Test MongoDB connection
+      ansible.builtin.command: docker exec mongodb mongosh --eval "db.runCommand('ping')"
+      register: mongo_test
+      changed_when: false
+      ignore_errors: true
+
+    - name: Display MongoDB connection test result
+      ansible.builtin.debug:
+        var: mongo_test
 
     - name: Set replica set configuration
       ansible.builtin.set_fact:
