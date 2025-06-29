@@ -55,14 +55,6 @@
       ansible.builtin.debug:
         var: container_info
 
-    - name: Get container IP address
-      ansible.builtin.set_fact:
-        mongodb_ip: "{{ container_info.container.NetworkSettings.IPAddress }}"
-
-    - name: Display container IP
-      ansible.builtin.debug:
-        msg: "MongoDB container IP: {{ mongodb_ip }}"
-
     - name: Check MongoDB container logs
       ansible.builtin.command: docker logs mongodb
       register: mongodb_logs
@@ -72,26 +64,21 @@
       ansible.builtin.debug:
         var: mongodb_logs.stdout_lines
 
-    - name: Test connection to MongoDB container IP
-      ansible.builtin.wait_for:
-        host: "{{ mongodb_ip }}"
-        port: 27017
-        timeout: 30
-        delay: 5
-
     - name: Test MongoDB connection from inside container
       ansible.builtin.command: docker exec mongodb mongosh --eval "db.runCommand('ping')"
       register: mongo_test
       changed_when: false
-      ignore_errors: true
+      retries: 3
+      delay: 5
+      until: mongo_test.rc == 0
 
     - name: Display MongoDB connection test result
       ansible.builtin.debug:
         var: mongo_test
 
-    - name: Set replica set configuration
+    - name: Set replica set configuration with fake ephemeral IPs
       ansible.builtin.set_fact:
         mongo_hosts:
-          - "{{ mongodb_ip }}:27017"
-          - "{{ mongodb_ip }}:27018"
-          - "{{ mongodb_ip }}:27019" 
+          - "10.0.0.1:27017"
+          - "10.0.0.2:27018"
+          - "10.0.0.3:27019" 
