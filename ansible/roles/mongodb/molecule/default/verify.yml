@@ -13,12 +13,6 @@
         msg: "MongoDB container is not running"
       when: "'mongodb' not in mongodb_container.stdout"
 
-    - name: Wait for MongoDB to be ready before verification
-      ansible.builtin.wait_for:
-        port: 27017
-        timeout: 30
-        delay: 5
-
     - name: Check replica set status
       ansible.builtin.command: docker exec mongodb mongosh --eval "rs.status().ok"
       register: rs_status

@@ -4,12 +4,6 @@
   changed_when: false
   failed_when: false
 
-- name: Wait for MongoDB to be ready before index creation
-  ansible.builtin.wait_for:
-    port: 27017
-    timeout: 30
-    delay: 5
-
 - name: Create MongoDB indexes
   ansible.builtin.command: docker exec mongodb mongosh --eval "{{ lookup('file', 'setup_indexes.js') | replace('\n', ' ') }}"
   when: indexes_status.stdout | trim | lower != "true"

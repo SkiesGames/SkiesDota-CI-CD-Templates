@@ -37,24 +37,44 @@
         state: started
         ports:
           - "27017:27017"
-        command: mongod --bind_ip_all
+        command: mongod --bind_ip_all --port 27017
         restart_policy: unless-stopped
         env:
           MONGO_INITDB_DATABASE: test
 
-    - name: Wait for MongoDB to be ready
-      ansible.builtin.wait_for:
-        port: 27017
-        timeout: 30
-        delay: 5
+    - name: Wait a moment for container to start
+      ansible.builtin.pause:
+        seconds: 10
 
-    - name: Test MongoDB connection
-      ansible.builtin.command: docker exec mongodb mongosh --eval "db.runCommand('ping')"
-      register: mongo_test
+    - name: Check MongoDB container status
+      ansible.builtin.docker_container_info:
+        name: mongodb
+      register: container_info
+
+    - name: Display container status
+      ansible.builtin.debug:
+        msg: "Container state: {{ container_info.container.State.Status }}"
+
+    - name: Check MongoDB container logs for errors
+      ansible.builtin.command: docker logs mongodb --tail 20
+      register: mongodb_logs
       changed_when: false
-      retries: 3
+
+    - name: Display MongoDB logs
+      ansible.builtin.debug:
+        msg: "MongoDB logs: {{ mongodb_logs.stdout_lines }}"
+
+    - name: Test MongoDB connection from inside container
+      ansible.builtin.command: docker exec mongodb mongosh --eval "db.runCommand('ping')"
+      register: mongo_internal_test
+      changed_when: false
+      retries: 5
       delay: 5
-      until: mongo_test.rc == 0
+      until: mongo_internal_test.rc == 0
+
+    - name: Display internal connection test result
+      ansible.builtin.debug:
+        msg: "Internal connection test: {{ mongo_internal_test.stdout }}"
 
     - name: Set replica set configuration with fake ephemeral IPs
       ansible.builtin.set_fact:
