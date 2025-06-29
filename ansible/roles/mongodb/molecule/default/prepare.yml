@@ -1,6 +1,7 @@
 ---
 - name: Prepare MongoDB Environment
-  hosts: all
+  hosts: localhost
+  connection: local
   become: true
   tasks:
     - name: Ensure Docker is running and accessible
@@ -40,14 +41,12 @@
           - /tmp/mongodb_data:/data/db
         ulimits:
           - "nofile:64000:64000"
-      delegate_to: localhost
 
     - name: Wait for MongoDB to be ready
       ansible.builtin.wait_for:
         port: 27017
         timeout: 30
         delay: 5
-      delegate_to: localhost
 
     - name: Set replica set configuration
       ansible.builtin.set_fact:
