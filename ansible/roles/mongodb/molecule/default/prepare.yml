@@ -33,6 +33,8 @@
           - "27017:27017"
         command: mongod --replSet rs0 --bind_ip_all --dbpath /data/db
         restart_policy: unless-stopped
+        wait: true
+        wait_timeout: 30
         env:
           MONGO_INITDB_DATABASE: test
         volumes:
