@@ -42,39 +42,19 @@
         env:
           MONGO_INITDB_DATABASE: test
 
-    - name: Wait a moment for container to start
-      ansible.builtin.pause:
-        seconds: 10
+    - name: Wait for MongoDB to be ready
+      ansible.builtin.wait_for:
+        port: 27017
+        timeout: 30
+        delay: 5
 
-    - name: Check MongoDB container status
-      ansible.builtin.docker_container_info:
-        name: mongodb
-      register: container_info
-
-    - name: Display container status
-      ansible.builtin.debug:
-        var: container_info
-
-    - name: Check MongoDB container logs
-      ansible.builtin.command: docker logs mongodb
-      register: mongodb_logs
-      changed_when: false
-
-    - name: Display MongoDB logs
-      ansible.builtin.debug:
-        var: mongodb_logs.stdout_lines
-
-    - name: Test MongoDB connection from inside container
+    - name: Test MongoDB connection
       ansible.builtin.command: docker exec mongodb mongosh --eval "db.runCommand('ping')"
       register: mongo_test
       changed_when: false
       retries: 3
       delay: 5
       until: mongo_test.rc == 0
-
-    - name: Display MongoDB connection test result
-      ansible.builtin.debug:
-        var: mongo_test
 
     - name: Set replica set configuration with fake ephemeral IPs
       ansible.builtin.set_fact:

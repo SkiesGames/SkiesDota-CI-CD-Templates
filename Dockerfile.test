@@ -19,6 +19,18 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p ~/.docker
 
+# Fix permission issues for Ansible
+RUN mkdir -p /tmp/.ansible/tmp && \
+    chmod 755 /tmp/.ansible/tmp && \
+    mkdir -p /root/.ansible && \
+    chmod 755 /root/.ansible
+
+# Set environment variables for Ansible
+ENV HOME=/tmp
+ENV ANSIBLE_LOCAL_TMP=/tmp/.ansible/tmp
+ENV ANSIBLE_REMOTE_TMP=/tmp/.ansible/tmp
+ENV PYTHONUNBUFFERED=1
+
 # Set working directory
 WORKDIR /workspace
 

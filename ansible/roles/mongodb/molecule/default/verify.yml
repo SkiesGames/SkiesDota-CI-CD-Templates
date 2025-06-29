@@ -4,30 +4,25 @@
   become: true
   tasks:
     - name: Check if MongoDB container is running
-      ansible.builtin.docker_container_info:
-        name: mongodb
+      ansible.builtin.command: docker ps --filter name=mongodb --format "{{.Names}}"
       register: mongodb_container
-      delegate_to: localhost
+      changed_when: false
 
     - name: Fail if MongoDB container is not running
       ansible.builtin.fail:
         msg: "MongoDB container is not running"
-      when: mongodb_container.exists == false
+      when: "'mongodb' not in mongodb_container.stdout"
 
     - name: Wait for MongoDB to be ready before verification
       ansible.builtin.wait_for:
         port: 27017
         timeout: 30
         delay: 5
-      delegate_to: localhost
 
     - name: Check replica set status
-      ansible.builtin.docker_container:
-        name: mongodb
-        command: mongosh --eval "rs.status().ok"
+      ansible.builtin.command: docker exec mongodb mongosh --eval "rs.status().ok"
       register: rs_status
       changed_when: false
-      delegate_to: localhost
 
     - name: Verify replica set is initialized
       ansible.builtin.assert:
@@ -36,12 +31,9 @@
         fail_msg: "Replica set is not properly initialized"
 
     - name: Check replica set configuration
-      ansible.builtin.docker_container:
-        name: mongodb
-        command: mongosh --eval "rs.conf()._id"
+      ansible.builtin.command: docker exec mongodb mongosh --eval "rs.conf()._id"
       register: rs_config
       changed_when: false
-      delegate_to: localhost
 
     - name: Verify replica set ID
       ansible.builtin.assert:
@@ -50,12 +42,9 @@
         fail_msg: "Replica set ID is not correctly configured"
 
     - name: Check if indexes were created (verify role execution)
-      ansible.builtin.docker_container:
-        name: mongodb
-        command: mongosh --eval "db.active_actions.getIndexes().length"
+      ansible.builtin.command: docker exec mongodb mongosh --eval "db.active_actions.getIndexes().length"
       register: active_actions_count
       changed_when: false
-      delegate_to: localhost
 
     - name: Verify active_actions indexes exist (role responsibility)
       ansible.builtin.assert:
@@ -64,12 +53,9 @@
         fail_msg: "active_actions collection does not have the expected number of indexes"
 
     - name: Check completed_operations indexes count
-      ansible.builtin.docker_container:
-        name: mongodb
-        command: mongosh --eval "db.completed_operations.getIndexes().length"
+      ansible.builtin.command: docker exec mongodb mongosh --eval "db.completed_operations.getIndexes().length"
       register: completed_operations_count
       changed_when: false
-      delegate_to: localhost
 
     - name: Verify completed_operations indexes exist (role responsibility)
       ansible.builtin.assert:
@@ -78,12 +64,9 @@
         fail_msg: "completed_operations collection does not have the expected number of indexes"
 
     - name: Check cache_version indexes count
-      ansible.builtin.docker_container:
-        name: mongodb
-        command: mongosh --eval "db.cache_version.getIndexes().length"
+      ansible.builtin.command: docker exec mongodb mongosh --eval "db.cache_version.getIndexes().length"
       register: cache_version_count
       changed_when: false
-      delegate_to: localhost
 
     - name: Verify cache_version indexes exist (role responsibility)
       ansible.builtin.assert:
@@ -92,12 +75,9 @@
         fail_msg: "cache_version collection does not have the expected number of indexes"
 
     - name: Verify TTL index exists (role responsibility)
-      ansible.builtin.docker_container:
-        name: mongodb
-        command: mongosh --eval "db.completed_operations.getIndexes().forEach(function(idx) { if(idx.expireAfterSeconds) print('TTL_EXISTS'); })"
+      ansible.builtin.command: docker exec mongodb mongosh --eval "db.completed_operations.getIndexes().forEach(function(idx) { if(idx.expireAfterSeconds) print('TTL_EXISTS'); })"
       register: ttl_check
       changed_when: false
-      delegate_to: localhost
 
     - name: Verify TTL index was created
       ansible.builtin.assert:

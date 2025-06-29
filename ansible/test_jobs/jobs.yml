@@ -6,6 +6,12 @@
   variables:
     DOCKER_HOST: tcp://docker:2375/
     DOCKER_TLS_CERTDIR: ""
+    # Fix permission issues
+    ANSIBLE_LOCAL_TMP: "/tmp/.ansible/tmp"
+    ANSIBLE_REMOTE_TMP: "/tmp/.ansible/tmp"
+    # Performance improvements
+    ANSIBLE_PIPELINING: "true"
+    ANSIBLE_FACT_CACHING: "memory"
   before_script:
     - !reference [.test_common_before_script]
   script:

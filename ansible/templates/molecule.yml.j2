@@ -11,6 +11,8 @@ platforms:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       DOCKER_HOST: unix:///var/run/docker.sock
+      HOME: /tmp
+      ANSIBLE_LOCAL_TMP: /tmp/.ansible/tmp
 
 provisioner:
   name: ansible
@@ -18,11 +20,19 @@ provisioner:
     defaults:
       callback_whitelist: profile_tasks
       host_key_checking: false
+      local_tmp: /tmp/.ansible/tmp
+      remote_tmp: /tmp/.ansible/tmp
+      display_skipped_hosts: false
+      display_ok_hosts: false
+      pipelining: true
+      fact_caching: memory
   inventory:
     group_vars:
       all:
         ansible_python_interpreter: /usr/bin/python3
         ansible_connection: docker
+        ansible_remote_tmp: /tmp/.ansible/tmp
+        ansible_local_tmp: /tmp/.ansible/tmp
   playbooks:
     prepare: ${MOLECULE_PREPARE_PLAYBOOK:-prepare.yml}
     converge: ${MOLECULE_PLAYBOOK:-converge.yml}

@@ -6,4 +6,13 @@ stdout_callback = yaml
 display_skipped_hosts = false
 display_ok_hosts = false
 display_failed_stderr = true
-display_args_to_stdout = true 
+display_args_to_stdout = true
+# Fix permission issues
+local_tmp = /tmp/.ansible/tmp
+remote_tmp = /tmp/.ansible/tmp
+# Performance improvements
+pipelining = true
+fact_caching = memory
+
+[ssh_connection]
+pipelining = true 
