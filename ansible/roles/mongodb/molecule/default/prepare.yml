@@ -64,7 +64,8 @@
     - name: Initialize replica set
       ansible.builtin.docker_container:
         name: mongodb
-        command: mongosh --eval "rs.initiate({_id: 'rs0', members: [{_id: 0, host: 'localhost:27017'}]})"
+        command: >
+          mongosh --eval "rs.initiate({_id: 'rs0', members: [{_id: 0, host: 'localhost:27017'}]})"
       register: rs_init_result
       changed_when: false
 
