@@ -26,3 +26,9 @@
         - ansible/roles/${MOLECULE_ROLE_NAME}/**/*
       when: always
       needs: []
+
+
+test_mongodb:
+  extends: .base_molecule
+  variables:
+    MOLECULE_ROLE_NAME: mongodb
