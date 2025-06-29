@@ -11,8 +11,6 @@ platforms:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       DOCKER_HOST: unix:///var/run/docker.sock
-    # Disable credential store for testing
-    dockerfile: null
 
 provisioner:
   name: ansible
