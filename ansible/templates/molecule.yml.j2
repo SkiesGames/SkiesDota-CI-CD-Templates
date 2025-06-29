@@ -4,9 +4,9 @@ driver:
 
 platforms:
   - name: instance
-    image: python:3.13-slim
+    image: ubuntu:22.04
     pre_build_image: true
-    command: ""
+    command: sleep infinity
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
