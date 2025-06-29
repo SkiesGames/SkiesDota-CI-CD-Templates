@@ -24,14 +24,20 @@
         - /tmp/mongodb_data
         - /tmp/mongodb_logs
 
-    - name: Start MongoDB container
+    - name: Remove existing MongoDB container if exists
+      ansible.builtin.docker_container:
+        name: mongodb
+        state: absent
+      ignore_errors: true
+
+    - name: Start MongoDB container (standalone first)
       ansible.builtin.docker_container:
         name: mongodb
         image: mongo:7.0
         state: started
         ports:
           - "27017:27017"
-        command: mongod --replSet rs0 --bind_ip_all --dbpath /data/db
+        command: mongod --bind_ip_all --dbpath /data/db
         restart_policy: unless-stopped
         env:
           MONGO_INITDB_DATABASE: test
@@ -40,7 +46,33 @@
         ulimits:
           - "nofile:64000:64000"
 
-    - name: Wait for MongoDB to be ready
+    - name: Wait for MongoDB to be ready (standalone)
+      ansible.builtin.wait_for:
+        port: 27017
+        timeout: 60
+        delay: 10
+
+    - name: Check MongoDB container logs
+      ansible.builtin.command: docker logs mongodb
+      register: mongodb_logs
+      changed_when: false
+
+    - name: Display MongoDB logs
+      ansible.builtin.debug:
+        var: mongodb_logs.stdout_lines
+
+    - name: Initialize replica set
+      ansible.builtin.docker_container:
+        name: mongodb
+        command: mongosh --eval "rs.initiate({_id: 'rs0', members: [{_id: 0, host: 'localhost:27017'}]})"
+      register: rs_init_result
+      changed_when: false
+
+    - name: Display replica set initialization result
+      ansible.builtin.debug:
+        var: rs_init_result
+
+    - name: Wait for replica set to be ready
       ansible.builtin.wait_for:
         port: 27017
         timeout: 30
