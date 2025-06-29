@@ -13,9 +13,6 @@
   after_script:
     - !reference [.test_common_after_script]
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "web"'
-      when: manual
-      needs: []
     - changes:
         - ansible/roles/${MOLECULE_ROLE_NAME}/**/*
         - Dockerfile.test
@@ -26,7 +23,8 @@
         - ansible/roles/${MOLECULE_ROLE_NAME}/**/*
       when: always
       needs: []
-
+    - when: manual
+      needs: []
 
 test_mongodb:
   extends: .base_molecule
