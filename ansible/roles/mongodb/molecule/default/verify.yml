@@ -1,6 +1,6 @@
 ---
 - name: Verify MongoDB Configuration
-  hosts: localhost
+  hosts: instance
   connection: local
   tasks:
     - name: Check if MongoDB container is running
