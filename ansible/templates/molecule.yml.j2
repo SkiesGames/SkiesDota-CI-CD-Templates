@@ -1,12 +1,8 @@
 ---
 driver:
-  name: docker
+  name: delegated
 
-platforms:
-  - name: instance
-    image: ubuntu:22.04
-    pre_build_image: true
-    command: sleep infinity
+platforms: []
 
 provisioner:
   name: ansible
