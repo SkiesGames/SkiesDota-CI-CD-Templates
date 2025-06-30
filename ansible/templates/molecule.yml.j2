@@ -10,9 +10,6 @@ platforms:
       - "27017:27017"
     env:
       MONGO_INITDB_DATABASE: test
-    volumes:
-      - /tmp/mongodb_data:/data/db
-      - /tmp/mongodb_logs:/var/log/mongodb
 
 provisioner:
   name: ansible

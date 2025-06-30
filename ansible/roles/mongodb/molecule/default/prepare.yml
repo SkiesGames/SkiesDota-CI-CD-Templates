@@ -17,6 +17,4 @@
     - name: Set replica set configuration
       ansible.builtin.set_fact:
         mongo_hosts:
-          - "{{ ansible_default_ipv4.address }}:27017"
-          - "{{ ansible_default_ipv4.address }}:27018"
-          - "{{ ansible_default_ipv4.address }}:27019" 
+          - "{{ ansible_default_ipv4.address }}:27017" 

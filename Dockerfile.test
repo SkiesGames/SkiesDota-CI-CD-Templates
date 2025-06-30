@@ -8,10 +8,15 @@ RUN apt-get update && \
         lsb-release \
         sudo \
         wget \
+        rsync \
     && curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg \
     && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list \
+    && wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | apt-key add - \
+    && echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/debian bullseye/mongodb-org/6.0 main" | tee /etc/apt/sources.list.d/mongodb-org-6.0.list \
     && apt-get update \
-    && apt-get install -y --no-install-recommends docker-ce-cli \
+    && apt-get install -y --no-install-recommends \
+        docker-ce-cli \
+        mongodb-mongosh \
     && pip install --no-cache-dir \
         ansible \
         molecule \
@@ -19,11 +24,6 @@ RUN apt-get update && \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p ~/.docker
-
-# Install MongoDB shell
-RUN wget -qO- https://downloads.mongodb.org/linux/mongodb-shell-linux-x86_64-debian11-1.10.6.tgz | tar -xz \
-    && mv mongodb-linux-x86_64-debian11-1.10.6/bin/mongosh /usr/local/bin/ \
-    && rm -rf mongodb-linux-x86_64-debian11-1.10.6
 
 # Fix permission issues for Ansible
 RUN mkdir -p /tmp/.ansible/tmp && \
