@@ -1,9 +1,9 @@
 - name: Check if replica set is already initialized
-  ansible.builtin.command: docker exec mongodb mongosh --eval "rs.status()"
+  ansible.builtin.command: mongosh --eval "rs.status()"
   register: rs_status
   changed_when: false
   failed_when: false
 
 - name: Initialize MongoDB replica set
-  ansible.builtin.command: docker exec mongodb mongosh --eval "{{ lookup('template', 'init_replica_set.js') | replace('\n', ' ') }}"
+  ansible.builtin.command: mongosh --eval "{{ lookup('template', 'init_replica_set.js') | replace('\n', ' ') }}"
   when: "'PRIMARY' not in rs_status.stdout"

@@ -1,31 +1,32 @@
 ---
 driver:
-  name: delegated
+  name: docker
 
-platforms: []
+platforms:
+  - name: mongodb
+    image: mongo:6.0
+    command: mongod --bind_ip_all --port 27017
+    ports:
+      - "27017:27017"
+    env:
+      MONGO_INITDB_DATABASE: test
+    volumes:
+      - /tmp/mongodb_data:/data/db
+      - /tmp/mongodb_logs:/var/log/mongodb
 
 provisioner:
   name: ansible
   config_options:
     defaults:
-      callback_whitelist: profile_tasks
       host_key_checking: false
       local_tmp: /tmp/.ansible/tmp
       remote_tmp: /tmp/.ansible/tmp
-      display_skipped_hosts: false
-      display_ok_hosts: false
       pipelining: true
       fact_caching: memory
   inventory:
     group_vars:
       all:
-        ansible_connection: local
-  playbooks:
-    prepare: ${MOLECULE_PREPARE_PLAYBOOK:-prepare.yml}
-    converge: ${MOLECULE_PLAYBOOK:-converge.yml}
+        ansible_connection: docker
 
 verifier:
-  name: ansible
-  options:
-    playbooks:
-      verify: ${MOLECULE_VERIFY_PLAYBOOK:-verify.yml} 
+  name: ansible 

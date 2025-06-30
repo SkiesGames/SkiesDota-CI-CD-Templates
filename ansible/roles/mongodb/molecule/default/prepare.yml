@@ -1,83 +1,22 @@
 ---
 - name: Prepare MongoDB Environment
-  hosts: localhost
-  connection: local
+  hosts: all
   tasks:
-    - name: Ensure Docker is running and accessible
-      ansible.builtin.command: docker ps
-      register: docker_check
-      failed_when: false
-      changed_when: false
+    - name: Wait for MongoDB to be ready
+      ansible.builtin.wait_for:
+        port: 27017
+        timeout: 30
 
-    - name: Fail if Docker is not available
-      ansible.builtin.fail:
-        msg: "Docker is not available or not running. Check Docker socket permissions."
-      when: docker_check.rc != 0
-
-    - name: Create necessary directories for MongoDB
-      ansible.builtin.file:
-        path: "{{ item }}"
-        state: directory
-        mode: '0755'
-      loop:
-        - /tmp/mongodb_data
-        - /tmp/mongodb_logs
-
-    - name: Remove existing MongoDB container if exists
-      ansible.builtin.docker_container:
-        name: mongodb
-        state: absent
-      ignore_errors: true
-
-    - name: Start MongoDB container (simple configuration)
-      ansible.builtin.docker_container:
-        name: mongodb
-        image: mongo:6.0
-        state: started
-        ports:
-          - "27017:27017"
-        command: mongod --bind_ip_all --port 27017
-        restart_policy: unless-stopped
-        env:
-          MONGO_INITDB_DATABASE: test
-
-    - name: Wait a moment for container to start
-      ansible.builtin.pause:
-        seconds: 10
-
-    - name: Check MongoDB container status
-      ansible.builtin.docker_container_info:
-        name: mongodb
-      register: container_info
-
-    - name: Display container status
-      ansible.builtin.debug:
-        msg: "Container state: {{ container_info.container.State.Status }}"
-
-    - name: Check MongoDB container logs for errors
-      ansible.builtin.command: docker logs mongodb --tail 20
-      register: mongodb_logs
-      changed_when: false
-
-    - name: Display MongoDB logs
-      ansible.builtin.debug:
-        msg: "MongoDB logs: {{ mongodb_logs.stdout_lines }}"
-
-    - name: Test MongoDB connection from inside container
-      ansible.builtin.command: docker exec mongodb mongosh --eval "db.runCommand('ping')"
-      register: mongo_internal_test
-      changed_when: false
+    - name: Test MongoDB connection
+      ansible.builtin.command: mongosh --eval "db.runCommand('ping')"
+      register: mongo_test
       retries: 5
       delay: 5
-      until: mongo_internal_test.rc == 0
+      until: mongo_test.rc == 0
 
-    - name: Display internal connection test result
-      ansible.builtin.debug:
-        msg: "Internal connection test: {{ mongo_internal_test.stdout }}"
-
-    - name: Set replica set configuration with fake ephemeral IPs
+    - name: Set replica set configuration
       ansible.builtin.set_fact:
         mongo_hosts:
-          - "10.0.0.1:27017"
-          - "10.0.0.2:27018"
-          - "10.0.0.3:27019" 
+          - "{{ ansible_default_ipv4.address }}:27017"
+          - "{{ ansible_default_ipv4.address }}:27018"
+          - "{{ ansible_default_ipv4.address }}:27019" 
