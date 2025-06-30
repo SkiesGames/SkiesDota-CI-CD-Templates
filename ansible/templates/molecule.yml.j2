@@ -2,17 +2,7 @@
 driver:
   name: docker
 
-platforms:
-  - name: instance
-    image: ubuntu:22.04
-    pre_build_image: true
-    command: sleep infinity
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    environment:
-      DOCKER_HOST: unix:///var/run/docker.sock
-      HOME: /tmp
-      ANSIBLE_LOCAL_TMP: /tmp/.ansible/tmp
+platforms: []
 
 provisioner:
   name: ansible
@@ -29,10 +19,7 @@ provisioner:
   inventory:
     group_vars:
       all:
-        ansible_python_interpreter: /usr/bin/python3
-        ansible_connection: docker
-        ansible_remote_tmp: /tmp/.ansible/tmp
-        ansible_local_tmp: /tmp/.ansible/tmp
+        ansible_connection: local
   playbooks:
     prepare: ${MOLECULE_PREPARE_PLAYBOOK:-prepare.yml}
     converge: ${MOLECULE_PLAYBOOK:-converge.yml}

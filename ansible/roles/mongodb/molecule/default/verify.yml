@@ -1,7 +1,7 @@
 ---
 - name: Verify MongoDB Configuration
-  hosts: all
-  become: true
+  hosts: localhost
+  connection: local
   tasks:
     - name: Check if MongoDB container is running
       ansible.builtin.command: docker ps --filter name=mongodb --format "{{.Names}}"
