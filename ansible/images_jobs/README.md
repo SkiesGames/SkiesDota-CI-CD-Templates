@@ -18,9 +18,9 @@ The `.base_image` template provides common functionality for all image building 
 - Change-based and manual trigger rules
 
 **Variables:**
-- `IMAGE_NAME`: Target image name (e.g., `ansible`, `ansible-test`)
+- `IMAGE_NAME`: Target image name (e.g., `ansible`)
 - `DOCKERFILE_PATH`: Path to Dockerfile for change detection
-- `DOCKERFILE_FLAG`: Docker build flags (empty for base, `-f Dockerfile.test` for test)
+- `DOCKERFILE_FLAG`: Docker build flags (empty for base)
 - `CACHE_KEY`: Unique cache key for the image type
 
 ## Available Jobs
@@ -41,38 +41,21 @@ Builds the base Ansible runner image used for all Ansible operations.
 - Dockerfile: `/Dockerfile`
 - Cache: `docker-base-image`
 
-### build_test_image
-Builds the testing image with Molecule for role testing.
-
-**Features:**
-- Python 3.13 slim base image
-- Ansible and Molecule installation
-- Docker CLI for test environments
-- Non-root user (molecule) for security
-- Optimized for testing workflows
-
-**Configuration:**
-- Extends: `.base_image`
-- Image: `$CI_REGISTRY_IMAGE/ansible-test:latest`
-- Dockerfile: `/Dockerfile.test`
-- Cache: `docker-test-image`
-
 ## Image Dependencies
 
-Both images require:
+The image requires:
 - `$CI_REGISTRY_USER`: GitLab registry username
 - `$CI_REGISTRY_PASSWORD`: GitLab registry password
 - `$CI_REGISTRY`: GitLab registry URL
 - `$CI_REGISTRY_IMAGE`: Target image path
 
-## Dockerfile Locations
+## Dockerfile Location
 
 - Base image: `/Dockerfile`
-- Test image: `/Dockerfile.test`
 
 ## Usage in Other Projects
 
-These images are automatically used when including the template jobs:
+This image is automatically used when including the template jobs:
 
 ```yaml
 include:

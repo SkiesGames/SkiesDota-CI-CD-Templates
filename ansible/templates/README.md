@@ -46,34 +46,6 @@ Initial inventory template for password-based SSH setup.
 - `ANSIBLE_HOSTS_PASSWORD`: Multi-line password list
 - `ANSIBLE_USER`: SSH username
 
-### Testing Templates
-
-#### molecule.yml.j2
-Molecule configuration template for role testing.
-
-**Features:**
-- Docker-based test environments
-- Ansible provisioner configuration
-- Customizable playbook paths
-- Environment variable support
-
-**Variables:**
-- `MOLECULE_ROLE_NAME`: Role being tested
-- `MOLECULE_PREPARE_PLAYBOOK`: Custom prepare playbook
-- `MOLECULE_PLAYBOOK`: Custom converge playbook
-- `MOLECULE_VERIFY_PLAYBOOK`: Custom verify playbook
-
-#### converge.yml.j2
-Molecule converge playbook template.
-
-**Features:**
-- Dynamic role inclusion
-- Standardized testing structure
-- Variable-based role selection
-
-**Variables:**
-- `MOLECULE_ROLE_NAME`: Role to test
-
 ## Template Usage
 
 ### In GitLab CI Jobs
@@ -117,7 +89,6 @@ Templates use variables from:
 - **Security**: Never expose sensitive data in templates
 - **Flexibility**: Use variables for customization
 - **Documentation**: Document all template variables
-- **Testing**: Test templates with various inputs
 
 ## Extending Templates
 

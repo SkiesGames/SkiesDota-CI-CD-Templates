@@ -25,38 +25,6 @@ This Ansible role configures MongoDB with replica set initialization and index s
 - Checks if indexes already exist
 - Creates indexes for all collections with proper configurations
 
-## Testing with Molecule
-
-The role includes comprehensive testing using Molecule with template-based configuration:
-
-### Test Structure
-```
-molecule/default/
-├── prepare.yml       # Environment setup (MongoDB container)
-└── verify.yml        # Verification tests
-```
-
-### Running Tests
-
-#### Local Testing
-```bash
-cd ansible/roles/mongodb
-molecule test
-```
-
-#### GitLab CI
-Tests run automatically on main branch commits when `AUTO_DEPLOY=true` and can be triggered manually.
-
-### Test Coverage
-
-The verification tests check:
-- MongoDB container is running
-- Replica set is properly initialized
-- All required indexes exist on collections:
-  - `active_actions`: ≥3 indexes
-  - `completed_operations`: ≥2 indexes  
-  - `cache_version`: ≥1 index
-
 ## Environment Variables
 
 The role expects these environment variables for replica set configuration:
@@ -67,6 +35,4 @@ The role expects these environment variables for replica set configuration:
 ## Files
 
 - `files/setup_indexes.js`: MongoDB index creation script
-- `templates/init_replica_set.js`: Replica set initialization script
-- `molecule/default/prepare.yml`: Test environment setup
-- `molecule/default/verify.yml`: Test verification 
+- `templates/init_replica_set.js`: Replica set initialization script 

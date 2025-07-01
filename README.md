@@ -1,16 +1,15 @@
 # SkiesDotaGitlab-CI-Templates
 
-A comprehensive GitLab CI template repository for Ansible automation and infrastructure management. This repository provides reusable CI/CD jobs, Docker images, Ansible playbooks, roles, and testing infrastructure that can be included in other projects.
+A comprehensive GitLab CI template repository for Ansible automation and infrastructure management. This repository provides reusable CI/CD jobs, Docker images, Ansible playbooks, roles, and infrastructure that can be included in other projects.
 
 ## Overview
 
 This template repository contains:
 
 - **Docker Images**: Pre-built Ansible runner images for CI/CD pipelines
-- **CI/CD Jobs**: Reusable GitLab CI job templates for deployment and testing
+- **CI/CD Jobs**: Reusable GitLab CI job templates for deployment and automation
 - **Ansible Playbooks**: Infrastructure automation playbooks
 - **Ansible Roles**: Modular, reusable Ansible roles for common tasks
-- **Testing Framework**: Molecule-based testing for Ansible roles
 - **Templates**: Jinja2 templates for dynamic configuration generation
 
 ## Quick Start
@@ -36,23 +35,17 @@ include:
 
 ### Image Building Jobs
 - `build_base_ansible_image`: Builds the base Ansible runner image
-- `build_test_image`: Builds the testing image with Molecule
-
-### Testing Jobs
-- `test_mongodb`: Tests the MongoDB role with Molecule
 
 ## Shared Templates
 
 ### Base Templates
 - `.base_ansible`: Base template for all Ansible jobs with SSH and inventory setup
 - `.base_image`: Base template for Docker image building jobs with caching and registry integration
-- `.base_molecule`: Base template for Molecule-based role testing
 
 ### Shared Blocks
 - `.common_before_script`: Sets up SSH, Ansible, and dependencies
 - `.generate_inventory`: Generates Ansible inventory files
 - `.execute_playbook`: Executes Ansible playbooks with safety checks
-- `.test_common_before_script`: Sets up Molecule test environment
 
 ## Initial SSH Setup
 
@@ -87,10 +80,8 @@ After successful setup, `ANSIBLE_HOSTS_PASSWORD` can be removed as subsequent ru
 │   │   └── ssh_key_setup.yml  # SSH key management
 │   ├── playbooks/      # Ansible playbooks
 │   ├── roles/          # Reusable Ansible roles
-│   ├── templates/      # Jinja2 templates
-│   └── test_jobs/      # Testing job definitions
+│   └── templates/      # Jinja2 templates
 ├── Dockerfile          # Base Ansible image
-├── Dockerfile.test     # Testing image with Molecule
 ├── common.gitlab-ci.yml # Shared CI/CD templates and anchors
 └── .gitlab-ci.yml      # Main CI/CD pipeline
 ```
@@ -108,31 +99,11 @@ After successful setup, `ANSIBLE_HOSTS_PASSWORD` can be removed as subsequent ru
 - **ssl**: SSL certificate management
 - **synchronize**: File synchronization utilities
 
-## Testing
-
-All roles include Molecule-based testing with:
-- Docker-based test environments using root user for simplicity
-- Comprehensive verification tests
-- Integration testing for complex roles
-- Automatic test execution on role changes
-
-Run tests locally:
-```bash
-cd ansible/roles/[role_name]
-molecule test
-```
-
-**Recent Fixes:**
-- Simplified test container configuration to run as root (resolves user permission issues)
-- Streamlined Dockerfile.test for better compatibility
-- Fixed Molecule configuration for Docker-in-Docker environments
-
 ## Contributing
 
 1. Follow the existing role structure
-2. Include Molecule tests for new roles
-3. Update documentation for new features
-4. Test changes in a fork before submitting
+2. Update documentation for new features
+3. Test changes in a fork before submitting
 
 ## License
 

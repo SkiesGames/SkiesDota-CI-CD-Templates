@@ -13,7 +13,6 @@ Application deployment and synchronization role.
 - File synchronization from CI/CD pipeline
 - Environment file management
 - Docker Compose service management
-- Integration testing with Molecule
 
 **Dependencies:**
 - `synchronize` role
@@ -61,7 +60,6 @@ MongoDB replica set and index management role.
 - Replica set initialization
 - Index creation and management
 - TTL index configuration
-- Comprehensive testing with Molecule
 
 #### ssl
 SSL certificate management role.
@@ -108,27 +106,9 @@ role_name/
 ├── tasks/
 │   ├── main.yml
 │   └── [specific_tasks].yml
-├── molecule/
-│   └── default/
-│       ├── prepare.yml
-│       └── verify.yml
 ├── templates/          # If needed
 ├── files/             # If needed
 └── README.md          # Role documentation
-```
-
-## Testing
-
-All roles include Molecule-based testing:
-
-- **Docker-based test environments**
-- **Comprehensive verification tests**
-- **Integration testing for complex roles**
-
-Run tests locally:
-```bash
-cd ansible/roles/[role_name]
-molecule test
 ```
 
 ## Role Dependencies
@@ -155,7 +135,6 @@ Roles can depend on other roles through:
 ## Best Practices
 
 - **Modularity**: Each role has a single responsibility
-- **Testing**: All roles include Molecule tests
 - **Documentation**: Each role has its own README
 - **Variables**: Use sensible defaults with override capability
 - **Idempotency**: All tasks are idempotent
@@ -165,7 +144,6 @@ Roles can depend on other roles through:
 When adding new roles:
 
 1. Follow the existing structure
-2. Include comprehensive tests
-3. Document variables and usage
-4. Ensure idempotency
-5. Add to this README 
+2. Document variables and usage
+3. Ensure idempotency
+4. Add to this README 
