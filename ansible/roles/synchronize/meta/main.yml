@@ -1,0 +1,22 @@
+---
+galaxy_info:
+  author: SkiesDota
+  description: File synchronization utilities role
+  company: SkiesDota
+  license: MIT
+  min_ansible_version: 2.9
+  platforms:
+    - name: Ubuntu
+      versions:
+        - all
+    - name: Debian
+      versions:
+        - all
+    - name: CentOS
+      versions:
+        - all
+  galaxy_tags:
+    - synchronization
+    - rsync
+    - file-management
+    - deployment 

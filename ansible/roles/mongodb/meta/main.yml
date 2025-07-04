@@ -1,0 +1,22 @@
+---
+galaxy_info:
+  author: SkiesDota
+  description: MongoDB replica set and index management role
+  company: SkiesDota
+  license: MIT
+  min_ansible_version: 2.9
+  platforms:
+    - name: Ubuntu
+      versions:
+        - all
+    - name: Debian
+      versions:
+        - all
+    - name: CentOS
+      versions:
+        - all
+  galaxy_tags:
+    - mongodb
+    - database
+    - replica-set
+    - indexes 
