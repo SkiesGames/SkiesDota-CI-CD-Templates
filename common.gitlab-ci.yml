@@ -1,6 +1,4 @@
 .common_before_script: &common_before_script
-  - mkdir -p ~/.ansible ~/.ssh
-  - chmod 700 ~/.ssh
   - ansible-playbook -i ansible/inventory.ini ansible/playbooks/setup_ci_env.yml
 
 .generate_inventory: &generate_inventory

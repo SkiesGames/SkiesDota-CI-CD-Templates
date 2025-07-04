@@ -3,6 +3,7 @@
   before_script:
     - !reference [.common_before_script]
     - !reference [.generate_inventory]
+  needs: []
 
 bootstrap:
   extends: .base_ansible
