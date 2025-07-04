@@ -9,4 +9,4 @@ add_ssh_key:
     initial_setup: true
   rules:
     - when: manual
-      needs: []  
+  needs: []  
