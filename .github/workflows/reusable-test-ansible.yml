@@ -67,8 +67,8 @@ jobs:
 
   test-ansible-syntax:
     runs-on: ubuntu-latest
-    needs: ${{ inputs.wait-for-build && fromJSON('["check-build-status", "wait-for-build"]') || fromJSON('[]') }}
-    if: ${{ !inputs.wait-for-build || always() && (needs.check-build-status.outputs.build-running == 'false' || needs.wait-for-build.result == 'success') }}
+    needs: ${{ fromJSON('["check-build-status", "wait-for-build"]') if inputs.wait-for-build else fromJSON('[]') }}
+    if: ${{ !inputs.wait-for-build || needs.check-build-status.outputs.build-running == 'false' || needs.wait-for-build.result == 'success' }}
     container:
       image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/ansible-test:latest
     steps:
