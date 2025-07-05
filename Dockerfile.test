@@ -4,10 +4,14 @@ FROM python:3.13-slim
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    PATH="/usr/local/bin:$PATH"
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    ANSIBLE_FORCE_COLOR=1
 
-# Install only essential Python dependencies
-RUN pip install --no-cache-dir ansible ansible-lint
+
+RUN pip install --no-cache-dir pipx && \
+    pipx install ansible && \
+    pipx install ansible-lint
 
 # Set working directory
 WORKDIR /workspace
