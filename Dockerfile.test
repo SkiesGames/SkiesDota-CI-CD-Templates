@@ -7,13 +7,9 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     ANSIBLE_FORCE_COLOR=1 \
-    PATH="/usr/local/bin:${PATH}"
 
 
 RUN pip install --no-cache-dir ansible ansible-lint
 
 # Set working directory
 WORKDIR /workspace
-
-# Default command
-CMD ["/bin/bash"] 

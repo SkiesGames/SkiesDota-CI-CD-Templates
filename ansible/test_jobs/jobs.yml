@@ -9,13 +9,13 @@ test_ansible_syntax:
     - |
       for role in ansible/roles/*/; do
         echo "CHECKING ROLE: $role"
-        ansible-lint "$role" --nocolor
+        python -m ansible-lint "$role" --nocolor
       done
     # Check all playbooks with ansible-lint
     - |
       for playbook in ansible/playbooks/*.yml; do
         echo "CHECKING PLAYBOOK: $playbook"
-        ansible-lint "$playbook" --nocolor
+        python -m ansible-lint "$playbook" --nocolor
       done
   rules:
     - changes:
@@ -38,7 +38,7 @@ test_playbooks:
     - |
       for playbook in ansible/playbooks/*.yml; do
         echo "CHECKING PLAYBOOK: $playbook"
-        ANSIBLE_CONFIG=ansible/ansible.cfg ansible-playbook "$playbook" --check --diff -i localhost
+        python -m ansible-playbook "$playbook" --check --diff -i localhost
       done
   rules:
     - changes:
