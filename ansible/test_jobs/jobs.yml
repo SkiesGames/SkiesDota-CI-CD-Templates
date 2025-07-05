@@ -51,8 +51,6 @@ test_ansible_syntax_auto:
         - ansible/roles/**/*
       when: always
       needs: []
-    - when: never
-      needs: []
 
 test_playbooks_auto:
   extends: .base_test_role_playbook
@@ -64,5 +62,3 @@ test_playbooks_auto:
       when: always
       needs:
         - test_ansible_syntax_auto
-    - when: never
-      needs: []
