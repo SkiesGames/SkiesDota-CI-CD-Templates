@@ -18,4 +18,5 @@ jobs:
     uses: ./.github/workflows/reusable-test-ansible.yml
     with:
       wait-for-build: true
-      build-workflow-name: 'Build Docker Images' 
+      build-workflow-name: 'Build Docker Images'
+      repo-lowercase: skiesgames/skiesdotagitlab-ci-templates 
