@@ -6,12 +6,11 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    ANSIBLE_FORCE_COLOR=1
+    ANSIBLE_FORCE_COLOR=1 \
+    PATH="/usr/local/bin:${PATH}"
 
 
-RUN pip install --no-cache-dir pipx && \
-    pipx install ansible && \
-    pipx install ansible-lint
+RUN pip install --no-cache-dir ansible ansible-lint
 
 # Set working directory
 WORKDIR /workspace
