@@ -11,15 +11,15 @@
 #
 # 
 # 
-# Include external job definitions
+#
 include:
   # Common Templates
   # Reusable shell anchors and templates for common functionality
   - local: '/common.gitlab-ci.yml'
-  
-  # Docker Image Building Jobs
-  # These jobs build the base Ansible runner image used by all other jobs
+
+  # Local Jobs
   - local: '/ansible/images_jobs/jobs.yml'
+  - local: '/ansible/test_jobs/jobs.yml'
 
 stages:
   - build     # Build Docker images (independent)
