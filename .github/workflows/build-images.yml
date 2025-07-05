@@ -7,6 +7,10 @@ on:
       - 'Dockerfile.test'
   workflow_dispatch:
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   build-base-ansible:
     uses: ./.github/workflows/reusable-build-images.yml
