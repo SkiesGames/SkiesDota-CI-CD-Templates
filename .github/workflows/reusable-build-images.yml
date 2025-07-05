@@ -36,11 +36,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set lowercase repository name
+        id: repo-name
+        run: echo "repo-name=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository }}/${{ inputs.image-name }}
+          images: ${{ env.REGISTRY }}/${{ steps.repo-name.outputs.repo-name }}/${{ inputs.image-name }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
