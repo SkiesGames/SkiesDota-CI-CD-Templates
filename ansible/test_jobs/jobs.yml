@@ -28,19 +28,21 @@ test_ansible_syntax_manual:
   before_script:
     - pip install ansible-lint
   script: *script_test_ansible_syntax
-  dependencies: []
   rules:
     - when: manual
+  tags:
+    - manual-testing
 
 test_playbooks_manual:
   extends: .base_test_ansible
   before_script:
     - pip install ansible
   script: *script_test_playbooks
-  dependencies: []
   rules:
-    - when: manual
-  
+    - when: manual  
+  tags:
+    - manual-testing
+
 test_ansible_syntax_auto:
   extends: .base_test_ansible
   before_script:
