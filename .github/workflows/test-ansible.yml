@@ -82,7 +82,7 @@ jobs:
       - name: Try to pull custom image
         id: pull-image
         run: |
-          if docker pull ghcr.io/skiesgames/skiesdotagitlab-ci-templates/ansible-test:latest; then
+          if docker pull ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-test:latest; then
             echo "custom-image-available=true" >> $GITHUB_OUTPUT
             echo "Successfully pulled custom image"
           else
@@ -93,7 +93,7 @@ jobs:
       - name: Test Ansible syntax for roles (Custom Image)
         if: steps.pull-image.outputs.custom-image-available == 'true'
         run: |
-          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ghcr.io/skiesgames/skiesdotagitlab-ci-templates/ansible-test:latest bash -c "
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-test:latest bash -c "
             for role in ansible/roles/*/; do
               echo \"CHECKING ROLE: \$role\"
               python -m ansiblelint \"\$role\" --nocolor
@@ -114,7 +114,7 @@ jobs:
       - name: Test Ansible syntax for playbooks (Custom Image)
         if: steps.pull-image.outputs.custom-image-available == 'true'
         run: |
-          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ghcr.io/skiesgames/skiesdotagitlab-ci-templates/ansible-test:latest bash -c "
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-test:latest bash -c "
             for playbook in ansible/playbooks/*.yml; do
               echo \"CHECKING PLAYBOOK: \$playbook\"
               python -m ansiblelint \"\$playbook\" --nocolor
@@ -153,7 +153,7 @@ jobs:
       - name: Try to pull custom image
         id: pull-image
         run: |
-          if docker pull ghcr.io/skiesgames/skiesdotagitlab-ci-templates/ansible-test:latest; then
+          if docker pull ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-test:latest; then
             echo "custom-image-available=true" >> $GITHUB_OUTPUT
             echo "Successfully pulled custom image"
           else
@@ -164,7 +164,7 @@ jobs:
       - name: Test playbooks with dry-run (Custom Image)
         if: steps.pull-image.outputs.custom-image-available == 'true'
         run: |
-          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ghcr.io/skiesgames/skiesdotagitlab-ci-templates/ansible-test:latest bash -c "
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-test:latest bash -c "
             for playbook in ansible/playbooks/*.yml; do
               echo \"CHECKING PLAYBOOK: \$playbook\"
               ansible-playbook \"\$playbook\" --check --diff -i localhost,
