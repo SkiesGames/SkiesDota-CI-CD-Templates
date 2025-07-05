@@ -17,6 +17,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  CONTAINER_IMAGE: ghcr.io/${{ github.repository }}/ansible-test:latest
 
 jobs:
   check-build-status:
@@ -74,7 +75,7 @@ jobs:
     needs: [check-build-status, wait-for-build]
     if: ${{ !inputs.wait-for-build || needs.check-build-status.outputs.build-running == 'false' || needs.wait-for-build.result == 'success' }}
     container:
-      image: ghcr.io/${{ github.repository | lower }}/ansible-test:latest
+      image: ${{ env.CONTAINER_IMAGE }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -98,7 +99,7 @@ jobs:
     needs: [test-ansible-syntax]
     if: ${{ always() }}
     container:
-      image: ghcr.io/${{ github.repository | lower }}/ansible-test:latest
+      image: ${{ env.CONTAINER_IMAGE }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

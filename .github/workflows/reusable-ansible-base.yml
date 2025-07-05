@@ -16,12 +16,13 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  CONTAINER_IMAGE: ${{ env.REGISTRY }}/${{ github.repository }}/ansible-base:latest
 
 jobs:
   ansible-execution:
     runs-on: ubuntu-latest
     container:
-      image: ${{ env.REGISTRY }}/${{ github.repository | lower }}/ansible-base:latest
+      image: ${{ env.CONTAINER_IMAGE }}
     env:
       ANSIBLE_HOSTS: ${{ secrets.ANSIBLE_HOSTS }}
       ANSIBLE_USER: ${{ secrets.ANSIBLE_USER }}
