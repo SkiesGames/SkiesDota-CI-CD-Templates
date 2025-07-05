@@ -14,3 +14,6 @@ RUN pip install --no-cache-dir ansible ansible-lint
 
 # Set working directory
 WORKDIR /workspace
+
+# Default command
+CMD ["/bin/bash"] 
