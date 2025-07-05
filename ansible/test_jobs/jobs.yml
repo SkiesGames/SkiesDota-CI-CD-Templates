@@ -19,10 +19,10 @@ test_ansible_syntax:
       done
   rules:
     - changes:
-        - Dockerfile.test
+        - Dockerfile.ansible-lint
       when: always
       needs:
-        - build_test_image
+        - build_ansible_lint_image
     - changes:
         - ansible/playbooks/**/*
         - ansible/roles/**/*
