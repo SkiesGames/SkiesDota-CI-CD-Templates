@@ -2,16 +2,42 @@
   stage: test
   image: $CI_REGISTRY_IMAGE/ansible-test:latest
 
-test_ansible_syntax:
-  extends: .base_test_role_playbook
-  script:
+.script_test_ansible_syntax:
+  script: &script_test_ansible_syntax
     - |
       for role in ansible/roles/*/; do
         echo "CHECKING ROLE: $role"
-        python -m ansiblelint "$role" --nocolor
+        python -m ansible-lint "$role" --nocolor
       done
     - |
       for playbook in ansible/playbooks/*.yml; do
+        echo "CHECKING PLAYBOOK: $playbook"
+        python -m ansiblelint "$playbook" --nocolor
+      done
+
+.script_test_playbooks:
+  script: &script_test_playbooks
+    - |
+      for playbook in ansible/playbooks/*.yml; do
+        echo "CHECKING PLAYBOOK: $playbook"
+        python -m ansible-playbook "$playbook" --check --diff -i localhost
+      done
+
+test_ansible_syntax_manual:
+  extends: .base_test_role_playbook
+  script: *script_test_ansible_syntax
+  rules:
+    - when: manual
+
+test_playbooks_manual:
+  extends: .base_test_role_playbook
+  script: *script_test_playbooks
+  rules:
+    - when: manual
+  
+test_ansible_syntax_auto:
+  extends: .base_test_role_playbook
+  script: *script_test_ansible_syntax
   rules:
     - changes:
         - Dockerfile.test
@@ -23,17 +49,10 @@ test_ansible_syntax:
         - ansible/roles/**/*
       when: always
       needs: []
-    - when: manual
-      needs: []
 
-test_playbooks:
+test_playbooks_auto:
   extends: .base_test_role_playbook
-  script:
-    - |
-      for playbook in ansible/playbooks/*.yml; do
-        echo "CHECKING PLAYBOOK: $playbook"
-        python -m ansible-playbook "$playbook" --check --diff -i localhost
-      done
+  script: *script_test_playbooks
   rules:
     - changes:
         - ansible/playbooks/**/*
@@ -41,5 +60,3 @@ test_playbooks:
       when: always
       needs:
         - test_ansible_syntax
-    - when: manual
-      needs: []
