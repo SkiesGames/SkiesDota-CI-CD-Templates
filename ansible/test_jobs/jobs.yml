@@ -23,8 +23,6 @@
         python -m ansible-playbook "$playbook" --check --diff -i localhost
       done
 
-# Manual test jobs (independent)
-
 test_ansible_syntax_manual:
   extends: .base_test_role_playbook
   script: .script_test_ansible_syntax
@@ -39,7 +37,6 @@ test_playbooks_manual:
     - when: manual
       allow_failure: true
 
-# Automatic test jobs (with dependencies)
 test_ansible_syntax:
   extends: .base_test_role_playbook
   script: .script_test_ansible_syntax
