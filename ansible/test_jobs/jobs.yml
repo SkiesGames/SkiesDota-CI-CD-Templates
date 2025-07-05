@@ -59,4 +59,4 @@ test_playbooks_auto:
         - ansible/roles/**/*
       when: always
       needs:
-        - test_ansible_syntax
+        - test_ansible_syntax_auto
