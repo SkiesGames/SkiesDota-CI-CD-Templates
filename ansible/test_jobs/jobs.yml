@@ -2,21 +2,47 @@
   stage: test
   image: $CI_REGISTRY_IMAGE/ansible-test:latest
 
-test_ansible_syntax:
-  extends: .base_test_role_playbook
+.script_test_ansible_syntax:
   script:
-    # Check all roles with ansible-lint
     - |
       for role in ansible/roles/*/; do
         echo "CHECKING ROLE: $role"
         python -m ansible-lint "$role" --nocolor
       done
-    # Check all playbooks with ansible-lint
     - |
       for playbook in ansible/playbooks/*.yml; do
         echo "CHECKING PLAYBOOK: $playbook"
         python -m ansiblelint "$playbook" --nocolor
       done
+
+.script_test_playbooks:
+  script:
+    - |
+      for playbook in ansible/playbooks/*.yml; do
+        echo "CHECKING PLAYBOOK: $playbook"
+        python -m ansible-playbook "$playbook" --check --diff -i localhost
+      done
+
+# Manual test jobs (independent)
+
+test_ansible_syntax_manual:
+  extends: .base_test_role_playbook
+  script: .script_test_ansible_syntax
+  rules:
+    - when: manual
+      allow_failure: true
+
+test_playbooks_manual:
+  extends: .base_test_role_playbook
+  script: .script_test_playbooks
+  rules:
+    - when: manual
+      allow_failure: true
+
+# Automatic test jobs (with dependencies)
+test_ansible_syntax:
+  extends: .base_test_role_playbook
+  script: .script_test_ansible_syntax
   rules:
     - changes:
         - Dockerfile.test
@@ -28,18 +54,10 @@ test_ansible_syntax:
         - ansible/roles/**/*
       when: always
       needs: []
-    - when: manual
-      needs: []
 
 test_playbooks:
   extends: .base_test_role_playbook
-  script:
-    # Check all playbooks with --check --diff
-    - |
-      for playbook in ansible/playbooks/*.yml; do
-        echo "CHECKING PLAYBOOK: $playbook"
-        python -m ansible-playbook "$playbook" --check --diff -i localhost
-      done
+  script: .script_test_playbooks
   rules:
     - changes:
         - ansible/playbooks/**/*
@@ -47,5 +65,3 @@ test_playbooks:
       when: always
       needs:
         - test_ansible_syntax
-    - when: manual
-      needs: []
