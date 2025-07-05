@@ -12,6 +12,8 @@ on:
 
 permissions:
   actions: read
+  contents: read
+  packages: read
 
 jobs:
   check-dockerfile-changes:
@@ -63,55 +65,119 @@ jobs:
     runs-on: ubuntu-latest
     needs: [check-dockerfile-changes, wait-for-build]
     if: always() && (needs.check-dockerfile-changes.outputs.dockerfile-changed == 'false' || needs.wait-for-build.result == 'success' || needs.wait-for-build.result == 'skipped')
-    strategy:
-      matrix:
-        container: [custom, fallback]
-    container:
-      image: ${{ matrix.container == 'custom' && 'ghcr.io/skiesgames/skiesdotagitlab-ci-templates/ansible-test:latest' || 'python:3.13-slim' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Ansible (fallback only)
-        if: matrix.container == 'fallback'
-        run: |
-          pip install --no-cache-dir ansible-lint
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Test Ansible syntax for roles
-        run: |
-          for role in ansible/roles/*/; do
-            echo "CHECKING ROLE: $role"
-            python -m ansiblelint "$role" --nocolor
-          done
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Test Ansible syntax for playbooks
+      - name: Try to pull custom image
+        id: pull-image
         run: |
-          for playbook in ansible/playbooks/*.yml; do
-            echo "CHECKING PLAYBOOK: $playbook"
-            python -m ansiblelint "$playbook" --nocolor
-          done
+          if docker pull ghcr.io/skiesgames/skiesdotagitlab-ci-templates/ansible-test:latest; then
+            echo "custom-image-available=true" >> $GITHUB_OUTPUT
+            echo "Successfully pulled custom image"
+          else
+            echo "custom-image-available=false" >> $GITHUB_OUTPUT
+            echo "Failed to pull custom image, will use fallback"
+          fi
+
+      - name: Test Ansible syntax for roles (Custom Image)
+        if: steps.pull-image.outputs.custom-image-available == 'true'
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ghcr.io/skiesgames/skiesdotagitlab-ci-templates/ansible-test:latest bash -c "
+            for role in ansible/roles/*/; do
+              echo \"CHECKING ROLE: \$role\"
+              python -m ansiblelint \"\$role\" --nocolor
+            done
+          "
+
+      - name: Test Ansible syntax for roles (Fallback)
+        if: steps.pull-image.outputs.custom-image-available == 'false'
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace python:3.13-slim bash -c "
+            pip install --no-cache-dir ansible ansible-lint
+            for role in ansible/roles/*/; do
+              echo \"CHECKING ROLE: \$role\"
+              python -m ansiblelint \"\$role\" --nocolor
+            done
+          "
+
+      - name: Test Ansible syntax for playbooks (Custom Image)
+        if: steps.pull-image.outputs.custom-image-available == 'true'
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ghcr.io/skiesgames/skiesdotagitlab-ci-templates/ansible-test:latest bash -c "
+            for playbook in ansible/playbooks/*.yml; do
+              echo \"CHECKING PLAYBOOK: \$playbook\"
+              python -m ansiblelint \"\$playbook\" --nocolor
+            done
+          "
+
+      - name: Test Ansible syntax for playbooks (Fallback)
+        if: steps.pull-image.outputs.custom-image-available == 'false'
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace python:3.13-slim bash -c "
+            pip install --no-cache-dir ansible ansible-lint
+            for playbook in ansible/playbooks/*.yml; do
+              echo \"CHECKING PLAYBOOK: \$playbook\"
+              python -m ansiblelint \"\$playbook\" --nocolor
+            done
+          "
 
   test-playbooks:
     runs-on: ubuntu-latest
     needs: [test-ansible-syntax]
     if: always()
-    strategy:
-      matrix:
-        container: [custom, fallback]
-    container:
-      image: ${{ matrix.container == 'custom' && 'ghcr.io/skiesgames/skiesdotagitlab-ci-templates/ansible-test:latest' || 'python:3.13-slim' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Ansible (fallback only)
-        if: matrix.container == 'fallback'
-        run: |
-          pip install --no-cache-dir ansible
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Test playbooks with dry-run
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Try to pull custom image
+        id: pull-image
         run: |
-          for playbook in ansible/playbooks/*.yml; do
-            echo "CHECKING PLAYBOOK: $playbook"
-            ansible-playbook "$playbook" --check --diff -i localhost,
-          done 
+          if docker pull ghcr.io/skiesgames/skiesdotagitlab-ci-templates/ansible-test:latest; then
+            echo "custom-image-available=true" >> $GITHUB_OUTPUT
+            echo "Successfully pulled custom image"
+          else
+            echo "custom-image-available=false" >> $GITHUB_OUTPUT
+            echo "Failed to pull custom image, will use fallback"
+          fi
+
+      - name: Test playbooks with dry-run (Custom Image)
+        if: steps.pull-image.outputs.custom-image-available == 'true'
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ghcr.io/skiesgames/skiesdotagitlab-ci-templates/ansible-test:latest bash -c "
+            for playbook in ansible/playbooks/*.yml; do
+              echo \"CHECKING PLAYBOOK: \$playbook\"
+              ansible-playbook \"\$playbook\" --check --diff -i localhost,
+            done
+          "
+
+      - name: Test playbooks with dry-run (Fallback)
+        if: steps.pull-image.outputs.custom-image-available == 'false'
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace python:3.13-slim bash -c "
+            pip install --no-cache-dir ansible ansible-lint
+            for playbook in ansible/playbooks/*.yml; do
+              echo \"CHECKING PLAYBOOK: \$playbook\"
+              ansible-playbook \"\$playbook\" --check --diff -i localhost,
+            done
+          " 
