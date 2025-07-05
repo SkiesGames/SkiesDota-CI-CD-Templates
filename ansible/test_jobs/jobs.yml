@@ -1,6 +1,6 @@
 .base_test_role_playbook: 
   stage: test
-  image: $CI_REGISTRY_IMAGE/ansible-lint:latest
+  image: $CI_REGISTRY_IMAGE/ansible-test:latest
 
 test_ansible_syntax:
   extends: .base_test_role_playbook
@@ -19,10 +19,10 @@ test_ansible_syntax:
       done
   rules:
     - changes:
-        - Dockerfile.ansible-lint
+        - Dockerfile.test
       when: always
       needs:
-        - build_ansible_lint_image
+        - build_test_ansible_image
     - changes:
         - ansible/playbooks/**/*
         - ansible/roles/**/*

@@ -22,7 +22,7 @@ include:
   - project: 'SkiesGames/SkiesDotaGitlab-CI-Templates'
     file: '/common.gitlab-ci.yml'
   - project: 'SkiesGames/SkiesDotaGitlab-CI-Templates'
-    file: '/ansible/jobs.yml'
+    file: '/ansible/jobs/jobs.yml'
   - project: 'SkiesGames/SkiesDotaGitlab-CI-Templates'
     file: '/ansible/jobs/ssh_key_setup.yml'
 ```
@@ -36,7 +36,7 @@ include:
 
 ### Image Building Jobs
 - `build_base_ansible_image`: Builds the base Ansible runner image
-- `build_ansible_lint_image`: Builds the Ansible lint testing image
+- `build_test_ansible_image`: Builds the Ansible testing image
 
 ### Test Jobs
 - `test_ansible_syntax`: Validates Ansible roles and playbooks using ansible-lint
@@ -91,7 +91,7 @@ After successful setup, `ANSIBLE_HOSTS_PASSWORD` can be removed as subsequent ru
 │   ├── roles/          # Reusable Ansible roles
 │   └── templates/      # Jinja2 templates
 ├── Dockerfile          # Base Ansible image
-├── Dockerfile.ansible-lint  # Ansible lint testing image
+├── Dockerfile.test     # Ansible testing image
 ├── common.gitlab-ci.yml # Shared CI/CD templates and anchors
 └── .gitlab-ci.yml      # Main CI/CD pipeline
 ```
@@ -122,6 +122,20 @@ The repository includes comprehensive testing capabilities:
 - **Dry-run validation**: Uses `--check --diff` to simulate playbook execution
 - **Dependency chain**: Runs after syntax validation
 - **Safety checks**: Prevents accidental changes during testing
+
+## Docker Images
+
+### Base Ansible Image (`Dockerfile`)
+- **Base**: Python 3.13 slim
+- **Features**: SSH client, Docker CLI, rsync, curl, jq
+- **Purpose**: Main Ansible runner for deployment and automation
+- **Registry**: `$CI_REGISTRY_IMAGE/ansible:latest`
+
+### Test Ansible Image (`Dockerfile.test`)
+- **Base**: Python 3.13 slim
+- **Features**: ansible, ansible-lint
+- **Purpose**: Code quality validation and testing
+- **Registry**: `$CI_REGISTRY_IMAGE/ansible-test:latest`
 
 ## Contributing
 

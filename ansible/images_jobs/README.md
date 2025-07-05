@@ -39,23 +39,38 @@ Builds the base Ansible runner image used for all Ansible operations.
 - Extends: `.base_image`
 - Image: `$CI_REGISTRY_IMAGE/ansible:latest`
 - Dockerfile: `/Dockerfile`
-- Cache: `docker-base-image`
+- Cache: `base-image`
+
+### build_test_ansible_image
+Builds the Ansible testing image used for code quality validation.
+
+**Features:**
+- Python 3.13 slim base image
+- Ansible and ansible-lint installation
+- Lightweight testing environment
+
+**Configuration:**
+- Extends: `.base_image`
+- Image: `$CI_REGISTRY_IMAGE/ansible-test:latest`
+- Dockerfile: `/Dockerfile.test`
+- Cache: `test-image`
 
 ## Image Dependencies
 
-The image requires:
+The images require:
 - `$CI_REGISTRY_USER`: GitLab registry username
 - `$CI_REGISTRY_PASSWORD`: GitLab registry password
 - `$CI_REGISTRY`: GitLab registry URL
 - `$CI_REGISTRY_IMAGE`: Target image path
 
-## Dockerfile Location
+## Dockerfile Locations
 
 - Base image: `/Dockerfile`
+- Test image: `/Dockerfile.test`
 
 ## Usage in Other Projects
 
-This image is automatically used when including the template jobs:
+These images are automatically used when including the template jobs:
 
 ```yaml
 include:

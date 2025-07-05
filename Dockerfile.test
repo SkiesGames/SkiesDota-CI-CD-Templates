@@ -5,7 +5,7 @@ FROM python:3.13-slim
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1
 
-# Install only essential dependencies
+# Install only essential Python dependencies
 RUN pip install --no-cache-dir ansible ansible-lint
 
 # Set working directory

@@ -11,12 +11,12 @@ All testing jobs are defined in `jobs.yml` and follow a consistent approach usin
 The `.base_test_role_playbook` template provides common functionality for all testing jobs:
 
 **Features:**
-- Uses the Ansible lint testing image
+- Uses the Ansible testing image
 - Runs in the test stage
 - Provides consistent environment for all test jobs
 
 **Image:**
-- `$CI_REGISTRY_IMAGE/ansible-lint:latest` - Built from `Dockerfile.ansible-lint`
+- `$CI_REGISTRY_IMAGE/ansible-test:latest` - Built from `Dockerfile.test`
 
 ## Available Jobs
 
@@ -30,7 +30,7 @@ Validates all Ansible roles and playbooks using ansible-lint for code quality an
 - Provides detailed feedback on code quality issues
 
 **Execution Rules:**
-- **Automatic on image changes**: When `Dockerfile.ansible-lint` changes, runs after `build_ansible_lint_image`
+- **Automatic on image changes**: When `Dockerfile.test` changes, runs after `build_test_ansible_image`
 - **Automatic on code changes**: When playbooks or roles change
 - **Manual execution**: Available for on-demand testing
 
@@ -67,7 +67,7 @@ ok: [localhost]
 
 ## Test Image
 
-The testing jobs use a dedicated Docker image built from `Dockerfile.ansible-lint`:
+The testing jobs use a dedicated Docker image built from `Dockerfile.test`:
 
 **Base Image:** `python:3.13-slim`
 **Installed Packages:**
@@ -75,8 +75,8 @@ The testing jobs use a dedicated Docker image built from `Dockerfile.ansible-lin
 - `ansible-lint`: Code quality validation tool
 
 **Build Process:**
-- Built automatically when `Dockerfile.ansible-lint` changes
-- Stored in GitLab registry as `$CI_REGISTRY_IMAGE/ansible-lint:latest`
+- Built automatically when `Dockerfile.test` changes
+- Stored in GitLab registry as `$CI_REGISTRY_IMAGE/ansible-test:latest`
 
 ## Usage in Other Projects
 
@@ -125,7 +125,7 @@ The jobs will automatically:
 - Review task dependencies and conditions
 
 **Image build failures:**
-- Ensure Dockerfile.ansible-lint is valid
+- Ensure Dockerfile.test is valid
 - Check GitLab registry permissions
 - Verify CI/CD variable configuration
 
