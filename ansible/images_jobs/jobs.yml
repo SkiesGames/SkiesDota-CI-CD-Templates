@@ -20,10 +20,6 @@
       when: always
     - when: manual
   needs: []
-  cache:
-    key: "docker-${CACHE_KEY}"
-    paths:
-      - .docker-cache/
 
 build_base_ansible_image:
   extends: .base_image
