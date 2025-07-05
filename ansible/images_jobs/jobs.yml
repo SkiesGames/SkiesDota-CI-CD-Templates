@@ -27,10 +27,3 @@ build_base_ansible_image:
     IMAGE_NAME: ansible
     DOCKERFILE_PATH: Dockerfile
     CACHE_KEY: base-image
-
-build_test_ansible_image:
-  extends: .base_image
-  variables:
-    IMAGE_NAME: ansible-test
-    DOCKERFILE_PATH: Dockerfile.test
-    CACHE_KEY: test-image

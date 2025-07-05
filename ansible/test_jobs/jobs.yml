@@ -1,3 +1,7 @@
+.base_test_ansible:
+  stage: test
+  image: python:3.13-slim
+
 .script_test_ansible_syntax:
   script: &script_test_ansible_syntax
     - |
@@ -20,24 +24,25 @@
       done
 
 test_ansible_syntax_manual:
-  stage: test
-  image: $CI_REGISTRY_IMAGE/ansible-test:latest
+  extends: .base_test_ansible
+  before_script:
+    - pip install ansible ansible-lint
   script: *script_test_ansible_syntax
   rules:
     - when: manual
-      allow_failure: true
 
 test_playbooks_manual:
-  stage: test
-  image: $CI_REGISTRY_IMAGE/ansible-test:latest
+  extends: .base_test_ansible
+  before_script:
+    - pip install ansible
   script: *script_test_playbooks
   rules:
     - when: manual
-      allow_failure: true
   
 test_ansible_syntax_auto:
-  stage: test
-  image: $CI_REGISTRY_IMAGE/ansible-test:latest
+  extends: .base_test_ansible
+  before_script:
+    - pip install ansible ansible-lint
   script: *script_test_ansible_syntax
   rules:
     - changes:
@@ -52,8 +57,9 @@ test_ansible_syntax_auto:
       needs: []
 
 test_playbooks_auto:
-  stage: test
-  image: $CI_REGISTRY_IMAGE/ansible-test:latest
+  extends: .base_test_ansible
+  before_script:
+    - pip install ansible
   script: *script_test_playbooks
   rules:
     - changes:
