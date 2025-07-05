@@ -10,6 +10,9 @@ on:
       - 'ansible/**/*'
   workflow_dispatch:
 
+permissions:
+  actions: read
+
 jobs:
   test-ansible:
     uses: ./.github/workflows/reusable-test-ansible.yml
