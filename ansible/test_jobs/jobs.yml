@@ -1,0 +1,51 @@
+.base_test_role_playbook: 
+  stage: test
+  image: $CI_REGISTRY_IMAGE/ansible-lint:latest
+
+test_ansible_syntax:
+  extends: .base_test_role_playbook
+  script:
+    # Check all roles with ansible-lint
+    - |
+      for role in ansible/roles/*/; do
+        echo "CHECKING ROLE: $role"
+        ansible-lint "$role" --nocolor
+      done
+    # Check all playbooks with ansible-lint
+    - |
+      for playbook in ansible/playbooks/*.yml; do
+        echo "CHECKING PLAYBOOK: $playbook"
+        ansible-lint "$playbook" --nocolor
+      done
+  rules:
+    - changes:
+        - Dockerfile.test
+      when: always
+      needs:
+        - build_test_image
+    - changes:
+        - ansible/playbooks/**/*
+        - ansible/roles/**/*
+      when: always
+      needs: []
+    - when: manual
+      needs: []
+
+test_playbooks:
+  extends: .base_test_role_playbook
+  script:
+    # Check all playbooks with --check --diff
+    - |
+      for playbook in ansible/playbooks/*.yml; do
+        echo "CHECKING PLAYBOOK: $playbook"
+        ANSIBLE_CONFIG=ansible/ansible.cfg ansible-playbook "$playbook" --check --diff -i localhost
+      done
+  rules:
+    - changes:
+        - ansible/playbooks/**/*
+        - ansible/roles/**/*
+      when: always
+      needs:
+        - test_ansible_syntax
+    - when: manual
+      needs: []

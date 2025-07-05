@@ -1,0 +1,12 @@
+# Use Python 3.13 slim image as base
+FROM python:3.13-slim
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+# Install only essential dependencies
+RUN pip install --no-cache-dir ansible ansible-lint
+
+# Set working directory
+WORKDIR /workspace

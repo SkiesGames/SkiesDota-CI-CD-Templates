@@ -30,5 +30,11 @@ build_base_ansible_image:
   variables:
     IMAGE_NAME: ansible
     DOCKERFILE_PATH: Dockerfile
-    DOCKERFILE_FLAG: ""
     CACHE_KEY: base-image
+
+build_ansible_lint_image:
+  extends: .base_image
+  variables:
+    IMAGE_NAME: ansible-lint
+    DOCKERFILE_PATH: Dockerfile.ansible-lint
+    CACHE_KEY: ansible-lint-image
