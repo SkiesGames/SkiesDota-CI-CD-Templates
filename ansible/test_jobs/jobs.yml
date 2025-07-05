@@ -30,8 +30,7 @@ test_ansible_syntax_manual:
   script: *script_test_ansible_syntax
   rules:
     - when: manual
-  tags:
-    - manual-testing
+      needs: []
 
 test_playbooks_manual:
   extends: .base_test_ansible
@@ -40,8 +39,7 @@ test_playbooks_manual:
   script: *script_test_playbooks
   rules:
     - when: manual  
-  tags:
-    - manual-testing
+      needs: []
 
 test_ansible_syntax_auto:
   extends: .base_test_ansible
