@@ -2,7 +2,7 @@
   stage: test
   image: $CI_REGISTRY_IMAGE/ansible-test:latest
 
-.script_test_ansible_syntax:
+.script_test_ansible_syntax: &script_test_ansible_syntax
   script:
     - |
       for role in ansible/roles/*/; do
@@ -15,7 +15,7 @@
         python -m ansiblelint "$playbook" --nocolor
       done
 
-.script_test_playbooks:
+.script_test_playbooks: &script_test_playbooks
   script:
     - |
       for playbook in ansible/playbooks/*.yml; do
@@ -25,21 +25,21 @@
 
 test_ansible_syntax_manual:
   extends: .base_test_role_playbook
-  script: .script_test_ansible_syntax
+  script: *script_test_ansible_syntax
   rules:
     - when: manual
       allow_failure: true
 
 test_playbooks_manual:
   extends: .base_test_role_playbook
-  script: .script_test_playbooks
+  script: *script_test_playbooks
   rules:
     - when: manual
       allow_failure: true
 
 test_ansible_syntax:
   extends: .base_test_role_playbook
-  script: .script_test_ansible_syntax
+  script: *script_test_ansible_syntax
   rules:
     - changes:
         - Dockerfile.test
@@ -54,7 +54,7 @@ test_ansible_syntax:
 
 test_playbooks:
   extends: .base_test_role_playbook
-  script: .script_test_playbooks
+  script: *script_test_playbooks
   rules:
     - changes:
         - ansible/playbooks/**/*
