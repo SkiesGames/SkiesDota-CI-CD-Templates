@@ -22,18 +22,6 @@
         echo "CHECKING PLAYBOOK: $playbook"
         python -m ansible-playbook "$playbook" --check --diff -i localhost
       done
-
-test_ansible_syntax_manual:
-  extends: .base_test_role_playbook
-  script: *script_test_ansible_syntax
-  rules:
-    - when: manual
-
-test_playbooks_manual:
-  extends: .base_test_role_playbook
-  script: *script_test_playbooks
-  rules:
-    - when: manual
   
 test_ansible_syntax:
   extends: .base_test_role_playbook
@@ -49,6 +37,8 @@ test_ansible_syntax:
         - ansible/roles/**/*
       when: always
       needs: []
+    - when: manual
+      needs: []
 
 test_playbooks:
   extends: .base_test_role_playbook
@@ -60,3 +50,5 @@ test_playbooks:
       when: always
       needs:
         - test_ansible_syntax
+    - when: manual
+      needs: []
