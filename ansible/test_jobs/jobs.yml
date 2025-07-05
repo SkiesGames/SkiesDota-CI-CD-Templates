@@ -1,28 +1,10 @@
 .base_test_role_playbook: 
   stage: test
   image: $CI_REGISTRY_IMAGE/ansible-test:latest
-  before_script:
-    - echo "=== Environment Information ==="
-    - python --version
-    - pip list | grep -E "(ansible|ansible-lint)"
-    - which ansible || echo "ansible not found in PATH"
-    - which ansible-lint || echo "ansible-lint not found in PATH"
-    - echo "=== Current Directory ==="
-    - pwd
-    - ls -la
 
 test_ansible_syntax:
   extends: .base_test_role_playbook
   script:
-    # Verify tools are available
-    - |
-      if ! command -v ansible-lint &> /dev/null; then
-        echo "ERROR: ansible-lint is not installed or not in PATH"
-        echo "Available commands:"
-        which -a ansible-lint || echo "ansible-lint not found"
-        echo "PATH: $PATH"
-        exit 1
-      fi
     # Check all roles with ansible-lint
     - |
       for role in ansible/roles/*/; do
@@ -52,12 +34,6 @@ test_ansible_syntax:
 test_playbooks:
   extends: .base_test_role_playbook
   script:
-    # Verify ansible is available
-    - |
-      if ! command -v ansible-playbook &> /dev/null; then
-        echo "ERROR: ansible-playbook is not installed or not in PATH"
-        exit 1
-      fi
     # Check all playbooks with --check --diff
     - |
       for playbook in ansible/playbooks/*.yml; do

@@ -6,18 +6,8 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PATH="/usr/local/bin:$PATH"
 
-# Install system dependencies and Python packages
-RUN apt-get update && apt-get install -y \
-    git \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Python dependencies with verification
-RUN pip install --no-cache-dir ansible ansible-lint && \
-    ansible --version && \
-    ansible-lint --version
+# Install only essential Python dependencies
+RUN pip install --no-cache-dir ansible ansible-lint
 
 # Set working directory
 WORKDIR /workspace
-
-# Verify installations
-RUN which ansible && which ansible-lint
