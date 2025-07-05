@@ -8,7 +8,7 @@ This template repository contains:
 
 - **Docker Images**: Pre-built Ansible runner images for CI/CD pipelines
 - **GitHub Actions Workflows**: Reusable workflow templates for deployment and automation
-- **Test Workflows**: Ansible code quality validation and syntax checking
+- **Test Workflows**: Ansible code quality validation and syntax checking with smart dependency management
 - **Ansible Playbooks**: Infrastructure automation playbooks
 - **Ansible Roles**: Modular, reusable Ansible roles for common tasks
 - **Templates**: Jinja2 templates for dynamic configuration generation
@@ -30,7 +30,7 @@ You can reference these workflows in other repositories by copying the workflow 
 
 ### Core Workflows
 - `build-images`: Builds Docker images for Ansible runners and testing
-- `test-ansible`: Validates Ansible code quality and syntax
+- `test-ansible`: Validates Ansible code quality and syntax with conditional build dependencies
 - `deploy`: Infrastructure deployment and automation
 
 ### Manual Operations
@@ -59,16 +59,25 @@ You can reference these workflows in other repositories by copying the workflow 
 
 ### Test Ansible Workflow (`.github/workflows/test-ansible.yml`)
 
-**Purpose**: Validates Ansible code quality and syntax
+**Purpose**: Validates Ansible code quality and syntax with smart dependency management
 
 **Features**:
+- **Conditional Build Dependency**: Automatically waits for build workflow only when necessary
 - Syntax validation for all roles and playbooks using ansible-lint
 - Dry-run testing for all playbooks with `--check --diff`
-- Parallel job execution
+- Parallel job execution when possible
 - Automatic triggering on Ansible code changes
+- Uses reusable workflow for consistency and maintainability
+
+**Smart Dependency Management**:
+- Checks if build workflow is running using GitHub API
+- Waits for build completion only when build is actually running
+- Proceeds immediately if no build workflow is active
+- Reduces unnecessary delays and improves pipeline efficiency
 
 **Triggers**:
 - Push to ansible directory
+- Push to Dockerfile.test
 - Pull requests to ansible directory
 - Manual workflow dispatch
 
@@ -87,6 +96,42 @@ You can reference these workflows in other repositories by copying the workflow 
 **Triggers**:
 - Push to main branch (ansible changes) - only if AUTO_DEPLOY=true
 - Manual workflow dispatch with playbook selection
+
+## Conditional Dependency Management
+
+### How It Works
+
+The test workflow implements intelligent dependency management that optimizes CI/CD pipeline performance:
+
+1. **API Check**: Uses GitHub API to check if build workflow is currently running
+2. **Conditional Wait**: Only waits if build workflow is actually in progress
+3. **Immediate Execution**: Proceeds immediately if no build workflow is running
+4. **Parallel Processing**: Allows tests to run in parallel when possible
+
+### Benefits
+
+- **Efficiency**: Eliminates unnecessary waiting when builds aren't running
+- **Reliability**: Ensures tests use the latest images when builds are active
+- **Performance**: Reduces overall pipeline execution time
+- **Flexibility**: Works with any build workflow configuration
+
+### Example Scenarios
+
+**Scenario 1: Build Running**
+```
+1. Test workflow triggers
+2. API check finds build workflow running
+3. Test workflow waits for build completion
+4. Test workflow proceeds with latest image
+```
+
+**Scenario 2: No Build Running**
+```
+1. Test workflow triggers
+2. API check finds no build workflow running
+3. Test workflow proceeds immediately
+4. Uses existing image from registry
+```
 
 ## Configuration
 
@@ -139,9 +184,10 @@ For first-time SSH key setup:
 ```
 ├── .github/
 │   └── workflows/
-│       ├── build-images.yml      # Docker image building
-│       ├── test-ansible.yml      # Ansible code testing
-│       └── deploy.yml           # Infrastructure deployment
+│       ├── build-images.yml           # Docker image building
+│       ├── test-ansible.yml          # Ansible code testing (main)
+│       ├── reusable-test-ansible.yml # Reusable test workflow
+│       └── deploy.yml                # Infrastructure deployment
 ├── ansible/
 │   ├── images_jobs/     # GitLab CI jobs (legacy)
 │   ├── test_jobs/       # GitLab CI jobs (legacy)
@@ -173,17 +219,24 @@ For first-time SSH key setup:
 
 ## Testing
 
-The repository includes comprehensive testing capabilities:
+The repository includes comprehensive testing capabilities with smart dependency management:
 
 ### Syntax Testing
 - **ansible-lint**: Validates all roles and playbooks for best practices
 - **Automatic triggers**: Runs on changes to playbooks, roles, or test image
 - **Manual execution**: Available for on-demand testing
+- **Conditional dependencies**: Waits for build workflow only when necessary
 
 ### Playbook Testing
 - **Dry-run validation**: Uses `--check --diff` to simulate playbook execution
 - **Dependency chain**: Runs after syntax validation
 - **Safety checks**: Prevents accidental changes during testing
+
+### Smart Dependency Features
+- **API-based detection**: Uses GitHub API to check build workflow status
+- **Conditional waiting**: Only waits when builds are actually running
+- **Parallel execution**: Runs tests immediately when no build dependency exists
+- **Configurable**: Can be adapted for different build workflow names
 
 ## Docker Images
 
@@ -217,6 +270,12 @@ Set `AUTO_DEPLOY` secret to "true" to enable automatic deployment on main branch
 3. Select "ssh-key-setup" option
 4. After successful run, remove `ANSIBLE_HOSTS_PASSWORD` secret
 
+### Testing with Conditional Dependencies
+The test workflow automatically handles build dependencies:
+- **When build is running**: Waits for completion, then runs tests
+- **When build is not running**: Proceeds immediately with existing images
+- **Manual override**: Can be configured to skip build dependency entirely
+
 ## Migration from GitLab CI
 
 This repository has been migrated from GitLab CI/CD to GitHub Actions. See `MIGRATION_GUIDE.md` for detailed migration instructions.
@@ -226,6 +285,13 @@ This repository has been migrated from GitLab CI/CD to GitHub Actions. See `MIGR
 - GitLab Container Registry → GitHub Container Registry
 - GitLab CI/CD variables → GitHub Secrets
 - GitLab API → GitHub API
+- Manual dependency management → Conditional dependency with API checks
+
+### New Features
+- **Smart Dependencies**: Conditional waiting reduces pipeline delays
+- **Reusable Workflows**: Better code organization and maintainability
+- **API Integration**: Real-time workflow status checking
+- **Parallel Execution**: Optimized job scheduling
 
 ## Contributing
 
@@ -241,6 +307,7 @@ This repository has been migrated from GitLab CI/CD to GitHub Actions. See `MIGR
 - Pre-flight validation for manual operations
 - Manual approval for critical operations
 - Encrypted communication with GitHub API
+- Conditional dependency management reduces attack surface
 
 ## Troubleshooting
 
@@ -263,10 +330,31 @@ ssh -i ~/.ssh/ci_id_ed25519 $ANSIBLE_USER@$TARGET_HOST
 - Verify all required secrets are configured
 - Ensure target hosts are accessible
 
+**Conditional Dependency Issues**
+- Check GitHub API rate limits
+- Verify workflow name matches exactly
+- Review API permissions for GITHUB_TOKEN
+- Test API queries manually using `gh api` command
+
 ### Debug Workflows
 - Enable debug logging in workflow files
 - Check workflow run logs in GitHub Actions
 - Use `actions/checkout@v4` with `fetch-depth: 0` for full history
+- Monitor GitHub API rate limits in workflow logs
+- Test conditional dependency logic manually
+
+## Performance Optimizations
+
+### Conditional Dependencies
+- **Efficiency**: Tests run immediately when no build dependency exists
+- **Parallel Processing**: Multiple workflows can run simultaneously
+- **API Optimization**: Minimal API calls for status checking
+- **Caching**: Leverages GitHub Actions caching for faster builds
+
+### Build Optimizations
+- **Layer Caching**: Docker layer caching reduces build times
+- **Multi-platform**: Parallel builds for different architectures
+- **Registry Caching**: GitHub Container Registry optimizations
 
 ## License
 
