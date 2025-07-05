@@ -135,7 +135,7 @@ jobs:
   test-playbooks:
     runs-on: ubuntu-latest
     needs: [test-ansible-syntax]
-    if: always()
+    if: needs.test-ansible-syntax.result == 'success'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

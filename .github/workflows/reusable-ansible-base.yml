@@ -21,7 +21,7 @@ jobs:
   ansible-execution:
     runs-on: ubuntu-latest
     container:
-      image: ${{ env.REGISTRY }}/${{ github.repository }}/ansible-base:latest
+      image: ghcr.io/${{ github.repository }}/ansible-base:latest
     env:
       ANSIBLE_HOSTS: ${{ secrets.ANSIBLE_HOSTS }}
       ANSIBLE_USER: ${{ secrets.ANSIBLE_USER }}
