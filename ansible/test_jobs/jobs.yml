@@ -1,7 +1,3 @@
-.base_test_role_playbook: 
-  stage: test
-  image: $CI_REGISTRY_IMAGE/ansible-test:latest
-
 .script_test_ansible_syntax:
   script: &script_test_ansible_syntax
     - |
@@ -24,21 +20,24 @@
       done
 
 test_ansible_syntax_manual:
-  extends: .base_test_role_playbook
+  stage: test
+  image: $CI_REGISTRY_IMAGE/ansible-test:latest
   script: *script_test_ansible_syntax
   rules:
     - when: manual
-      needs: []
+      allow_failure: true
 
 test_playbooks_manual:
-  extends: .base_test_role_playbook
+  stage: test
+  image: $CI_REGISTRY_IMAGE/ansible-test:latest
   script: *script_test_playbooks
   rules:
     - when: manual
-      needs: []
+      allow_failure: true
   
 test_ansible_syntax_auto:
-  extends: .base_test_role_playbook
+  stage: test
+  image: $CI_REGISTRY_IMAGE/ansible-test:latest
   script: *script_test_ansible_syntax
   rules:
     - changes:
@@ -53,7 +52,8 @@ test_ansible_syntax_auto:
       needs: []
 
 test_playbooks_auto:
-  extends: .base_test_role_playbook
+  stage: test
+  image: $CI_REGISTRY_IMAGE/ansible-test:latest
   script: *script_test_playbooks
   rules:
     - changes:
