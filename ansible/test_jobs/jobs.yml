@@ -46,11 +46,6 @@ test_ansible_syntax_auto:
   script: *script_test_ansible_syntax
   rules:
     - changes:
-        - Dockerfile.test
-      when: always
-      needs:
-        - build_test_ansible_image
-    - changes:
         - ansible/playbooks/**/*
         - ansible/roles/**/*
       when: always
