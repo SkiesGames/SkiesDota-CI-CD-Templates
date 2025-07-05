@@ -5,6 +5,7 @@ on:
     paths:
       - 'Dockerfile'
       - 'Dockerfile.test'
+      - 'Dockerfile.lint'
   workflow_dispatch:
 
 permissions:
@@ -24,4 +25,11 @@ jobs:
     with:
       image-name: ansible-test
       dockerfile-path: ./Dockerfile.test
+    secrets: inherit
+
+  build-lint-ansible:
+    uses: ./.github/workflows/reusable-build-images.yml
+    with:
+      image-name: ansible-lint
+      dockerfile-path: ./Dockerfile.lint
     secrets: inherit 

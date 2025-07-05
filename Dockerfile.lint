@@ -1,0 +1,22 @@
+FROM python:3.13-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    nodejs \
+    npm \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+RUN pip install --no-cache-dir \
+    yamllint \
+    ansible-lint
+
+# Install Prettier globally
+RUN npm install -g prettier
+
+# Create workspace directory
+WORKDIR /workspace
+
+# Set default command
+CMD ["bash"] 

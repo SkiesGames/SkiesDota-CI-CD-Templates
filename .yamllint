@@ -1,0 +1,31 @@
+extends: default
+
+rules:
+  # 80 chars should be enough, but don't fail if a line is longer
+  line-length: disable
+  
+  # Allow document start
+  document-start: disable
+  
+  # Allow trailing spaces in some cases
+  trailing-spaces: enable
+  
+  # Allow comments
+  comments-indentation: disable
+  
+  # Allow empty lines at end of file
+  empty-lines-at-end-of-file: enable
+  
+  # Allow indentation with spaces
+  indentation:
+    spaces: 2
+    indent-sequences: true
+    
+  # Allow truthy values
+  truthy:
+    check-keys: false
+    
+  # Allow brackets in comments
+  brackets:
+    min-spaces-inside: 0
+    max-spaces-inside: 1 

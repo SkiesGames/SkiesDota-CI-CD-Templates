@@ -1,5 +1,4 @@
 - name: Restart docker compose
-  ansible.builtin.docker_compose:
+  community.docker.docker_compose_v2:
     state: restarted
-    args:
-      chdir: "{{ app_dir }}"
+    project_src: "{{ app_dir }}"
