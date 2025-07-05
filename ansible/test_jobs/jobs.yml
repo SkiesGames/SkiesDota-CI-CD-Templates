@@ -7,7 +7,7 @@
     - |
       for role in ansible/roles/*/; do
         echo "CHECKING ROLE: $role"
-        python -m ansible-lint "$role" --nocolor
+        python -m ansiblelint "$role" --nocolor
       done
     - |
       for playbook in ansible/playbooks/*.yml; do
@@ -26,7 +26,7 @@
 test_ansible_syntax_manual:
   extends: .base_test_ansible
   before_script:
-    - pip install ansible ansible-lint
+    - pip install ansible-lint
   script: *script_test_ansible_syntax
   rules:
     - when: manual
@@ -42,7 +42,7 @@ test_playbooks_manual:
 test_ansible_syntax_auto:
   extends: .base_test_ansible
   before_script:
-    - pip install ansible ansible-lint
+    - pip install ansible-lint
   script: *script_test_ansible_syntax
   rules:
     - changes:
