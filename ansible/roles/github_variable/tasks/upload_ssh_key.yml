@@ -1,0 +1,39 @@
+- name: Upload private key to GitHub Secrets
+  ansible.builtin.uri:
+    url: "https://api.github.com/repos/{{ lookup('env', 'GITHUB_REPOSITORY') }}/actions/secrets/public-key"
+    method: GET
+    headers:
+      Authorization: "token {{ lookup('env', 'GITHUB_TOKEN') }}"
+      Accept: "application/vnd.github.v3+json"
+    body_format: json
+  register: public_key_response
+  delegate_to: localhost
+  no_log: true
+
+- name: Encrypt SSH key with GitHub public key
+  ansible.builtin.shell: |
+    echo "{{ lookup('file', '~/.ssh/ci_id_ed25519') }}" | base64 -w 0
+  register: ssh_key_base64
+  delegate_to: localhost
+  no_log: true
+
+- name: Create encrypted value
+  ansible.builtin.shell: |
+    echo "{{ ssh_key_base64.stdout }}" | openssl pkeyutl -encrypt -pubin -inkey <(echo "{{ public_key_response.json.key }}" | base64 -d) | base64 -w 0
+  register: encrypted_value
+  delegate_to: localhost
+  no_log: true
+
+- name: Upload encrypted SSH key to GitHub
+  ansible.builtin.uri:
+    url: "https://api.github.com/repos/{{ lookup('env', 'GITHUB_REPOSITORY') }}/actions/secrets/SSH_PRIVATE_KEY"
+    method: "{{ 'PUT' if secret_exists else 'POST' }}"
+    headers:
+      Authorization: "token {{ lookup('env', 'GITHUB_TOKEN') }}"
+      Accept: "application/vnd.github.v3+json"
+    body_format: json
+    body:
+      encrypted_value: "{{ encrypted_value.stdout }}"
+      key_id: "{{ public_key_response.json.key_id }}"
+  delegate_to: localhost
+  no_log: true 

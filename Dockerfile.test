@@ -1,0 +1,24 @@
+# Use Python 3.13 slim image as base
+FROM python:3.13-slim
+
+# Set environment variables for better security and performance
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    ANSIBLE_FORCE_COLOR=1
+
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        # Basic utilities
+        curl \
+        && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies for testing
+RUN pip install --no-cache-dir ansible ansible-lint
+
+# Set working directory
+WORKDIR /workspace
+
+CMD ansible --version && ansible-lint --version || exit 1

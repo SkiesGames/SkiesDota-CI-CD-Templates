@@ -1,0 +1,54 @@
+name: Test Ansible Code
+
+on:
+  push:
+    paths:
+      - 'ansible/**/*'
+      - 'Dockerfile.test'
+  pull_request:
+    paths:
+      - 'ansible/**/*'
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  test-ansible-syntax:
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/ansible-test:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Test Ansible syntax for roles
+        run: |
+          for role in ansible/roles/*/; do
+            echo "CHECKING ROLE: $role"
+            python -m ansiblelint "$role" --nocolor
+          done
+
+      - name: Test Ansible syntax for playbooks
+        run: |
+          for playbook in ansible/playbooks/*.yml; do
+            echo "CHECKING PLAYBOOK: $playbook"
+            python -m ansiblelint "$playbook" --nocolor
+          done
+
+  test-playbooks:
+    runs-on: ubuntu-latest
+    needs: test-ansible-syntax
+    container:
+      image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/ansible-test:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Test playbooks with dry-run
+        run: |
+          for playbook in ansible/playbooks/*.yml; do
+            echo "CHECKING PLAYBOOK: $playbook"
+            python -m ansible.playbook "$playbook" --check --diff -i localhost
+          done 

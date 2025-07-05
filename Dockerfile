@@ -5,7 +5,8 @@ FROM python:3.13-slim
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    ANSIBLE_FORCE_COLOR=1
 
 # Install system dependencies
 RUN apt-get update && \
@@ -21,6 +22,8 @@ RUN apt-get update && \
         gnupg \
         lsb-release \
         ca-certificates \
+        # OpenSSL for GitHub API encryption
+        openssl \
         && rm -rf /var/lib/apt/lists/*
 
 # Add Docker repository and install Docker CLI
@@ -36,9 +39,9 @@ RUN curl -fsSL https://download.docker.com/linux/debian/gpg | \
 # Install Python dependencies
 RUN pip install --no-cache-dir ansible
 
-# Configure Docker for GitLab CI
+# Configure Docker for GitHub Container Registry
 RUN mkdir -p ~/.docker && \
-    echo '{"credsStore": "gitlab"}' > ~/.docker/config.json
+    echo '{"credsStore": "ghcr"}' > ~/.docker/config.json
 
 # Set working directory
 WORKDIR /workspace

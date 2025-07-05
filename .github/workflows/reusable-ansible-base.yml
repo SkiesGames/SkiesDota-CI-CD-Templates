@@ -1,0 +1,44 @@
+name: Reusable Ansible Base Workflow
+
+on:
+  workflow_call:
+    inputs:
+      playbook-path:
+        description: 'Path to the Ansible playbook to execute'
+        required: true
+        type: string
+      inventory-type:
+        description: 'Type of inventory to generate'
+        required: false
+        type: string
+        default: 'standard'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  ansible-execution:
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/ansible-base:latest
+    env:
+      ANSIBLE_HOSTS: ${{ secrets.ANSIBLE_HOSTS }}
+      ANSIBLE_USER: ${{ secrets.ANSIBLE_USER }}
+      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate inventory
+        run: |
+          ansible-playbook ansible/playbooks/generate_inventory.yml
+
+      - name: Setup CI environment
+        run: |
+          ansible-playbook -i ansible/inventory.ini ansible/playbooks/setup_ci_env.yml
+
+      - name: Execute Playbook
+        run: |
+          echo "Executing playbook..."
+          ansible-playbook --diff -i ansible/inventory.ini ${{ inputs.playbook-path }} --retry-files-enabled 

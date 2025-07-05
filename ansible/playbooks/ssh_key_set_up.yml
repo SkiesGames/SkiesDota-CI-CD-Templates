@@ -4,5 +4,5 @@
   roles:
     - role: ssh
       tasks_from: generate_and_deliver
-    - role: gitlab_variable
+    - role: github_variable
       tasks_from: upload_ssh_key
