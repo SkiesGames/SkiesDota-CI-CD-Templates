@@ -7,3 +7,4 @@
 - name: Initialize MongoDB replica set
   ansible.builtin.command: mongosh --eval "{{ lookup('template', 'init_replica_set.js') | replace('\n', ' ') }}"
   when: "'PRIMARY' not in rs_status.stdout"
+  changed_when: rs_status.rc != 0

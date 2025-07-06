@@ -1,4 +1,4 @@
-name: Test Ansible Code
+name: Test Ansible Code (With Dependencies)
 
 on:
   push:
@@ -9,6 +9,12 @@ on:
     paths:
       - 'ansible/**/*'
   workflow_dispatch:
+    inputs:
+      skip_dependency_check:
+        description: 'Skip dependency workflow checks'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   actions: read
@@ -21,6 +27,11 @@ jobs:
     outputs:
       dockerfile-changed: ${{ steps.check.outputs.changed }}
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
       - name: Check if Dockerfile.test changed
         id: check
         run: |
@@ -61,10 +72,64 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  test-ansible-syntax:
+  check-dependencies:
     runs-on: ubuntu-latest
     needs: [check-dockerfile-changes, wait-for-build]
-    if: always() && (needs.check-dockerfile-changes.outputs.dockerfile-changed == 'false' || needs.wait-for-build.result == 'success' || needs.wait-for-build.result == 'skipped')
+    outputs:
+      lint-running: ${{ steps.check-lint.outputs.running }}
+      lint-success: ${{ steps.check-lint.outputs.success }}
+    steps:
+      - name: Check if lint workflow is running
+        id: check-lint
+        run: |
+          # Check if Lint Ansible Code workflow is currently running for this commit
+          RUNNING_LINT=$(gh api repos/${{ github.repository }}/actions/runs --jq '.workflow_runs[] | select(.name == "Lint Ansible Code" and .head_sha == "'${{ github.sha }}'" and .status == "in_progress") | .id' | head -1)
+          
+          if [ -n "$RUNNING_LINT" ]; then
+            echo "running=true" >> $GITHUB_OUTPUT
+            echo "Lint workflow is running, will wait for it"
+          else
+            echo "running=false" >> $GITHUB_OUTPUT
+            echo "No lint workflow running, proceeding"
+          fi
+
+      - name: Wait for lint workflow if running
+        if: steps.check-lint.outputs.running == 'true'
+        run: |
+          echo "Waiting for lint workflow to complete..."
+          
+          while true; do
+            RUNNING_LINT=$(gh api repos/${{ github.repository }}/actions/runs --jq '.workflow_runs[] | select(.name == "Lint Ansible Code" and .head_sha == "'${{ github.sha }}'" and .status == "in_progress") | .id' | head -1)
+            
+            if [ -z "$RUNNING_LINT" ]; then
+              echo "Lint workflow completed"
+              break
+            fi
+            
+            echo "Lint workflow still running, waiting 30 seconds..."
+            sleep 30
+          done
+          
+          # Check final result
+          LINT_RESULT=$(gh api repos/${{ github.repository }}/actions/runs --jq '.workflow_runs[] | select(.name == "Lint Ansible Code" and .head_sha == "'${{ github.sha }}'" and .status == "completed") | .conclusion' | head -1)
+          
+          if [ "$LINT_RESULT" = "success" ]; then
+            echo "success=true" >> $GITHUB_OUTPUT
+            echo "Lint workflow completed successfully"
+          else
+            echo "success=false" >> $GITHUB_OUTPUT
+            echo "Lint workflow failed or was cancelled"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  test-ansible-syntax:
+    runs-on: ubuntu-latest
+    needs: [check-dockerfile-changes, wait-for-build, check-dependencies]
+    if: |
+      always() && 
+      (needs.check-dockerfile-changes.outputs.dockerfile-changed == 'false' || needs.wait-for-build.result == 'success' || needs.wait-for-build.result == 'skipped') &&
+      (needs.check-dependencies.outputs.lint-running == 'false' || needs.check-dependencies.outputs.lint-success == 'true')
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

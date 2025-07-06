@@ -40,4 +40,4 @@
       encrypted_value: "{{ encrypted_value.stdout }}"
       key_id: "{{ public_key_response.json.key_id }}"
   delegate_to: localhost
-  no_log: true 
+  no_log: true

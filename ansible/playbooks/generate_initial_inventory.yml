@@ -8,4 +8,4 @@
       ansible.builtin.template:
         src: initial_ssh_setup_inventory.j2
         dest: ansible/inventory.ini
-        mode: '0644' 
+        mode: '0644'

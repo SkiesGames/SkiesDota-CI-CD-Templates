@@ -13,4 +13,4 @@
     rule: allow
     port: "{{ item.port }}"
     proto: "{{ item.proto }}"
-  loop: "{{ ports }}" 
+  loop: "{{ ports }}"

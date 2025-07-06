@@ -4,4 +4,4 @@
     state: absent
   with_items:
     - certificate.crt
-    - certificate_ca.crt 
+    - certificate_ca.crt

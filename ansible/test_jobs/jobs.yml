@@ -38,7 +38,7 @@ test_playbooks_manual:
     - pip install ansible
   script: *script_test_playbooks
   rules:
-    - when: manual  
+    - when: manual
       needs: []
 
 test_ansible_syntax_auto:

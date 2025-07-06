@@ -7,3 +7,4 @@
 - name: Create MongoDB indexes
   ansible.builtin.command: mongosh --eval "{{ lookup('file', 'setup_indexes.js') | replace('\n', ' ') }}"
   when: indexes_status.stdout | trim | lower != "true"
+  changed_when: indexes_status.stdout | trim | lower != "true"

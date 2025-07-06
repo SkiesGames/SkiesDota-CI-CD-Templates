@@ -19,4 +19,4 @@
     key: "{{ lookup('file', '~/.ssh/ci_id_ed25519.pub') }}"
     state: present
     exclusive: true
-  when: lookup('env', 'CI_JOB_NAME') == 'add_ssh_key' 
+  when: lookup('env', 'CI_JOB_NAME') == 'add_ssh_key'

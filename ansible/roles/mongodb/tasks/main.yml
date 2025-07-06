@@ -1,6 +1,6 @@
 ---
 - name: Import init replica set tasks
   ansible.builtin.import_tasks: init_replica_set.yml
- 
+
 - name: Import setup indexes tasks
-  ansible.builtin.import_tasks: setup_indexes.yml 
+  ansible.builtin.import_tasks: setup_indexes.yml
