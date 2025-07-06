@@ -1,0 +1,63 @@
+name: 'Detect Changed Files'
+description: 'Detect which files changed and output as matrix'
+
+inputs:
+  patterns:
+    description: 'Comma-separated list of file patterns to check'
+    required: true
+  matrix-key:
+    description: 'Name of the matrix key to output'
+    required: true
+    default: 'file'
+
+outputs:
+  matrix:
+    description: 'JSON matrix of changed files'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 2
+
+    - name: Detect changed files
+      id: detect
+      shell: bash
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          # For manual runs, include all patterns
+          IFS=',' read -ra PATTERNS <<< "${{ inputs.patterns }}"
+          CHANGED_FILES=()
+          for pattern in "${PATTERNS[@]}"; do
+            CHANGED_FILES+=("$pattern")
+          done
+        else
+          # Get changed files
+          CHANGED_FILES_RAW=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} 2>/dev/null || echo "")
+          
+          # Filter by patterns
+          IFS=',' read -ra PATTERNS <<< "${{ inputs.patterns }}"
+          CHANGED_FILES=()
+          for pattern in "${PATTERNS[@]}"; do
+            if echo "$CHANGED_FILES_RAW" | grep -q "$pattern"; then
+              CHANGED_FILES+=("$pattern")
+            fi
+          done
+        fi
+        
+        # Create matrix
+        if [ ${#CHANGED_FILES[@]} -eq 0 ]; then
+          echo "matrix=[]" >> $GITHUB_OUTPUT
+        else
+          MATRIX_JSON="["
+          for file in "${CHANGED_FILES[@]}"; do
+            if [ "$MATRIX_JSON" != "[" ]; then
+              MATRIX_JSON="$MATRIX_JSON,"
+            fi
+            MATRIX_JSON="$MATRIX_JSON{\"${{ inputs.matrix-key }}\":\"$file\"}"
+          done
+          MATRIX_JSON="$MATRIX_JSON]"
+          echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
+        fi 

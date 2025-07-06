@@ -1,4 +1,4 @@
-name: Build Docker Images
+name: Build Docker Images (Concise)
 
 on:
   push:
@@ -13,23 +13,28 @@ permissions:
   packages: write
 
 jobs:
-  build-base-ansible:
-    uses: ./.github/workflows/reusable-build-images.yml
-    with:
-      image-name: ansible-base
-      dockerfile-path: ./Dockerfile
-    secrets: inherit
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.detect.outputs.matrix }}
+    steps:
+      - name: Detect changed Dockerfiles
+        id: detect
+        uses: ./.github/actions/detect-changes
+        with:
+          patterns: 'Dockerfile,Dockerfile.test,Dockerfile.lint'
+          matrix-key: 'dockerfile'
 
-  build-test-ansible:
-    uses: ./.github/workflows/reusable-build-images.yml
-    with:
-      image-name: ansible-test
-      dockerfile-path: ./Dockerfile.test
-    secrets: inherit
-
-  build-lint-ansible:
-    uses: ./.github/workflows/reusable-build-images.yml
-    with:
-      image-name: ansible-lint
-      dockerfile-path: ./Dockerfile.lint
-    secrets: inherit 
+  build:
+    needs: detect-changes
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dockerfile: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+      fail-fast: false
+    steps:
+      - name: Build ${{ matrix.dockerfile }}
+        uses: ./.github/workflows/reusable-build-images.yml
+        with:
+          image-name: ${{ matrix.dockerfile == 'Dockerfile' && 'ansible-base' || matrix.dockerfile == 'Dockerfile.test' && 'ansible-test' || 'ansible-lint' }}
+          dockerfile-path: ./${{ matrix.dockerfile }} 

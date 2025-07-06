@@ -13,9 +13,6 @@ rules:
   # Allow comments
   comments-indentation: disable
   
-  # Allow empty lines at end of file
-  empty-lines-at-end-of-file: enable
-  
   # Allow indentation with spaces
   indentation:
     spaces: 2
