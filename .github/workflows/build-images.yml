@@ -38,8 +38,11 @@ jobs:
         dockerfile: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
       fail-fast: false
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Build ${{ matrix.dockerfile }}
-        uses: ./.github/workflows/reusable-build-images.yml
+        uses: ./.github/actions/build-image
         with:
           image-name: ${{ matrix.dockerfile == 'Dockerfile' && 'ansible-base' || matrix.dockerfile == 'Dockerfile.test' && 'ansible-test' || 'ansible-lint' }}
           dockerfile-path: ./${{ matrix.dockerfile }} 
