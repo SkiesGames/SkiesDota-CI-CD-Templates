@@ -92,9 +92,18 @@ jobs:
             echo "running=false" >> $GITHUB_OUTPUT
             echo "No lint workflow running, proceeding"
           fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  wait-for-dependencies:
+    runs-on: ubuntu-latest
+    needs: [check-dependencies]
+    if: needs.check-dependencies.outputs.lint-running == 'true'
+    outputs:
+      lint-success: ${{ steps.wait-lint.outputs.success }}
+    steps:
       - name: Wait for lint workflow if running
-        if: steps.check-lint.outputs.running == 'true'
+        id: wait-lint
         run: |
           echo "Waiting for lint workflow to complete..."
           
@@ -125,11 +134,11 @@ jobs:
 
   test-ansible-syntax:
     runs-on: ubuntu-latest
-    needs: [check-dockerfile-changes, wait-for-build, check-dependencies]
+    needs: [check-dockerfile-changes, wait-for-build, check-dependencies, wait-for-dependencies]
     if: |
       always() && 
       (needs.check-dockerfile-changes.outputs.dockerfile-changed == 'false' || needs.wait-for-build.result == 'success' || needs.wait-for-build.result == 'skipped') &&
-      (needs.check-dependencies.outputs.lint-running == 'false' || needs.check-dependencies.outputs.lint-success == 'true')
+      (needs.check-dependencies.outputs.lint-running == 'false' || needs.wait-for-dependencies.outputs.lint-success == 'true' || needs.wait-for-dependencies.result == 'skipped')
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -159,6 +168,7 @@ jobs:
         if: steps.pull-image.outputs.custom-image-available == 'true'
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-test:latest bash -c "
+            ansible-galaxy collection install ansible.posix
             for role in ansible/roles/*/; do
               echo \"CHECKING ROLE: \$role\"
               python -m ansiblelint \"\$role\" --nocolor
@@ -170,6 +180,7 @@ jobs:
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace python:3.13-slim bash -c "
             pip install --no-cache-dir ansible ansible-lint
+            ansible-galaxy collection install ansible.posix
             for role in ansible/roles/*/; do
               echo \"CHECKING ROLE: \$role\"
               python -m ansiblelint \"\$role\" --nocolor
@@ -180,6 +191,7 @@ jobs:
         if: steps.pull-image.outputs.custom-image-available == 'true'
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-test:latest bash -c "
+            ansible-galaxy collection install ansible.posix
             for playbook in ansible/playbooks/*.yml; do
               echo \"CHECKING PLAYBOOK: \$playbook\"
               python -m ansiblelint \"\$playbook\" --nocolor
@@ -191,6 +203,7 @@ jobs:
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace python:3.13-slim bash -c "
             pip install --no-cache-dir ansible ansible-lint
+            ansible-galaxy collection install ansible.posix
             for playbook in ansible/playbooks/*.yml; do
               echo \"CHECKING PLAYBOOK: \$playbook\"
               python -m ansiblelint \"\$playbook\" --nocolor
@@ -230,6 +243,7 @@ jobs:
         if: steps.pull-image.outputs.custom-image-available == 'true'
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-test:latest bash -c "
+            ansible-galaxy collection install ansible.posix
             for playbook in ansible/playbooks/*.yml; do
               echo \"CHECKING PLAYBOOK: \$playbook\"
               ansible-playbook \"\$playbook\" --check --diff -i localhost,
@@ -241,6 +255,7 @@ jobs:
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace python:3.13-slim bash -c "
             pip install --no-cache-dir ansible ansible-lint
+            ansible-galaxy collection install ansible.posix
             for playbook in ansible/playbooks/*.yml; do
               echo \"CHECKING PLAYBOOK: \$playbook\"
               ansible-playbook \"\$playbook\" --check --diff -i localhost,

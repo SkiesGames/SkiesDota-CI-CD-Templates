@@ -15,6 +15,9 @@ RUN pip install --no-cache-dir \
 # Install Prettier globally
 RUN npm install -g prettier
 
+# Install required ansible collections
+RUN ansible-galaxy collection install ansible.posix
+
 # Create workspace directory
 WORKDIR /workspace
 

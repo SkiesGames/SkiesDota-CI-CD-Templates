@@ -18,6 +18,9 @@ RUN apt-get update && \
 # Install Python dependencies for testing
 RUN pip install --no-cache-dir ansible ansible-lint
 
+# Install required ansible collections
+RUN ansible-galaxy collection install ansible.posix
+
 # Set working directory
 WORKDIR /workspace
 

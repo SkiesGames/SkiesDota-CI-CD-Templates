@@ -108,7 +108,7 @@ jobs:
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-lint:latest bash -c "
             echo 'Formatting YAML files with Prettier...'
-            prettier --write 'ansible/**/*.yml' 'ansible/**/*.yaml' || true
+            prettier --write 'ansible/**/*.yml' || true
             echo 'Prettier formatting completed'
           "
 
@@ -119,7 +119,7 @@ jobs:
             apt-get update && apt-get install -y nodejs npm
             npm install -g prettier
             echo 'Formatting YAML files with Prettier...'
-            prettier --write 'ansible/**/*.yml' 'ansible/**/*.yaml' || true
+            prettier --write 'ansible/**/*.yml' || true
             echo 'Prettier formatting completed'
           "
 
@@ -146,6 +146,8 @@ jobs:
         if: steps.pull-image.outputs.custom-image-available == 'true'
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-lint:latest bash -c "
+            echo 'Installing required ansible collections...'
+            ansible-galaxy collection install ansible.posix
             echo 'Running ansible-lint on roles...'
             for role in ansible/roles/*/; do
               echo \"CHECKING ROLE: \$role\"
@@ -164,6 +166,8 @@ jobs:
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace python:3.13-slim bash -c "
             pip install --no-cache-dir ansible ansible-lint
+            echo 'Installing required ansible collections...'
+            ansible-galaxy collection install ansible.posix
             echo 'Running ansible-lint on roles...'
             for role in ansible/roles/*/; do
               echo \"CHECKING ROLE: \$role\"
