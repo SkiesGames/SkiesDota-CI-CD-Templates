@@ -24,4 +24,4 @@ galaxy_info:
 dependencies:
   - role: synchronize
   - role: environment
-  - role: docker-compose-plugin 
+  - role: docker_compose_plugin

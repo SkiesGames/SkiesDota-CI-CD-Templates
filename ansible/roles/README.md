@@ -17,7 +17,7 @@ Application deployment and synchronization role.
 **Dependencies:**
 - `synchronize` role
 - `environment` role
-- `docker-compose-plugin` role
+- `docker_compose_plugin` role
 
 #### docker
 Docker installation and configuration role.
@@ -27,7 +27,7 @@ Docker installation and configuration role.
 - User group management
 - Multi-distribution support
 
-#### docker-compose-plugin
+#### docker_compose_plugin
 Docker Compose plugin management role.
 
 **Features:**

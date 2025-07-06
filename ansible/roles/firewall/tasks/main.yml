@@ -2,14 +2,14 @@
   ansible.builtin.apt:
     name: ufw
     state: present
-    update_cache: yes
+    update_cache: true
 
 - name: Ensure UFW is enabled
-  ansible.builtin.ufw:
+  community.general.ufw:
     state: enabled
 
 - name: Open required ports
-  ansible.builtin.ufw:
+  community.general.ufw:
     rule: allow
     port: "{{ item.port }}"
     proto: "{{ item.proto }}"

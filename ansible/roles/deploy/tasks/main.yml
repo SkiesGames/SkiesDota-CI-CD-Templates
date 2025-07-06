@@ -5,4 +5,4 @@
   ansible.builtin.import_tasks: ../environment/main.yml
 
 - name: Import docker-compose restart tasks
-  ansible.builtin.import_tasks: ../docker-compose-plugin/tasks/restart.yml
+  ansible.builtin.import_tasks: ../docker_compose_plugin/tasks/restart.yml

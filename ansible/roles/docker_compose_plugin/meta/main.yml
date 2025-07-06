@@ -17,7 +17,7 @@ galaxy_info:
         - all
   galaxy_tags:
     - docker
-    - docker-compose
+    - dockercompose
     - containerization
     - orchestration
 

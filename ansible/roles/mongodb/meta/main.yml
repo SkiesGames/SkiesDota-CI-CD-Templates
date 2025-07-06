@@ -12,11 +12,11 @@ galaxy_info:
     - name: Debian
       versions:
         - all
-    - name: CentOS
+    - name: EL
       versions:
         - all
   galaxy_tags:
     - mongodb
     - database
-    - replica-set
+    - replica_set
     - indexes 

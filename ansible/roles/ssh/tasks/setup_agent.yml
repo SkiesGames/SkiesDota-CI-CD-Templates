@@ -15,6 +15,7 @@
   environment:
     SSH_AUTH_SOCK: "{{ ssh_auth_sock }}"
     SSH_AGENT_PID: "{{ ssh_agent_pid }}"
+  changed_when: false
 
 - name: Ensure .ssh directory exists
   ansible.builtin.file:

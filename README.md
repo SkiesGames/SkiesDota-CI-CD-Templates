@@ -274,7 +274,7 @@ For first-time SSH key setup:
 
 - **deploy**: Application deployment and synchronization
 - **docker**: Docker installation and configuration
-- **docker-compose-plugin**: Docker Compose plugin management
+- **docker_compose_plugin**: Docker Compose plugin management
 - **environment**: Environment file management
 - **firewall**: UFW firewall configuration
 - **github_variable**: GitHub variable management (new)

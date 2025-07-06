@@ -25,4 +25,15 @@ rules:
   # Allow brackets in comments
   brackets:
     min-spaces-inside: 0
-    max-spaces-inside: 1 
+    max-spaces-inside: 1
+    
+  # Required by ansible-lint
+  comments:
+    min-spaces-from-content: 1
+    
+  braces:
+    max-spaces-inside: 1
+    
+  octal-values:
+    forbid-implicit-octal: true
+    forbid-explicit-octal: true 

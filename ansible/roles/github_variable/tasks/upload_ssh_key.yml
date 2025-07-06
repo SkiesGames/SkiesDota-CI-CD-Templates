@@ -12,17 +12,21 @@
 
 - name: Encrypt SSH key with GitHub public key
   ansible.builtin.shell: |
+    set -o pipefail
     echo "{{ lookup('file', '~/.ssh/ci_id_ed25519') }}" | base64 -w 0
   register: ssh_key_base64
   delegate_to: localhost
   no_log: true
+  changed_when: false
 
 - name: Create encrypted value
   ansible.builtin.shell: |
+    set -o pipefail
     echo "{{ ssh_key_base64.stdout }}" | openssl pkeyutl -encrypt -pubin -inkey <(echo "{{ public_key_response.json.key }}" | base64 -d) | base64 -w 0
   register: encrypted_value
   delegate_to: localhost
   no_log: true
+  changed_when: false
 
 - name: Upload encrypted SSH key to GitHub
   ansible.builtin.uri:
