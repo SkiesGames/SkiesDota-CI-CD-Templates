@@ -14,6 +14,7 @@ permissions:
 
 jobs:
   detect-changes:
+    if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.detect.outputs.matrix }}
@@ -30,12 +31,30 @@ jobs:
           patterns: 'Dockerfile,Dockerfile.test,Dockerfile.lint'
           matrix-key: 'dockerfile'
 
-  build:
+  build-push:
+    if: github.event_name != 'workflow_dispatch'
     needs: detect-changes
     runs-on: ubuntu-latest
     strategy:
       matrix:
         dockerfile: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+      fail-fast: false
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build ${{ matrix.dockerfile }}
+        uses: ./.github/actions/build-image
+        with:
+          image-name: ${{ matrix.dockerfile == 'Dockerfile' && 'ansible-base' || matrix.dockerfile == 'Dockerfile.test' && 'ansible-test' || 'ansible-lint' }}
+          dockerfile-path: ./${{ matrix.dockerfile }}
+
+  build-manual:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dockerfile: [Dockerfile, Dockerfile.test, Dockerfile.lint]
       fail-fast: false
     steps:
       - name: Checkout repository
