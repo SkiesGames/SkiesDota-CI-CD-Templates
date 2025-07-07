@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: MainCI/CD Pipeline
 
 on:
   push:
@@ -11,18 +11,18 @@ on:
       - 'Dockerfile*'
   workflow_dispatch:
     inputs:
-      build_images:
+      build:
         description: 'Build Docker images'
         required: false
         default: true
         type: boolean
-      run_lint:
-        description: 'Run linting'
+      lint:
+        description: 'Lint Ansible code'
         required: false
         default: true
         type: boolean
-      run_tests:
-        description: 'Run tests'
+      test:
+        description: 'Test Ansible code'
         required: false
         default: true
         type: boolean
@@ -38,7 +38,7 @@ permissions:
 
 jobs:
   detect-changes:
-    if: github.event_name != 'workflow_dispatch'
+    if: github.event_name != 'workflow_dispatch' || (github.event_name == 'workflow_dispatch' && !inputs.force_all)
     runs-on: ubuntu-latest
     outputs:
       dockerfiles-changed: ${{ steps.detect.outputs.dockerfiles }}
@@ -89,7 +89,7 @@ jobs:
   build-images:
     needs: detect-changes
     if: |
-      (github.event_name == 'workflow_dispatch' && inputs.build_images) ||
+      (github.event_name == 'workflow_dispatch' && inputs.build) ||
       (github.event_name != 'workflow_dispatch' && needs.detect-changes.outputs.matrix != '[]') ||
       (github.event_name == 'workflow_dispatch' && inputs.force_all)
     runs-on: ubuntu-latest
@@ -111,7 +111,7 @@ jobs:
   lint:
     needs: [detect-changes, build-images]
     if: |
-      (github.event_name == 'workflow_dispatch' && inputs.run_lint) ||
+      (github.event_name == 'workflow_dispatch' && inputs.lint) ||
       (github.event_name != 'workflow_dispatch' && (needs.detect-changes.outputs.ansible-changed == 'true' || contains(needs.detect-changes.outputs.dockerfiles-changed, 'Dockerfile.lint'))) ||
       (github.event_name == 'workflow_dispatch' && inputs.force_all)
     runs-on: ubuntu-latest
@@ -170,7 +170,7 @@ jobs:
   test:
     needs: [detect-changes, build-images, lint]
     if: |
-      (github.event_name == 'workflow_dispatch' && inputs.run_tests) ||
+      (github.event_name == 'workflow_dispatch' && inputs.test) ||
       (github.event_name != 'workflow_dispatch' && (needs.detect-changes.outputs.ansible-changed == 'true' || contains(needs.detect-changes.outputs.dockerfiles-changed, 'Dockerfile.test'))) ||
       (github.event_name == 'workflow_dispatch' && inputs.force_all)
     runs-on: ubuntu-latest
