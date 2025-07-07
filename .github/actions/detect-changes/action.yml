@@ -45,6 +45,7 @@ runs:
         # Create matrix
         if [ ${#CHANGED_FILES[@]} -eq 0 ]; then
           echo "matrix=[]" >> $GITHUB_OUTPUT
+          echo "No files changed matching patterns: ${{ inputs.patterns }}"
         else
           MATRIX_JSON="["
           for file in "${CHANGED_FILES[@]}"; do
@@ -55,4 +56,5 @@ runs:
           done
           MATRIX_JSON="$MATRIX_JSON]"
           echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
+          echo "Changed files: ${CHANGED_FILES[*]}"
         fi 

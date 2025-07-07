@@ -32,7 +32,7 @@ jobs:
           matrix-key: 'dockerfile'
 
   build-push:
-    if: github.event_name != 'workflow_dispatch'
+    if: github.event_name != 'workflow_dispatch' && needs.detect-changes.outputs.matrix != '[]' && needs.detect-changes.outputs.matrix != ''
     needs: detect-changes
     runs-on: ubuntu-latest
     strategy:
