@@ -26,13 +26,14 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       dockerfile-changed: ${{ steps.check.outputs.changed }}
+      build-running: ${{ steps.check.outputs.build-running }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 2
 
-      - name: Check if Dockerfile.test changed
+      - name: Check if Dockerfile.test changed and build status
         id: check
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
@@ -45,9 +46,31 @@ jobs:
               echo "changed=false" >> $GITHUB_OUTPUT
             fi
           fi
+          
+          # Check if build workflow is currently running (with retry for race conditions)
+          for i in {1..3}; do
+            RUNNING_BUILD=$(gh api repos/${{ github.repository }}/actions/runs --jq '.workflow_runs[] | select(.name == "Build Docker Images" and .status == "in_progress") | .id' | head -1)
+            
+            if [ -n "$RUNNING_BUILD" ]; then
+              echo "build-running=true" >> $GITHUB_OUTPUT
+              echo "Build workflow is currently running"
+              break
+            else
+              echo "Attempt $i: No build workflow currently running"
+              if [ $i -lt 3 ]; then
+                echo "Waiting 10 seconds before retry..."
+                sleep 10
+              else
+                echo "build-running=false" >> $GITHUB_OUTPUT
+                echo "No build workflow currently running after 3 attempts"
+              fi
+            fi
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   wait-for-build:
-    if: needs.check-dockerfile-changes.outputs.dockerfile-changed == 'true'
+    if: needs.check-dockerfile-changes.outputs.dockerfile-changed == 'true' || needs.check-dockerfile-changes.outputs.build-running == 'true'
     runs-on: ubuntu-latest
     needs: [check-dockerfile-changes]
     outputs:
@@ -58,7 +81,11 @@ jobs:
       - name: Wait for build workflow to complete
         id: wait
         run: |
-          echo "Dockerfile.test changed, waiting for build workflow to complete..."
+          if [ "${{ needs.check-dockerfile-changes.outputs.dockerfile-changed }}" = "true" ]; then
+            echo "Dockerfile.test changed, waiting for build workflow to complete..."
+          else
+            echo "Build workflow is running, waiting for it to complete..."
+          fi
           
           # Wait for build workflow to complete
           while true; do
@@ -97,6 +124,13 @@ jobs:
       - name: Check if lint workflow is running
         id: check-lint
         run: |
+          # Skip dependency check if requested via workflow_dispatch
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.skip_dependency_check }}" = "true" ]; then
+            echo "running=false" >> $GITHUB_OUTPUT
+            echo "Skipping dependency check as requested"
+            exit 0
+          fi
+          
           # Check if Lint Ansible Code workflow is currently running for this commit
           RUNNING_LINT=$(gh api repos/${{ github.repository }}/actions/runs --jq '.workflow_runs[] | select(.name == "Lint Ansible Code" and .head_sha == "'${{ github.sha }}'" and .status == "in_progress") | .id' | head -1)
           
@@ -153,7 +187,7 @@ jobs:
     needs: [check-dockerfile-changes, wait-for-build, check-dependencies, wait-for-dependencies]
     if: |
       always() && 
-      (needs.check-dockerfile-changes.outputs.dockerfile-changed == 'false' || needs.wait-for-build.outputs.build-success == 'true' || needs.wait-for-build.result == 'skipped') &&
+      ((needs.check-dockerfile-changes.outputs.dockerfile-changed == 'false' && needs.check-dockerfile-changes.outputs.build-running == 'false') || needs.wait-for-build.outputs.build-success == 'true' || needs.wait-for-build.result == 'skipped') &&
       (needs.check-dependencies.outputs.lint-running == 'false' || needs.wait-for-dependencies.outputs.lint-success == 'true' || needs.wait-for-dependencies.result == 'skipped')
     steps:
       - name: Checkout repository
@@ -184,7 +218,7 @@ jobs:
         if: steps.pull-image.outputs.custom-image-available == 'true'
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-test:latest bash -c "
-            ansible-galaxy collection install ansible.posix
+            ansible-galaxy collection install -r ansible/collections/requirements.yml
             for role in ansible/roles/*/; do
               echo \"CHECKING ROLE: \$role\"
               python -m ansiblelint \"\$role\" --nocolor
@@ -196,7 +230,7 @@ jobs:
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace python:3.13-slim bash -c "
             pip install --no-cache-dir ansible ansible-lint
-            ansible-galaxy collection install ansible.posix
+            ansible-galaxy collection install -r ansible/collections/requirements.yml
             for role in ansible/roles/*/; do
               echo \"CHECKING ROLE: \$role\"
               python -m ansiblelint \"\$role\" --nocolor
@@ -207,7 +241,7 @@ jobs:
         if: steps.pull-image.outputs.custom-image-available == 'true'
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-test:latest bash -c "
-            ansible-galaxy collection install ansible.posix
+            ansible-galaxy collection install -r ansible/collections/requirements.yml
             for playbook in ansible/playbooks/*.yml; do
               echo \"CHECKING PLAYBOOK: \$playbook\"
               python -m ansiblelint \"\$playbook\" --nocolor
@@ -219,7 +253,7 @@ jobs:
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace python:3.13-slim bash -c "
             pip install --no-cache-dir ansible ansible-lint
-            ansible-galaxy collection install ansible.posix
+            ansible-galaxy collection install -r ansible/collections/requirements.yml
             for playbook in ansible/playbooks/*.yml; do
               echo \"CHECKING PLAYBOOK: \$playbook\"
               python -m ansiblelint \"\$playbook\" --nocolor
@@ -259,7 +293,7 @@ jobs:
         if: steps.pull-image.outputs.custom-image-available == 'true'
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-test:latest bash -c "
-            ansible-galaxy collection install ansible.posix
+            ansible-galaxy collection install -r ansible/collections/requirements.yml
             for playbook in ansible/playbooks/*.yml; do
               echo \"CHECKING PLAYBOOK: \$playbook\"
               ansible-playbook \"\$playbook\" --check --diff -i localhost,
@@ -271,7 +305,7 @@ jobs:
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace python:3.13-slim bash -c "
             pip install --no-cache-dir ansible ansible-lint
-            ansible-galaxy collection install ansible.posix
+            ansible-galaxy collection install -r ansible/collections/requirements.yml
             for playbook in ansible/playbooks/*.yml; do
               echo \"CHECKING PLAYBOOK: \$playbook\"
               ansible-playbook \"\$playbook\" --check --diff -i localhost,

@@ -10,6 +10,12 @@ on:
       - 'ansible/**/*'
       - 'Dockerfile.lint'
   workflow_dispatch:
+    inputs:
+      skip_dependency_check:
+        description: 'Skip dependency workflow checks'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   actions: read
@@ -23,13 +29,14 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       dockerfile-changed: ${{ steps.check.outputs.changed }}
+      build-running: ${{ steps.check.outputs.build-running }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 2
 
-      - name: Check if Dockerfile.lint changed
+      - name: Check if Dockerfile.lint changed and build status
         id: check
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
@@ -45,9 +52,31 @@ jobs:
               echo "changed=false" >> $GITHUB_OUTPUT
             fi
           fi
+          
+          # Check if build workflow is currently running (with retry for race conditions)
+          for i in {1..3}; do
+            RUNNING_BUILD=$(gh api repos/${{ github.repository }}/actions/runs --jq '.workflow_runs[] | select(.name == "Build Docker Images" and .status == "in_progress") | .id' | head -1)
+            
+            if [ -n "$RUNNING_BUILD" ]; then
+              echo "build-running=true" >> $GITHUB_OUTPUT
+              echo "Build workflow is currently running"
+              break
+            else
+              echo "Attempt $i: No build workflow currently running"
+              if [ $i -lt 3 ]; then
+                echo "Waiting 10 seconds before retry..."
+                sleep 10
+              else
+                echo "build-running=false" >> $GITHUB_OUTPUT
+                echo "No build workflow currently running after 3 attempts"
+              fi
+            fi
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   wait-for-build:
-    if: needs.check-dockerfile-changes.outputs.dockerfile-changed == 'true'
+    if: needs.check-dockerfile-changes.outputs.dockerfile-changed == 'true' || needs.check-dockerfile-changes.outputs.build-running == 'true'
     runs-on: ubuntu-latest
     needs: [check-dockerfile-changes]
     outputs:
@@ -58,7 +87,11 @@ jobs:
       - name: Wait for build workflow to complete
         id: wait
         run: |
-          echo "Dockerfile.lint changed, waiting for build workflow to complete..."
+          if [ "${{ needs.check-dockerfile-changes.outputs.dockerfile-changed }}" = "true" ]; then
+            echo "Dockerfile.lint changed, waiting for build workflow to complete..."
+          else
+            echo "Build workflow is running, waiting for it to complete..."
+          fi
           
           # Wait for build workflow to complete
           while true; do
@@ -92,7 +125,7 @@ jobs:
     needs: [check-dockerfile-changes, wait-for-build]
     if: |
       always() && 
-      (needs.check-dockerfile-changes.outputs.dockerfile-changed == 'false' || needs.wait-for-build.outputs.build-success == 'true' || needs.wait-for-build.result == 'skipped')
+      ((needs.check-dockerfile-changes.outputs.dockerfile-changed == 'false' && needs.check-dockerfile-changes.outputs.build-running == 'false') || needs.wait-for-build.outputs.build-success == 'true' || needs.wait-for-build.result == 'skipped')
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -162,7 +195,7 @@ jobs:
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-lint:latest bash -c "
             echo 'Installing required ansible collections...'
-            ansible-galaxy collection install ansible.posix
+            ansible-galaxy collection install -r ansible/collections/requirements.yml
             echo 'Running ansible-lint on roles...'
             for role in ansible/roles/*/; do
               echo \"CHECKING ROLE: \$role\"
@@ -182,7 +215,7 @@ jobs:
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace python:3.13-slim bash -c "
             pip install --no-cache-dir ansible ansible-lint
             echo 'Installing required ansible collections...'
-            ansible-galaxy collection install ansible.posix
+            ansible-galaxy collection install -r ansible/collections/requirements.yml
             echo 'Running ansible-lint on roles...'
             for role in ansible/roles/*/; do
               echo \"CHECKING ROLE: \$role\"
