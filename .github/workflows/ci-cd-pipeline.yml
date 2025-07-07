@@ -1,0 +1,227 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    paths:
+      - 'ansible/**/*'
+      - 'Dockerfile*'
+  pull_request:
+    paths:
+      - 'ansible/**/*'
+      - 'Dockerfile*'
+  workflow_dispatch:
+    inputs:
+      build_images:
+        description: 'Build Docker images'
+        required: false
+        default: true
+        type: boolean
+      run_lint:
+        description: 'Run linting'
+        required: false
+        default: true
+        type: boolean
+      run_tests:
+        description: 'Run tests'
+        required: false
+        default: true
+        type: boolean
+      force_all:
+        description: 'Force run all jobs (ignore path filters)'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  detect-changes:
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    outputs:
+      dockerfiles-changed: ${{ steps.detect.outputs.dockerfiles }}
+      ansible-changed: ${{ steps.detect.outputs.ansible }}
+      matrix: ${{ steps.detect.outputs.matrix }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Detect changes
+        id: detect
+        run: |
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} 2>/dev/null || echo "")
+          
+          # Detect Dockerfile changes
+          DOCKERFILES=""
+          if echo "$CHANGED_FILES" | grep -q "Dockerfile$"; then
+            DOCKERFILES="$DOCKERFILES Dockerfile"
+          fi
+          if echo "$CHANGED_FILES" | grep -q "Dockerfile.test"; then
+            DOCKERFILES="$DOCKERFILES Dockerfile.test"
+          fi
+          if echo "$CHANGED_FILES" | grep -q "Dockerfile.lint"; then
+            DOCKERFILES="$DOCKERFILES Dockerfile.lint"
+          fi
+          
+          # Detect Ansible changes
+          ANSIBLE_CHANGED="false"
+          if echo "$CHANGED_FILES" | grep -q "ansible/"; then
+            ANSIBLE_CHANGED="true"
+          fi
+          
+          # Build matrix for Docker builds
+          MATRIX="[]"
+          if [ -n "$DOCKERFILES" ]; then
+            MATRIX=$(echo "$DOCKERFILES" | tr ' ' '\n' | jq -R . | jq -s .)
+          fi
+          
+          echo "dockerfiles=$DOCKERFILES" >> $GITHUB_OUTPUT
+          echo "ansible=$ANSIBLE_CHANGED" >> $GITHUB_OUTPUT
+          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+          
+          echo "Changed Dockerfiles: $DOCKERFILES"
+          echo "Ansible changed: $ANSIBLE_CHANGED"
+
+  build-images:
+    needs: detect-changes
+    if: |
+      (github.event_name == 'workflow_dispatch' && inputs.build_images) ||
+      (github.event_name != 'workflow_dispatch' && needs.detect-changes.outputs.matrix != '[]') ||
+      (github.event_name == 'workflow_dispatch' && inputs.force_all)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dockerfile: ${{ github.event_name == 'workflow_dispatch' && fromJson('["Dockerfile", "Dockerfile.test", "Dockerfile.lint"]') || fromJson(needs.detect-changes.outputs.matrix) }}
+      fail-fast: false
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build ${{ matrix.dockerfile }}
+        uses: ./.github/actions/build-image
+        with:
+          image-name: ${{ matrix.dockerfile == 'Dockerfile' && 'ansible-base' || matrix.dockerfile == 'Dockerfile.test' && 'ansible-test' || 'ansible-lint' }}
+          dockerfile-path: ./${{ matrix.dockerfile }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  lint:
+    needs: [detect-changes, build-images]
+    if: |
+      (github.event_name == 'workflow_dispatch' && inputs.run_lint) ||
+      (github.event_name != 'workflow_dispatch' && (needs.detect-changes.outputs.ansible-changed == 'true' || contains(needs.detect-changes.outputs.dockerfiles-changed, 'Dockerfile.lint'))) ||
+      (github.event_name == 'workflow_dispatch' && inputs.force_all)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Try to pull custom lint image
+        id: pull-image
+        run: |
+          if docker pull ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-lint:latest; then
+            echo "custom-image-available=true" >> $GITHUB_OUTPUT
+          else
+            echo "custom-image-available=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run linting (Custom Image)
+        if: steps.pull-image.outputs.custom-image-available == 'true'
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-lint:latest bash -c "
+            yamllint ansible/ || exit 1
+            ansible-galaxy collection install -r ansible/collections/requirements.yml
+            for role in ansible/roles/*/; do
+              ansible-lint \"\$role\" --nocolor || exit 1
+            done
+            for playbook in ansible/playbooks/*.yml; do
+              ansible-lint \"\$playbook\" --nocolor || exit 1
+            done
+          "
+
+      - name: Run linting (Fallback)
+        if: steps.pull-image.outputs.custom-image-available == 'false'
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace python:3.13-slim bash -c "
+            pip install --no-cache-dir yamllint ansible ansible-lint
+            yamllint ansible/ || exit 1
+            ansible-galaxy collection install -r ansible/collections/requirements.yml
+            for role in ansible/roles/*/; do
+              ansible-lint \"\$role\" --nocolor || exit 1
+            done
+            for playbook in ansible/playbooks/*.yml; do
+              ansible-lint \"\$playbook\" --nocolor || exit 1
+            done
+          "
+
+  test:
+    needs: [detect-changes, build-images, lint]
+    if: |
+      (github.event_name == 'workflow_dispatch' && inputs.run_tests) ||
+      (github.event_name != 'workflow_dispatch' && (needs.detect-changes.outputs.ansible-changed == 'true' || contains(needs.detect-changes.outputs.dockerfiles-changed, 'Dockerfile.test'))) ||
+      (github.event_name == 'workflow_dispatch' && inputs.force_all)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Try to pull custom test image
+        id: pull-image
+        run: |
+          if docker pull ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-test:latest; then
+            echo "custom-image-available=true" >> $GITHUB_OUTPUT
+          else
+            echo "custom-image-available=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run tests (Custom Image)
+        if: steps.pull-image.outputs.custom-image-available == 'true'
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-test:latest bash -c "
+            ansible-galaxy collection install -r ansible/collections/requirements.yml
+            for role in ansible/roles/*/; do
+              python -m ansiblelint \"\$role\" --nocolor
+            done
+            for playbook in ansible/playbooks/*.yml; do
+              python -m ansiblelint \"\$playbook\" --nocolor
+              ansible-playbook \"\$playbook\" --check --diff -i localhost,
+            done
+          "
+
+      - name: Run tests (Fallback)
+        if: steps.pull-image.outputs.custom-image-available == 'false'
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace python:3.13-slim bash -c "
+            pip install --no-cache-dir ansible ansible-lint
+            ansible-galaxy collection install -r ansible/collections/requirements.yml
+            for role in ansible/roles/*/; do
+              python -m ansiblelint \"\$role\" --nocolor
+            done
+            for playbook in ansible/playbooks/*.yml; do
+              python -m ansiblelint \"\$playbook\" --nocolor
+              ansible-playbook \"\$playbook\" --check --diff -i localhost,
+            done
+          " 

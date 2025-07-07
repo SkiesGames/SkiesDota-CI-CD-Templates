@@ -26,13 +26,39 @@ jobs:
 
       - name: Detect changed Dockerfiles
         id: detect
-        uses: ./.github/actions/detect-changes
-        with:
-          patterns: 'Dockerfile,Dockerfile.test,Dockerfile.lint'
-          matrix-key: 'dockerfile'
+        run: |
+          # Get list of changed files
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} 2>/dev/null || echo "")
+          
+          # Check which Dockerfiles were changed
+          CHANGED_DOCKERFILES="[]"
+          if echo "$CHANGED_FILES" | grep -q "Dockerfile$"; then
+            CHANGED_DOCKERFILES='["Dockerfile"]'
+          fi
+          if echo "$CHANGED_FILES" | grep -q "Dockerfile.test"; then
+            if [ "$CHANGED_DOCKERFILES" = "[]" ]; then
+              CHANGED_DOCKERFILES='["Dockerfile.test"]'
+            else
+              CHANGED_DOCKERFILES='["Dockerfile", "Dockerfile.test"]'
+            fi
+          fi
+          if echo "$CHANGED_FILES" | grep -q "Dockerfile.lint"; then
+            if [ "$CHANGED_DOCKERFILES" = "[]" ]; then
+              CHANGED_DOCKERFILES='["Dockerfile.lint"]'
+            elif [ "$CHANGED_DOCKERFILES" = '["Dockerfile"]' ]; then
+              CHANGED_DOCKERFILES='["Dockerfile", "Dockerfile.lint"]'
+            elif [ "$CHANGED_DOCKERFILES" = '["Dockerfile.test"]' ]; then
+              CHANGED_DOCKERFILES='["Dockerfile.test", "Dockerfile.lint"]'
+            else
+              CHANGED_DOCKERFILES='["Dockerfile", "Dockerfile.test", "Dockerfile.lint"]'
+            fi
+          fi
+          
+          echo "matrix=$CHANGED_DOCKERFILES" >> $GITHUB_OUTPUT
+          echo "Changed Dockerfiles: $CHANGED_DOCKERFILES"
 
-  build-push:
-    if: github.event_name != 'workflow_dispatch' && needs.detect-changes.outputs.matrix != '[]' && needs.detect-changes.outputs.matrix != ''
+  build-changed:
+    if: github.event_name != 'workflow_dispatch' && needs.detect-changes.outputs.matrix != '[]'
     needs: detect-changes
     runs-on: ubuntu-latest
     strategy:
@@ -50,7 +76,7 @@ jobs:
           dockerfile-path: ./${{ matrix.dockerfile }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-  build-manual:
+  build-all:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     strategy:

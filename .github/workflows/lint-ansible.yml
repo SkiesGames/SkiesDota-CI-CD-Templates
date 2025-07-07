@@ -10,122 +10,19 @@ on:
       - 'ansible/**/*'
       - 'Dockerfile.lint'
   workflow_dispatch:
-    inputs:
-      skip_dependency_check:
-        description: 'Skip dependency workflow checks'
-        required: false
-        default: false
-        type: boolean
+  workflow_run:
+    workflows: ["Build Docker Images"]
+    types:
+      - completed
 
 permissions:
-  actions: read
   contents: read
   packages: read
 
 jobs:
-
-
-  check-dockerfile-changes:
+  lint:
     runs-on: ubuntu-latest
-    outputs:
-      dockerfile-changed: ${{ steps.check.outputs.changed }}
-      build-running: ${{ steps.check.outputs.build-running }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-
-      - name: Check if Dockerfile.lint changed and build status
-        id: check
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "changed=false" >> $GITHUB_OUTPUT
-          else
-            # Get the list of changed files with better error handling
-            CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} 2>/dev/null || echo "")
-            
-            # Check if Dockerfile.lint was modified in this push/PR
-            if echo "$CHANGED_FILES" | grep -q "Dockerfile.lint"; then
-              echo "changed=true" >> $GITHUB_OUTPUT
-            else
-              echo "changed=false" >> $GITHUB_OUTPUT
-            fi
-          fi
-          
-          # Check if build workflow is currently running (with retry for race conditions)
-          for i in {1..3}; do
-            RUNNING_BUILD=$(gh api repos/${{ github.repository }}/actions/runs --jq '.workflow_runs[] | select(.name == "Build Docker Images" and .status == "in_progress") | .id' | head -1)
-            
-            if [ -n "$RUNNING_BUILD" ]; then
-              echo "build-running=true" >> $GITHUB_OUTPUT
-              echo "Build workflow is currently running"
-              break
-            else
-              echo "Attempt $i: No build workflow currently running"
-              if [ $i -lt 3 ]; then
-                echo "Waiting 10 seconds before retry..."
-                sleep 10
-              else
-                echo "build-running=false" >> $GITHUB_OUTPUT
-                echo "No build workflow currently running after 3 attempts"
-              fi
-            fi
-          done
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  wait-for-build:
-    if: needs.check-dockerfile-changes.outputs.dockerfile-changed == 'true' || needs.check-dockerfile-changes.outputs.build-running == 'true'
-    runs-on: ubuntu-latest
-    needs: [check-dockerfile-changes]
-    outputs:
-      build-success: ${{ steps.wait.outputs.success }}
-    permissions:
-      actions: read
-    steps:
-      - name: Wait for build workflow to complete
-        id: wait
-        run: |
-          if [ "${{ needs.check-dockerfile-changes.outputs.dockerfile-changed }}" = "true" ]; then
-            echo "Dockerfile.lint changed, waiting for build workflow to complete..."
-          else
-            echo "Build workflow is running, waiting for it to complete..."
-          fi
-          
-          # Wait for build workflow to complete
-          while true; do
-            RUNNING_WORKFLOWS=$(gh api repos/${{ github.repository }}/actions/runs --jq '.workflow_runs[] | select(.name == "Build Docker Images" and .status == "in_progress") | .id')
-            
-            if [ -z "$RUNNING_WORKFLOWS" ]; then
-              echo "Build workflow completed, checking result..."
-              break
-            fi
-            
-            echo "Build workflow still running, waiting 30 seconds..."
-            sleep 30
-          done
-          
-          # Check final result of build workflow
-          BUILD_RESULT=$(gh api repos/${{ github.repository }}/actions/runs --jq '.workflow_runs[] | select(.name == "Build Docker Images" and .status == "completed") | .conclusion' | head -1)
-          
-          if [ "$BUILD_RESULT" = "success" ]; then
-            echo "success=true" >> $GITHUB_OUTPUT
-            echo "Build workflow completed successfully"
-          else
-            echo "success=false" >> $GITHUB_OUTPUT
-            echo "Build workflow failed or was cancelled"
-            exit 1
-          fi
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  lint-ansible:
-    runs-on: ubuntu-latest
-    needs: [check-dockerfile-changes, wait-for-build]
-    if: |
-      always() && 
-      ((needs.check-dockerfile-changes.outputs.dockerfile-changed == 'false' && needs.check-dockerfile-changes.outputs.build-running == 'false') || needs.wait-for-build.outputs.build-success == 'true' || needs.wait-for-build.result == 'skipped')
+    if: github.event_name != 'workflow_run' || contains(github.event.workflow_run.head_commit.message, 'Dockerfile.lint')
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
