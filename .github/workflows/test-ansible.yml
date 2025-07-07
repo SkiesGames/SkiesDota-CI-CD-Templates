@@ -131,16 +131,41 @@ jobs:
             exit 0
           fi
           
-          # Check if Lint Ansible Code workflow is currently running for this commit
-          RUNNING_LINT=$(gh api repos/${{ github.repository }}/actions/runs --jq '.workflow_runs[] | select(.name == "Lint Ansible Code" and .head_sha == "'${{ github.sha }}'" and .status == "in_progress") | .id' | head -1)
+          # Check if Lint Ansible Code workflow is currently running (with retry for race conditions)
+          # Add initial delay to allow other workflows to start
+          echo "Waiting 15 seconds to allow other workflows to start..."
+          echo "Current workflow run ID: ${{ github.run_id }}"
+          echo "Current commit SHA: ${{ github.sha }}"
+          sleep 15
           
-          if [ -n "$RUNNING_LINT" ]; then
-            echo "running=true" >> $GITHUB_OUTPUT
-            echo "Lint workflow is running, will wait for it"
-          else
-            echo "running=false" >> $GITHUB_OUTPUT
-            echo "No lint workflow running, proceeding"
-          fi
+          for i in {1..3}; do
+            # Get the current workflow run ID to avoid detecting ourselves
+            CURRENT_RUN_ID=${{ github.run_id }}
+            
+            # First check for exact commit match (running or queued)
+            RUNNING_LINT=$(gh api repos/${{ github.repository }}/actions/runs --jq '.workflow_runs[] | select(.name == "Lint Ansible Code" and .head_sha == "'${{ github.sha }}'" and (.status == "in_progress" or .status == "queued") and .id != '$CURRENT_RUN_ID') | .id' | head -1)
+            
+            # If no exact match, check for any recent lint workflow that might be running
+            if [ -z "$RUNNING_LINT" ]; then
+              # Look for any recent lint workflow (within last 5 minutes) that's running or queued
+              RUNNING_LINT=$(gh api repos/${{ github.repository }}/actions/runs --jq '.workflow_runs[] | select(.name == "Lint Ansible Code" and (.status == "in_progress" or .status == "queued") and .id != '$CURRENT_RUN_ID' and (.created_at | fromdateiso8601) > (now - 300)) | .id' | head -1)
+            fi
+            
+            if [ -n "$RUNNING_LINT" ]; then
+              echo "running=true" >> $GITHUB_OUTPUT
+              echo "Lint workflow is running or queued, will wait for it"
+              break
+            else
+              echo "Attempt $i: No lint workflow currently running or queued"
+              if [ $i -lt 3 ]; then
+                echo "Waiting 10 seconds before retry..."
+                sleep 10
+              else
+                echo "running=false" >> $GITHUB_OUTPUT
+                echo "No lint workflow currently running or queued after 3 attempts"
+              fi
+            fi
+          done
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -157,7 +182,17 @@ jobs:
           echo "Waiting for lint workflow to complete..."
           
           while true; do
-            RUNNING_LINT=$(gh api repos/${{ github.repository }}/actions/runs --jq '.workflow_runs[] | select(.name == "Lint Ansible Code" and .head_sha == "'${{ github.sha }}'" and .status == "in_progress") | .id' | head -1)
+            # Get the current workflow run ID to avoid detecting ourselves
+            CURRENT_RUN_ID=${{ github.run_id }}
+            
+            # First check for exact commit match (running or queued)
+            RUNNING_LINT=$(gh api repos/${{ github.repository }}/actions/runs --jq '.workflow_runs[] | select(.name == "Lint Ansible Code" and .head_sha == "'${{ github.sha }}'" and (.status == "in_progress" or .status == "queued") and .id != '$CURRENT_RUN_ID') | .id' | head -1)
+            
+            # If no exact match, check for any recent lint workflow that might be running
+            if [ -z "$RUNNING_LINT" ]; then
+              # Look for any recent lint workflow (within last 5 minutes) that's running or queued
+              RUNNING_LINT=$(gh api repos/${{ github.repository }}/actions/runs --jq '.workflow_runs[] | select(.name == "Lint Ansible Code" and (.status == "in_progress" or .status == "queued") and .id != '$CURRENT_RUN_ID' and (.created_at | fromdateiso8601) > (now - 300)) | .id' | head -1)
+            fi
             
             if [ -z "$RUNNING_LINT" ]; then
               echo "Lint workflow completed"
@@ -168,8 +203,15 @@ jobs:
             sleep 30
           done
           
-          # Check final result
-          LINT_RESULT=$(gh api repos/${{ github.repository }}/actions/runs --jq '.workflow_runs[] | select(.name == "Lint Ansible Code" and .head_sha == "'${{ github.sha }}'" and .status == "completed") | .conclusion' | head -1)
+          # Check final result - look for any recent completed lint workflow
+          CURRENT_RUN_ID=${{ github.run_id }}
+          # First try to find a completed lint workflow for the same commit
+          LINT_RESULT=$(gh api repos/${{ github.repository }}/actions/runs --jq '.workflow_runs[] | select(.name == "Lint Ansible Code" and .head_sha == "'${{ github.sha }}'" and .status == "completed" and .id != '$CURRENT_RUN_ID') | .conclusion' | head -1)
+          
+          # If no result for same commit, look for any recent completed lint workflow
+          if [ -z "$LINT_RESULT" ]; then
+            LINT_RESULT=$(gh api repos/${{ github.repository }}/actions/runs --jq '.workflow_runs[] | select(.name == "Lint Ansible Code" and .status == "completed" and .id != '$CURRENT_RUN_ID' and (.created_at | fromdateiso8601) > (now - 600)) | .conclusion' | head -1)
+          fi
           
           if [ "$LINT_RESULT" = "success" ]; then
             echo "success=true" >> $GITHUB_OUTPUT

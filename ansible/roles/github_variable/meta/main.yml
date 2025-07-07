@@ -17,6 +17,6 @@ galaxy_info:
         - all
   galaxy_tags:
     - github
-    - ci-cd
+    - cicd
     - variables
     - automation
