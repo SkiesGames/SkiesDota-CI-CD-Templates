@@ -38,7 +38,7 @@ permissions:
 
 jobs:
   detect-changes:
-    if: github.event_name != 'workflow_dispatch' || (github.event_name == 'workflow_dispatch' && !inputs.force_all)
+    if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
     outputs:
       dockerfiles-changed: ${{ steps.detect.outputs.dockerfiles }}
