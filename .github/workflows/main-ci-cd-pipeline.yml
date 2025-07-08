@@ -27,7 +27,7 @@ on:
         default: true
         type: boolean
       force_all:
-        description: 'Force run all jobs (ignore path filters)'
+        description: 'Force run all jobs'
         required: false
         default: false
         type: boolean
