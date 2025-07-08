@@ -173,9 +173,9 @@ jobs:
               ansible-lint \"\$playbook\" --nocolor || exit 1
             done
           "
-
-  lint:
-    needs: [detect-changes, build]
+  
+  lint-sequential:
+    needs: [detect-changes, build-sequential]
     if: |
       github.event_name != 'workflow_dispatch' &&
       (needs.detect-changes.outputs.ansible-changed == 'true' || contains(needs.detect-changes.outputs.dockerfiles-changed, 'Dockerfile.lint'))
@@ -288,8 +288,8 @@ jobs:
             done
           "
 
-  test:
-    needs: [detect-changes, build, lint]
+  test-sequential:
+    needs: [detect-changes, lint-sequential]
     if: |
       github.event_name != 'workflow_dispatch' && 
       (needs.detect-changes.outputs.ansible-changed == 'true' || contains(needs.detect-changes.outputs.dockerfiles-changed, 'Dockerfile.test'))
