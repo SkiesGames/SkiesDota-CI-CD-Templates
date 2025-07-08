@@ -163,6 +163,7 @@ jobs:
           "
 
   test-standalone:
+    needs: lint-standalone
     if: github.event_name == 'workflow_dispatch' && (inputs.test || inputs.force_all)
     runs-on: ubuntu-latest
     steps:
