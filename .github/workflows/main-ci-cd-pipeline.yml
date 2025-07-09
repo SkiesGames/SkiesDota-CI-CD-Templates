@@ -167,7 +167,7 @@ jobs:
       (needs.detect-changes.result == 'success' || needs.detect-changes.result == 'skipped') &&
       (needs.lint.result == 'success' || needs.lint.result == 'skipped') &&
       (inputs.test ||
-      needs.detect-changes.outputs.ansible-changed == 'true' || 
+      needs.detect-changes.outputs.ansible-changed == 'true' ||
       contains(needs.detect-changes.outputs.dockerfiles-changed, 'Dockerfile.test'))
     runs-on: ubuntu-latest
     steps:
