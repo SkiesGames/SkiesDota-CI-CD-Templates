@@ -120,7 +120,11 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
   lint-standalone:
-    if: github.event_name == 'workflow_dispatch' && inputs.lint
+    needs: build-standalone
+    if: |
+      always() &&
+      (needs.build-standalone.result == 'success' || needs.build-standalone.result == 'skipped') &&
+      github.event_name == 'workflow_dispatch' && inputs.lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
