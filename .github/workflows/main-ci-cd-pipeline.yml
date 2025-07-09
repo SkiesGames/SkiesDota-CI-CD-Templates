@@ -177,7 +177,10 @@ jobs:
   lint-sequential:
     needs: [detect-changes, build-sequential]
     if: |
+      always() &&
       github.event_name != 'workflow_dispatch' &&
+      (needs.detect-changes.result == 'success' || needs.detect-changes.result == 'skipped') &&
+      (needs.build-sequential.result == 'success' || needs.build-sequential.result == 'skipped') &&
       (needs.detect-changes.outputs.ansible-changed == 'true' || contains(needs.detect-changes.outputs.dockerfiles-changed, 'Dockerfile.lint'))
     runs-on: ubuntu-latest
     steps:
