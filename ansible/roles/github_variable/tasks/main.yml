@@ -1,7 +1,0 @@
----
-# Main tasks file for GitHub Variable role
-# This file is required for Ansible to recognize this as a valid role
-# Individual task files are called using tasks_from parameter in playbooks
-
-- name: Include default GitHub variable upload
-  ansible.builtin.include_tasks: upload_ssh_key.yml
