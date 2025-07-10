@@ -14,7 +14,7 @@ lint_roles() {
     for role in roles/*/; do
         if [ -d "$role" ]; then
             role_name=$(basename "$role")
-            echo "CHECKING ROLE: $role_name"
+            echo "LINTING ROLE: $role_name"
             ansible-lint "$role" --nocolor || exit 1
         fi
     done
@@ -26,7 +26,7 @@ lint_playbooks() {
     for playbook in playbooks/*.yml; do
         if [ -f "$playbook" ]; then
             playbook_name=$(basename "$playbook")
-            echo "CHECKING PLAYBOOK: $playbook_name"
+            echo "LINTING PLAYBOOK: $playbook_name"
             ansible-lint "$playbook" --nocolor || exit 1
         fi
     done
