@@ -145,13 +145,13 @@ jobs:
             ansible-galaxy collection install -r ansible/collections/requirements.yml
             cd ansible/roles
             for role in */; do
-              echo CHECKING ROLE: $role
-              ansible-lint $role --nocolor || exit 1
+              echo CHECKING ROLE: \"$role\"
+              ansible-lint \"\$role\" --nocolor || exit 1
             done
             cd ../playbooks
             for playbook in *.yml; do
-              echo CHECKING PLAYBOOK: $playbook
-              ansible-lint $playbook --nocolor || exit 1
+              echo CHECKING PLAYBOOK: \"$playbook\"
+              ansible-lint \"\$playbook\" --nocolor || exit 1
             done
           "
 
@@ -164,13 +164,13 @@ jobs:
             ansible-galaxy collection install -r ansible/collections/requirements.yml
             cd ansible/roles
             for role in */; do
-              echo CHECKING ROLE: $role
-              ansible-lint $role --nocolor || exit 1
+              echo CHECKING ROLE: \"$role\"
+              ansible-lint \"\$role\" --nocolor || exit 1
             done
             cd ../playbooks
             for playbook in *.yml; do
-              echo CHECKING PLAYBOOK: $playbook
-              ansible-lint $playbook --nocolor || exit 1
+              echo CHECKING PLAYBOOK: \"$playbook\"
+              ansible-lint \"\$playbook\" --nocolor || exit 1
             done
           "
   
@@ -231,13 +231,13 @@ jobs:
             ansible-galaxy collection install -r ansible/collections/requirements.yml
             cd ansible/roles
             for role in */; do
-              echo CHECKING ROLE: $role
-              python -m ansiblelint $role --nocolor
+              echo CHECKING ROLE: \"$role\"
+              python -m ansiblelint \"\$role\" --nocolor
             done
             cd ../playbooks
             for playbook in *.yml; do
-              echo CHECKING PLAYBOOK: $playbook
-              python -m ansiblelint $playbook --nocolor
+              echo CHECKING PLAYBOOK: \"$playbook\"
+              python -m ansiblelint \"\$playbook\" --nocolor
               ansible-playbook \"\$playbook\" --check --diff -i localhost,
             done
           " 
