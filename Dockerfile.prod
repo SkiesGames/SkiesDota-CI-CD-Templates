@@ -26,7 +26,7 @@ RUN apt-get update && \
         openssl \
         && rm -rf /var/lib/apt/lists/*
 
-# Add Docker repository and install Docker CLI
+# Add Docker repository and install Docker CLI 
 RUN curl -fsSL https://download.docker.com/linux/debian/gpg | \
     gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg && \
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] \
@@ -50,11 +50,3 @@ RUN mkdir -p ~/.docker && \
 
 # Set working directory
 WORKDIR /workspace
-
-# Create non-root user for better security (optional)
-# RUN groupadd -r ansible && useradd -r -g ansible ansible
-# USER ansible
-
-# Health check to verify Ansible is available
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD ansible --version || exit 1
