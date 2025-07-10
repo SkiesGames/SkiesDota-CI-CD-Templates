@@ -48,36 +48,34 @@ jobs:
       - name: Detect changes
         id: detect
         run: |
-          CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} 2>/dev/null || echo "")
+          # Configuration
+          DOCKERFILE_PATTERNS=("Dockerfile.prod" "Dockerfile.prod.test" "Dockerfile.prod.lint")
+          ANSIBLE_PATTERN="ansible/"
+          
+          # Get changed files with error handling
+          if [ -z "${{ github.event.before }}" ] || [ -z "${{ github.sha }}" ]; then
+            echo "Warning: Missing commit references, using empty diff"
+            CHANGED_FILES=""
+          else
+            CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} 2>/dev/null || echo "")
+          fi
           
           echo "All changed files: $CHANGED_FILES"
           
           # Detect Dockerfile changes
           DOCKERFILES=""
-          if echo "$CHANGED_FILES" | grep -q "^Dockerfile\.prod$"; then
-            echo "Found Dockerfile.prod changes"
-            DOCKERFILES="Dockerfile.prod"
-          fi
-          if echo "$CHANGED_FILES" | grep -q "^Dockerfile\.prod\.test$"; then
-            echo "Found Dockerfile.prod.test changes"
-            if [ -n "$DOCKERFILES" ]; then
-              DOCKERFILES="$DOCKERFILES Dockerfile.prod.test"
-            else
-              DOCKERFILES="Dockerfile.prod.test"
+          
+          # Use a single grep command for better performance
+          for pattern in "${DOCKERFILE_PATTERNS[@]}"; do
+            if echo "$CHANGED_FILES" | grep -q "^${pattern}$"; then
+              echo "Found ${pattern} changes"
+              DOCKERFILES="${DOCKERFILES:+$DOCKERFILES }$pattern"
             fi
-          fi
-          if echo "$CHANGED_FILES" | grep -q "^Dockerfile\.prod\.lint$"; then
-            echo "Found Dockerfile.prod.lint changes"
-            if [ -n "$DOCKERFILES" ]; then
-              DOCKERFILES="$DOCKERFILES Dockerfile.prod.lint"
-            else
-              DOCKERFILES="Dockerfile.prod.lint"
-            fi
-          fi
+          done
           
           # Detect Ansible changes
           ANSIBLE_CHANGED="false"
-          if echo "$CHANGED_FILES" | grep -q "ansible/"; then
+          if echo "$CHANGED_FILES" | grep -q "$ANSIBLE_PATTERN"; then
             ANSIBLE_CHANGED="true"
           fi
           
@@ -97,19 +95,13 @@ jobs:
             fi
           fi
           
-          # For workflow_dispatch, if no Dockerfiles were detected, use all Dockerfiles
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "$MATRIX" = "[]" ]; then
-            MATRIX='["Dockerfile.prod","Dockerfile.prod.test","Dockerfile.prod.lint"]'
-          fi
-          
           printf "dockerfiles=%s\n" "$DOCKERFILES" >> $GITHUB_OUTPUT
           printf "ansible=%s\n" "$ANSIBLE_CHANGED" >> $GITHUB_OUTPUT
           printf "matrix=%s\n" "$MATRIX" >> $GITHUB_OUTPUT
           
-          echo "Changed Dockerfiles: $DOCKERFILES"
+          echo "Dockerfiles changed: $DOCKERFILES"
           echo "Ansible changed: $ANSIBLE_CHANGED"
           echo "Matrix JSON: $MATRIX"
-          echo "Dockerfiles trimmed: '$DOCKERFILES_TRIMMED'"
   
   build:
     needs: detect-changes
