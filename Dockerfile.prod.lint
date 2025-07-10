@@ -18,8 +18,5 @@ RUN npm install -g prettier
 # Install required ansible collections
 RUN ansible-galaxy collection install ansible.posix
 
-# Create workspace directory
+# Set Working Directory
 WORKDIR /workspace
-
-# Set default command
-CMD ["bash"] 

@@ -21,7 +21,5 @@ RUN pip install --no-cache-dir ansible
 # Install required ansible collections
 RUN ansible-galaxy collection install ansible.posix
 
-# Set working directory
+# Set Working Directory
 WORKDIR /workspace
-
-CMD ansible --version || exit 1

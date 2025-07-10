@@ -50,19 +50,24 @@ jobs:
         run: |
           CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} 2>/dev/null || echo "")
           
-          # Detect Dockerfile.prod changes
+          echo "All changed files: $CHANGED_FILES"
+          
+          # Detect Dockerfile changes
           DOCKERFILES=""
-          if echo "$CHANGED_FILES" | grep -q "Dockerfile$"; then
+          if echo "$CHANGED_FILES" | grep -q "^Dockerfile\.prod$"; then
+            echo "Found Dockerfile.prod changes"
             DOCKERFILES="Dockerfile.prod"
           fi
-          if echo "$CHANGED_FILES" | grep -q "Dockerfile.prod.test"; then
+          if echo "$CHANGED_FILES" | grep -q "^Dockerfile\.prod\.test$"; then
+            echo "Found Dockerfile.prod.test changes"
             if [ -n "$DOCKERFILES" ]; then
               DOCKERFILES="$DOCKERFILES Dockerfile.prod.test"
             else
               DOCKERFILES="Dockerfile.prod.test"
             fi
           fi
-          if echo "$CHANGED_FILES" | grep -q "Dockerfile.prod.lint"; then
+          if echo "$CHANGED_FILES" | grep -q "^Dockerfile\.prod\.lint$"; then
+            echo "Found Dockerfile.prod.lint changes"
             if [ -n "$DOCKERFILES" ]; then
               DOCKERFILES="$DOCKERFILES Dockerfile.prod.lint"
             else
