@@ -141,15 +141,43 @@ jobs:
         if: steps.pull-image.outputs.custom-image-available == 'true'
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-lint:latest bash -c "
+            # Lint YAML files
             yamllint ansible/ || exit 1
+            
+            # Install collections
             ansible-galaxy collection install -r ansible/collections/requirements.yml
-            for role in ansible/roles/*/; do
-              echo CHECKING ROLE: \"\$role\"
-              ansible-lint \"\$role\" --nocolor || exit 1
+            
+            # Change to ansible directory to respect ansible.cfg
+            cd ansible
+            
+            # Lint roles
+            echo '=== LINTING ROLES ==='
+            for role in roles/*/; do
+              if [ -d \"\$role\" ]; then
+                role_name=\$(basename \"\$role\")
+                echo \"CHECKING ROLE: \$role_name\"
+                ansible-lint \"\$role\" --nocolor || exit 1
+              fi
             done
-            for playbook in ansible/playbooks/*.yml; do
-              echo CHECKING PLAYBOOK: \"\$playbook\"
-              ansible-lint \"\$playbook\" --nocolor || exit 1
+            
+            # Lint playbooks
+            echo '=== LINTING PLAYBOOKS ==='
+            for playbook in playbooks/*.yml; do
+              if [ -f \"\$playbook\" ]; then
+                playbook_name=\$(basename \"\$playbook\")
+                echo \"CHECKING PLAYBOOK: \$playbook_name\"
+                ansible-lint \"\$playbook\" --nocolor || exit 1
+              fi
+            done
+            
+            # Lint jobs (if any)
+            echo '=== LINTING JOBS ==='
+            for job in jobs/*.yml; do
+              if [ -f \"\$job\" ]; then
+                job_name=\$(basename \"\$job\")
+                echo \"CHECKING JOB: \$job_name\"
+                ansible-lint \"\$job\" --nocolor || exit 1
+              fi
             done
           "
 
@@ -157,16 +185,46 @@ jobs:
         if: steps.pull-image.outputs.custom-image-available == 'false'
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace python:3.13-slim bash -c "
+            # Install dependencies
             pip install --no-cache-dir yamllint ansible ansible-lint
+            
+            # Lint YAML files
             yamllint ansible/ || exit 1
+            
+            # Install collections
             ansible-galaxy collection install -r ansible/collections/requirements.yml
-            for role in ansible/roles/*/; do
-              echo CHECKING ROLE: \"\$role\"
-              ansible-lint \"\$role\" --nocolor || exit 1
+            
+            # Change to ansible directory to respect ansible.cfg
+            cd ansible
+            
+            # Lint roles
+            echo '=== LINTING ROLES ==='
+            for role in roles/*/; do
+              if [ -d \"\$role\" ]; then
+                role_name=\$(basename \"\$role\")
+                echo \"CHECKING ROLE: \$role_name\"
+                ansible-lint \"\$role\" --nocolor || exit 1
+              fi
             done
-            for playbook in ansible/playbooks/*.yml; do
-              echo CHECKING PLAYBOOK: \"\$playbook\"
-              ansible-lint \"\$playbook\" --nocolor || exit 1
+            
+            # Lint playbooks
+            echo '=== LINTING PLAYBOOKS ==='
+            for playbook in playbooks/*.yml; do
+              if [ -f \"\$playbook\" ]; then
+                playbook_name=\$(basename \"\$playbook\")
+                echo \"CHECKING PLAYBOOK: \$playbook_name\"
+                ansible-lint \"\$playbook\" --nocolor || exit 1
+              fi
+            done
+            
+            # Lint jobs (if any)
+            echo '=== LINTING JOBS ==='
+            for job in jobs/*.yml; do
+              if [ -f \"\$job\" ]; then
+                job_name=\$(basename \"\$job\")
+                echo \"CHECKING JOB: \$job_name\"
+                ansible-lint \"\$job\" --nocolor || exit 1
+              fi
             done
           "
   
@@ -207,13 +265,42 @@ jobs:
         if: steps.pull-image.outputs.custom-image-available == 'true'
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-test:latest bash -c "
+            # Install collections
             ansible-galaxy collection install -r ansible/collections/requirements.yml
-            for role in ansible/roles/*/; do
-              python -m ansiblelint \"\$role\" --nocolor
+            
+            # Change to ansible directory to respect ansible.cfg
+            cd ansible
+            
+            # Test roles
+            echo '=== TESTING ROLES ==='
+            for role in roles/*/; do
+              if [ -d \"\$role\" ]; then
+                role_name=\$(basename \"\$role\")
+                echo \"TESTING ROLE: \$role_name\"
+                ansible-lint \"\$role\" --nocolor || exit 1
+              fi
             done
-            for playbook in ansible/playbooks/*.yml; do
-              python -m ansiblelint \"\$playbook\" --nocolor
-              ansible-playbook \"\$playbook\" --check --diff -i localhost,
+            
+            # Test playbooks
+            echo '=== TESTING PLAYBOOKS ==='
+            for playbook in playbooks/*.yml; do
+              if [ -f \"\$playbook\" ]; then
+                playbook_name=\$(basename \"\$playbook\")
+                echo \"TESTING PLAYBOOK: \$playbook_name\"
+                ansible-lint \"\$playbook\" --nocolor || exit 1
+                ansible-playbook \"\$playbook\" --check --diff -i localhost, || exit 1
+              fi
+            done
+            
+            # Test jobs (if any)
+            echo '=== TESTING JOBS ==='
+            for job in jobs/*.yml; do
+              if [ -f \"\$job\" ]; then
+                job_name=\$(basename \"\$job\")
+                echo \"TESTING JOB: \$job_name\"
+                ansible-lint \"\$job\" --nocolor || exit 1
+                ansible-playbook \"\$job\" --check --diff -i localhost, || exit 1
+              fi
             done
           "
 
@@ -221,15 +308,44 @@ jobs:
         if: steps.pull-image.outputs.custom-image-available == 'false'
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace python:3.13-slim bash -c "
+            # Install dependencies
             pip install --no-cache-dir ansible ansible-lint
+            
+            # Install collections
             ansible-galaxy collection install -r ansible/collections/requirements.yml
-            for role in ansible/roles/*/; do
-              echo CHECKING ROLE: \"\$role\"
-              python -m ansiblelint \"\$role\" --nocolor
+            
+            # Change to ansible directory to respect ansible.cfg
+            cd ansible
+            
+            # Test roles
+            echo '=== TESTING ROLES ==='
+            for role in roles/*/; do
+              if [ -d \"\$role\" ]; then
+                role_name=\$(basename \"\$role\")
+                echo \"TESTING ROLE: \$role_name\"
+                ansible-lint \"\$role\" --nocolor || exit 1
+              fi
             done
-            for playbook in ansible/playbooks/*.yml; do
-              echo CHECKING PLAYBOOK: \"\$playbook\"
-              python -m ansiblelint \"\$playbook\" --nocolor
-              ansible-playbook \"\$playbook\" --check --diff -i localhost,
+            
+            # Test playbooks
+            echo '=== TESTING PLAYBOOKS ==='
+            for playbook in playbooks/*.yml; do
+              if [ -f \"\$playbook\" ]; then
+                playbook_name=\$(basename \"\$playbook\")
+                echo \"TESTING PLAYBOOK: \$playbook_name\"
+                ansible-lint \"\$playbook\" --nocolor || exit 1
+                ansible-playbook \"\$playbook\" --check --diff -i localhost, || exit 1
+              fi
+            done
+            
+            # Test jobs (if any)
+            echo '=== TESTING JOBS ==='
+            for job in jobs/*.yml; do
+              if [ -f \"\$job\" ]; then
+                job_name=\$(basename \"\$job\")
+                echo \"TESTING JOB: \$job_name\"
+                ansible-lint \"\$job\" --nocolor || exit 1
+                ansible-playbook \"\$job\" --check --diff -i localhost, || exit 1
+              fi
             done
           " 
