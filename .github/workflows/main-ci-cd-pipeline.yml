@@ -143,11 +143,11 @@ jobs:
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-lint:latest bash -c "
             yamllint ansible/ || exit 1
             ansible-galaxy collection install -r ansible/collections/requirements.yml
-            for role in */; do
+            for role in ansible/roles/*/; do
               echo CHECKING ROLE: \"\$role\"
               ansible-lint \"\$role\" --nocolor || exit 1
             done
-            for playbook in *.yml; do
+            for playbook in ansible/playbooks/*.yml; do
               echo CHECKING PLAYBOOK: \"\$playbook\"
               ansible-lint \"\$playbook\" --nocolor || exit 1
             done
@@ -160,11 +160,11 @@ jobs:
             pip install --no-cache-dir yamllint ansible ansible-lint
             yamllint ansible/ || exit 1
             ansible-galaxy collection install -r ansible/collections/requirements.yml
-            for role in */; do
+            for role in ansible/roles/*/; do
               echo CHECKING ROLE: \"\$role\"
               ansible-lint \"\$role\" --nocolor || exit 1
             done
-            for playbook in *.yml; do
+            for playbook in ansible/playbooks/*.yml; do
               echo CHECKING PLAYBOOK: \"\$playbook\"
               ansible-lint \"\$playbook\" --nocolor || exit 1
             done
@@ -208,10 +208,10 @@ jobs:
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-test:latest bash -c "
             ansible-galaxy collection install -r ansible/collections/requirements.yml
-            for role in */; do
+            for role in ansible/roles/*/; do
               python -m ansiblelint \"\$role\" --nocolor
             done
-            for playbook in *.yml; do
+            for playbook in ansible/playbooks/*.yml; do
               python -m ansiblelint \"\$playbook\" --nocolor
               ansible-playbook \"\$playbook\" --check --diff -i localhost,
             done
@@ -223,11 +223,11 @@ jobs:
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace python:3.13-slim bash -c "
             pip install --no-cache-dir ansible ansible-lint
             ansible-galaxy collection install -r ansible/collections/requirements.yml
-            for role in */; do
+            for role in ansible/roles/*/; do
               echo CHECKING ROLE: \"\$role\"
               python -m ansiblelint \"\$role\" --nocolor
             done
-            for playbook in *.yml; do
+            for playbook in ansible/playbooks/*.yml; do
               echo CHECKING PLAYBOOK: \"\$playbook\"
               python -m ansiblelint \"\$playbook\" --nocolor
               ansible-playbook \"\$playbook\" --check --diff -i localhost,
