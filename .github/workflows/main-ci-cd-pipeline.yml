@@ -50,16 +50,24 @@ jobs:
         run: |
           CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} 2>/dev/null || echo "")
           
-          # Detect Dockerfile changes
+          # Detect Dockerfile.prod changes
           DOCKERFILES=""
           if echo "$CHANGED_FILES" | grep -q "Dockerfile$"; then
-            DOCKERFILES="$DOCKERFILES Dockerfile"
+            DOCKERFILES="Dockerfile.prod"
           fi
-          if echo "$CHANGED_FILES" | grep -q "Dockerfile.test"; then
-            DOCKERFILES="$DOCKERFILES Dockerfile.test"
+          if echo "$CHANGED_FILES" | grep -q "Dockerfile.prod.test"; then
+            if [ -n "$DOCKERFILES" ]; then
+              DOCKERFILES="$DOCKERFILES Dockerfile.prod.test"
+            else
+              DOCKERFILES="Dockerfile.prod.test"
+            fi
           fi
-          if echo "$CHANGED_FILES" | grep -q "Dockerfile.lint"; then
-            DOCKERFILES="$DOCKERFILES Dockerfile.lint"
+          if echo "$CHANGED_FILES" | grep -q "Dockerfile.prod.lint"; then
+            if [ -n "$DOCKERFILES" ]; then
+              DOCKERFILES="$DOCKERFILES Dockerfile.prod.lint"
+            else
+              DOCKERFILES="Dockerfile.prod.lint"
+            fi
           fi
           
           # Detect Ansible changes
@@ -71,7 +79,11 @@ jobs:
           # Build matrix for Docker builds
           MATRIX="[]"
           if [ -n "$DOCKERFILES" ]; then
-            MATRIX=$(echo "$DOCKERFILES" | tr ' ' '\n' | jq -R . | jq -s .)
+            # Remove leading/trailing whitespace and ensure we have content
+            DOCKERFILES_TRIMMED=$(echo "$DOCKERFILES" | xargs)
+            if [ -n "$DOCKERFILES_TRIMMED" ]; then
+              MATRIX=$(echo "$DOCKERFILES_TRIMMED" | tr ' ' '\n' | jq -R . | jq -s .)
+            fi
           fi
           
           echo "dockerfiles=$DOCKERFILES" >> $GITHUB_OUTPUT
@@ -91,7 +103,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        dockerfile: ${{ github.event_name == 'workflow_dispatch' && fromJson('["Dockerfile", "Dockerfile.test", "Dockerfile.lint"]') || fromJson(needs.detect-changes.outputs.matrix) }}
+        dockerfile: ${{ github.event_name == 'workflow_dispatch' && fromJson('["Dockerfile.prod", "Dockerfile.prod.test", "Dockerfile.prod.lint"]') || fromJson(needs.detect-changes.outputs.matrix) }}
       fail-fast: false
     steps:
       - name: Checkout repository
@@ -100,7 +112,7 @@ jobs:
       - name: Build ${{ matrix.dockerfile }}
         uses: ./.github/actions/build-image
         with:
-          image-name: ${{ matrix.dockerfile == 'Dockerfile' && 'ansible-base' || matrix.dockerfile == 'Dockerfile.test' && 'ansible-test' || 'ansible-lint' }}
+          image-name: ${{ matrix.dockerfile == 'Dockerfile.prod' && 'ansible-prod' || matrix.dockerfile == 'Dockerfile.prod.test' && 'ansible-prod-test' || 'ansible-prod-lint' }}
           dockerfile-path: ./${{ matrix.dockerfile }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
   
@@ -112,7 +124,7 @@ jobs:
       (needs.build.result == 'success' || needs.build.result == 'skipped') &&
       (inputs.lint ||
       needs.detect-changes.outputs.ansible-changed == 'true' ||
-      contains(needs.detect-changes.outputs.dockerfiles-changed, 'Dockerfile.lint'))
+      contains(needs.detect-changes.outputs.dockerfiles-changed, 'Dockerfile.prod.lint'))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -146,7 +158,7 @@ jobs:
         if: steps.pull-image.outputs.custom-image-available == 'false'
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace python:3.13-slim bash -c "
-            pip install --no-cache-dir yamllint ansible ansible-lint
+            pip install --no-cache-dir yamllint ansible ansible-prod-lint
             bash .github/scripts/ansible-lint.sh
           "
   
@@ -158,7 +170,7 @@ jobs:
       (needs.lint.result == 'success' || needs.lint.result == 'skipped') &&
       (inputs.test ||
       needs.detect-changes.outputs.ansible-changed == 'true' ||
-      contains(needs.detect-changes.outputs.dockerfiles-changed, 'Dockerfile.test'))
+      contains(needs.detect-changes.outputs.dockerfiles-changed, 'Dockerfile.prod.test'))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -177,7 +189,7 @@ jobs:
       - name: Try to pull custom test image
         id: pull-image
         run: |
-          if docker pull ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-test:latest; then
+          if docker pull ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod-test:latest; then
             echo "custom-image-available=true" >> $GITHUB_OUTPUT
           else
             echo "custom-image-available=false" >> $GITHUB_OUTPUT
@@ -192,6 +204,6 @@ jobs:
         if: steps.pull-image.outputs.custom-image-available == 'false'
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace python:3.13-slim bash -c "
-            pip install --no-cache-dir ansible ansible-lint
+            pip install --no-cache-dir ansible ansible-prod-test
             bash .github/scripts/ansible-test.sh
           " 
