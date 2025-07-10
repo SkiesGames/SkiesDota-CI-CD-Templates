@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
+# Install Python Dependencies
 RUN pip install --no-cache-dir \
     yamllint \
     ansible-lint

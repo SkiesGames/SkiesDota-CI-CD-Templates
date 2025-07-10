@@ -87,8 +87,8 @@ jobs:
             # Remove leading/trailing whitespace and ensure we have content
             DOCKERFILES_TRIMMED=$(echo "$DOCKERFILES" | xargs)
             if [ -n "$DOCKERFILES_TRIMMED" ]; then
-              # Create JSON array more reliably using jq directly
-              MATRIX=$(jq -n --arg files "$DOCKERFILES_TRIMMED" '$files | split(" ") | map(select(length > 0))')
+              # Create JSON array more reliably using jq directly with compact output
+              MATRIX=$(jq -n -c --arg files "$DOCKERFILES_TRIMMED" '$files | split(" ") | map(select(length > 0))')
               # Validate JSON format
               if ! echo "$MATRIX" | jq . >/dev/null 2>&1; then
                 echo "Error: Invalid JSON generated for matrix"
@@ -97,9 +97,14 @@ jobs:
             fi
           fi
           
-          echo "dockerfiles=$DOCKERFILES" >> $GITHUB_OUTPUT
-          echo "ansible=$ANSIBLE_CHANGED" >> $GITHUB_OUTPUT
-          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+          # For workflow_dispatch, if no Dockerfiles were detected, use all Dockerfiles
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "$MATRIX" = "[]" ]; then
+            MATRIX='["Dockerfile.prod","Dockerfile.prod.test","Dockerfile.prod.lint"]'
+          fi
+          
+          printf "dockerfiles=%s\n" "$DOCKERFILES" >> $GITHUB_OUTPUT
+          printf "ansible=%s\n" "$ANSIBLE_CHANGED" >> $GITHUB_OUTPUT
+          printf "matrix=%s\n" "$MATRIX" >> $GITHUB_OUTPUT
           
           echo "Changed Dockerfiles: $DOCKERFILES"
           echo "Ansible changed: $ANSIBLE_CHANGED"
@@ -116,7 +121,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        dockerfile: ${{ github.event_name == 'workflow_dispatch' && fromJson('["Dockerfile.prod", "Dockerfile.prod.test", "Dockerfile.prod.lint"]') || fromJson(needs.detect-changes.outputs.matrix) }}
+        dockerfile: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
       fail-fast: false
     steps:
       - name: Checkout repository

@@ -15,7 +15,7 @@ RUN apt-get update && \
         curl \
         && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies for testing
+# Install Python Dependencies
 RUN pip install --no-cache-dir ansible
 
 # Install required ansible collections
