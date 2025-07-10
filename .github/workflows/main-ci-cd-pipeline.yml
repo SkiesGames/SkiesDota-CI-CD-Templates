@@ -110,9 +110,9 @@ jobs:
       always() &&
       (needs.detect-changes.result == 'success' || needs.detect-changes.result == 'skipped') &&
       (needs.build.result == 'success' || needs.build.result == 'skipped') &&
-      (needs.detect-changes.outputs.ansible-changed == 'true' ||
-      contains(needs.detect-changes.outputs.dockerfiles-changed, 'Dockerfile.lint') ||
-      inputs.lint)
+      (inputs.lint ||
+      needs.detect-changes.outputs.ansible-changed == 'true' ||
+      contains(needs.detect-changes.outputs.dockerfiles-changed, 'Dockerfile.lint'))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -172,9 +172,9 @@ jobs:
       always() &&
       (needs.detect-changes.result == 'success' || needs.detect-changes.result == 'skipped') &&
       (needs.lint.result == 'success' || needs.lint.result == 'skipped') &&
-      (needs.detect-changes.outputs.ansible-changed == 'true' ||
-      contains(needs.detect-changes.outputs.dockerfiles-changed, 'Dockerfile.test') ||
-      inputs.test)
+      (inputs.test ||
+      needs.detect-changes.outputs.ansible-changed == 'true' ||
+      contains(needs.detect-changes.outputs.dockerfiles-changed, 'Dockerfile.test'))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
