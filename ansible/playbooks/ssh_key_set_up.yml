@@ -6,7 +6,7 @@
       ansible.builtin.import_role:
         name: ssh
         tasks_from: generate_and_deliver
-    
+
     - name: Upload SSH key to GitHub
       ansible.builtin.import_role:
         name: github_variable
