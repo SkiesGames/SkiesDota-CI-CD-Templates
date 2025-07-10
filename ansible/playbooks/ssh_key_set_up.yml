@@ -1,8 +1,13 @@
 - name: Manage SSH keys
   hosts: all
   gather_facts: false
-  roles:
-    - role: ssh
-      tasks_from: generate_and_deliver
-    - role: github_variable
-      tasks_from: upload_ssh_key
+  tasks:
+    - name: Generate and deliver SSH keys
+      ansible.builtin.import_role:
+        name: ssh
+        tasks_from: generate_and_deliver
+    
+    - name: Upload SSH key to GitHub
+      ansible.builtin.import_role:
+        name: github_variable
+        tasks_from: upload_ssh_key
