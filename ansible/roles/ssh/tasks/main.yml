@@ -4,4 +4,4 @@
 # Individual task files are called using tasks_from parameter in playbooks
 
 - name: Include default SSH setup
-  ansible.builtin.include_tasks: setup_agent.yml 
+  ansible.builtin.include_tasks: setup_agent.yml
