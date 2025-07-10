@@ -39,6 +39,11 @@ RUN curl -fsSL https://download.docker.com/linux/debian/gpg | \
 # Install Python dependencies
 RUN pip install --no-cache-dir ansible
 
+# Copy and install Ansible collections
+COPY ansible/collections/requirements.yml /tmp/collections-requirements.yml
+RUN ansible-galaxy collection install -r /tmp/collections-requirements.yml && \
+    rm /tmp/collections-requirements.yml
+
 # Configure Docker for GitHub Container Registry
 RUN mkdir -p ~/.docker && \
     echo '{"credsStore": "ghcr"}' > ~/.docker/config.json

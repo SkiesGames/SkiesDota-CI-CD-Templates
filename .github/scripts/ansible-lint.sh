@@ -35,9 +35,6 @@ lint_playbooks() {
 # Lint YAML files
 yamllint ansible/ || exit 1
 
-# Install collections
-ansible-galaxy collection install -r ansible/collections/requirements.yml
-
 # Change to ansible directory to respect ansible.cfg
 cd ansible
 

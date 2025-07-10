@@ -18,6 +18,11 @@ RUN apt-get update && \
 # Install Python dependencies for testing
 RUN pip install --no-cache-dir ansible ansible-lint
 
+# Copy and install Ansible collections
+COPY ansible/collections/requirements.yml /tmp/collections-requirements.yml
+RUN ansible-galaxy collection install -r /tmp/collections-requirements.yml && \
+    rm /tmp/collections-requirements.yml
+
 # Install required ansible collections
 RUN ansible-galaxy collection install ansible.posix
 
