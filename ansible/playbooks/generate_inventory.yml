@@ -5,7 +5,7 @@
   gather_facts: false
   tasks:
     - name: Generate inventory file
-      ansible.builtin.template:
-        src: "{{ playbook_dir }}/../templates/inventory.j2"
+      ansible.builtin.copy:
+        content: "{{ lookup('template', playbook_dir + '/../templates/inventory.j2') }}"
         dest: "{{ playbook_dir }}/../inventory.ini"
         mode: '0644'
