@@ -6,6 +6,6 @@
   tasks:
     - name: Generate initial ssh setup inventory file
       ansible.builtin.template:
-        src: initial_ssh_setup_inventory.j2
+        src: ../templates/initial_ssh_setup_inventory.j2
         dest: ansible/inventory.ini
         mode: '0644'

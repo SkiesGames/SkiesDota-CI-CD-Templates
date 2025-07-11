@@ -6,6 +6,6 @@
   tasks:
     - name: Generate inventory file
       ansible.builtin.template:
-        src: inventory.j2
+        src: ../templates/inventory.j2
         dest: ansible/inventory.ini
         mode: '0644'

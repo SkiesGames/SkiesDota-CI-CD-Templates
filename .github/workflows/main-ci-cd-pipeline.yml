@@ -65,7 +65,6 @@ jobs:
           # Detect Dockerfile changes
           DOCKERFILES=""
           
-          # Use a single grep command for better performance
           for pattern in "${DOCKERFILE_PATTERNS[@]}"; do
             if echo "$CHANGED_FILES" | grep -q "^${pattern}$"; then
               echo "Found ${pattern} changes"
