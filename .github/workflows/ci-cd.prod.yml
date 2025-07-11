@@ -1,4 +1,4 @@
-name: Main CI/CD Pipeline
+name: Main Production Workflow
 
 on:
   push:
