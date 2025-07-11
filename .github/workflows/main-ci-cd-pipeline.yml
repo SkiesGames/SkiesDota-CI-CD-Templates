@@ -112,7 +112,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        dockerfile: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+        dockerfile: ${{ fromJson(needs.detect-changes.outputs.matrix || '["Dockerfile.prod", "Dockerfile.prod.test", "Dockerfile.prod.lint"]') }}
       fail-fast: false
     steps:
       - name: Checkout repository
