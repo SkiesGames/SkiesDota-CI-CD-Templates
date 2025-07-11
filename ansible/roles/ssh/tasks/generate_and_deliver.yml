@@ -11,7 +11,6 @@
     state: present
   register: key_result
   delegate_to: localhost
-  when: lookup('env', 'CI_JOB_NAME') == 'add_ssh_key'
 
 - name: Upload public key to remote host
   ansible.posix.authorized_key:
@@ -19,4 +18,4 @@
     key: "{{ lookup('file', '~/.ssh/ci_id_ed25519.pub') }}"
     state: present
     exclusive: true
-  when: lookup('env', 'CI_JOB_NAME') == 'add_ssh_key'
+  when: not is_local_testing

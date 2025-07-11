@@ -1,11 +1,7 @@
 name: Deploy Infrastructure
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'ansible/**/*'
-  workflow_dispatch:
+  workflow_call:
 
 env:
   REGISTRY: ghcr.io
@@ -13,7 +9,13 @@ env:
 
 jobs:
   deploy:
-    if: ${{ secrets.AUTO_DEPLOY == 'true' }}
-    uses: ./.github/workflows/reusable-ansible-base.yml
-    with:
-      playbook-path: ansible/playbooks/deploy.yml
+    if: ${{ env.AUTO_DEPLOY == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Ansible Playbook
+        uses: ./.github/workflows/reusable-ansible-base.yml
+        with:
+          playbook-path: ansible/playbooks/deploy.yml

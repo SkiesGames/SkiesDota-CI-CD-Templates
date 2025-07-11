@@ -1,82 +1,63 @@
-# Playbooks
+# Ansible Playbooks
 
-This directory contains Ansible playbooks for infrastructure automation and deployment workflows.
+This directory contains Ansible playbooks for setting up CI/CD environments and managing SSH keys.
 
-## Available Playbooks
+## Playbooks
 
-### ssh_key_set_up.yml
-SSH key management and distribution playbook.
-
-**Purpose:**
-- Generates SSH key pairs for CI/CD automation
-- Distributes public keys to target servers
-- Uploads private keys to GitLab variables for secure storage
-
-**Roles Used:**
-- `ssh`: Key generation and distribution
-- `gitlab_variable`: Secure variable storage
+### setup_ci_env.yml
+Sets up the CI/CD environment by configuring SSH agent and environment.
 
 **Usage:**
-- Triggered by `add_ssh_key` job
-- Used for initial server setup
-- Requires password authentication for first run
-
-**Target Hosts:**
-- All hosts defined in `ANSIBLE_HOSTS` variable
-
-**Execution:**
 ```bash
-ansible-playbook -i inventory.ini ssh_key_set_up.yml
+ansible-playbook setup_ci_env.yml
 ```
 
-## Playbook Structure
+### ssh_key_set_up.yml
+Manages SSH key generation, delivery, and GitHub integration.
 
-Each playbook follows the standard Ansible structure:
+**Usage:**
+```bash
+# For local testing (template development)
+ansible-playbook ssh_key_set_up.yml
 
-```yaml
-- name: Playbook Description
-  hosts: target_hosts
-  gather_facts: false  # When not needed
-  roles:
-    - role: role_name
-      tasks_from: specific_task_file  # Optional
+# For real usage with remote hosts
+ansible-playbook ssh_key_set_up.yml -i inventory.yml
 ```
 
-## Integration with Jobs
+## Local Testing Mode
 
-Playbooks are executed by GitLab CI jobs:
+The playbooks support a local testing mode for template development. This mode:
 
-- **bootstrap**: Runs bootstrap playbook (to be created)
-- **deploy**: Runs deploy playbook (to be created)
-- **add_ssh_key**: Runs ssh_key_set_up.yml
+- Detects when running locally (localhost with local connection)
+- Skips remote host operations that require SSH connections
+- Skips GitHub API operations that require CI environment variables
+- Allows testing of playbook structure and basic functionality
 
-## Variables
+### Environment Variables
 
-Playbooks use variables from:
-- GitLab CI/CD variables
-- Inventory files
-- Role defaults
-- Environment-specific configurations
+- `LOCAL_TESTING=true` - Explicitly enable local testing mode
+- `CI_JOB_NAME=add_ssh_key` - Required for SSH key operations in CI environment
 
-## Security Considerations
+### Detection Logic
 
-- SSH keys are generated ephemerally
-- Private keys are stored securely in GitLab variables
-- Public keys are distributed to authorized hosts only
-- Password authentication is only used for initial setup
+Local testing mode is automatically detected when:
+1. `ansible_connection` is set to `local`
+2. `inventory_hostname` is `localhost`
+3. `LOCAL_TESTING` environment variable is set to `true`
 
-## Extending Playbooks
+## Real Usage
 
-To add new playbooks:
+For real usage in CI/CD pipelines:
 
-1. Create the playbook file in this directory
-2. Define the required roles and tasks
-3. Update corresponding job definitions
-4. Add documentation for usage and variables
+1. Set up proper inventory with remote hosts
+2. Configure SSH connection details
+3. Set required environment variables (`GITHUB_TOKEN`, `GITHUB_REPOSITORY`, etc.)
+4. Run playbooks with proper inventory file
 
-## Best Practices
+## Troubleshooting
 
-- Use roles for reusable functionality
-- Keep playbooks focused on specific workflows
-- Document required variables and dependencies
-- Test playbooks with Molecule before deployment 
+### Connection Refused Error
+If you see "Connection refused" errors, ensure you're running in local testing mode or have proper SSH access configured for remote hosts.
+
+### GitHub API Errors
+GitHub operations are skipped in local testing mode. For real usage, ensure `GITHUB_TOKEN` and `GITHUB_REPOSITORY` environment variables are set. 
