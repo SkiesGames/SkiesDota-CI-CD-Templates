@@ -172,10 +172,11 @@ jobs:
           "
   
   test:
-    needs: [detect-changes, lint]
+    needs: [detect-changes, build, lint]
     if: |
       always() &&
       (needs.detect-changes.result == 'success' || needs.detect-changes.result == 'skipped') &&
+      (needs.build.result == 'success' || needs.build.result == 'skipped') &&
       (needs.lint.result == 'success' || needs.lint.result == 'skipped') &&
       (inputs.test ||
       needs.detect-changes.outputs.ansible-changed == 'true' ||
