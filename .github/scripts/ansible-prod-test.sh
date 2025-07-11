@@ -20,7 +20,6 @@ test_playbooks() {
     done
 }
 
-# Change to ansible directory to respect ansible.cfg
 cd ansible
 
 # Run testing

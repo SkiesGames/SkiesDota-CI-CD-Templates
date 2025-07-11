@@ -152,7 +152,7 @@ jobs:
       - name: Try to pull custom lint image
         id: pull-image
         run: |
-          if docker pull ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-lint:latest; then
+          if docker pull ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod-lint:latest; then
             echo "custom-image-available=true" >> $GITHUB_OUTPUT
           else
             echo "custom-image-available=false" >> $GITHUB_OUTPUT
@@ -161,14 +161,14 @@ jobs:
       - name: Run linting (Custom Image)
         if: steps.pull-image.outputs.custom-image-available == 'true'
         run: |
-          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-lint:latest bash .github/scripts/ansible-lint.sh
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod-lint:latest bash .github/scripts/ansible-prod-lint.sh
 
       - name: Run linting (Fallback)
         if: steps.pull-image.outputs.custom-image-available == 'false'
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace python:3.13-slim bash -c "
             pip install --no-cache-dir yamllint ansible ansible-prod-lint
-            bash .github/scripts/ansible-lint.sh
+            bash .github/scripts/ansible-prod-lint.sh
           "
   
   test:
@@ -207,12 +207,12 @@ jobs:
       - name: Run tests (Custom Image)
         if: steps.pull-image.outputs.custom-image-available == 'true'
         run: |
-          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-test:latest bash .github/scripts/ansible-test.sh
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod-test:latest bash .github/scripts/ansible-prod-test.sh
 
       - name: Run tests (Fallback)
         if: steps.pull-image.outputs.custom-image-available == 'false'
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace python:3.13-slim bash -c "
             pip install --no-cache-dir ansible ansible-prod-test
-            bash .github/scripts/ansible-test.sh
+            bash .github/scripts/ansible-prod-test.sh
           " 

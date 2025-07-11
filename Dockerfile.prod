@@ -44,6 +44,9 @@ COPY ansible/collections/requirements.yml /tmp/collections-requirements.yml
 RUN ansible-galaxy collection install -r /tmp/collections-requirements.yml && \
     rm /tmp/collections-requirements.yml
 
+# Copy Ansible configuration
+COPY ansible/ansible.cfg /etc/ansible/ansible.cfg
+
 # Configure Docker for GitHub Container Registry
 RUN mkdir -p ~/.docker && \
     echo '{"credsStore": "ghcr"}' > ~/.docker/config.json
