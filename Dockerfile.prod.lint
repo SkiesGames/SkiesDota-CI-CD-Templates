@@ -18,6 +18,11 @@ RUN apt-get update && \
 # Install Python Dependencies
 RUN pip install --no-cache-dir yamllint ansible-lint
 
+# Copy and install Ansible collections
+COPY ansible/collections/requirements.yml /tmp/collections-requirements.yml
+RUN ansible-galaxy collection install -r /tmp/collections-requirements.yml && \
+    rm /tmp/collections-requirements.yml
+
 # Copy Ansible configuration
 COPY ansible/ansible.cfg /etc/ansible/ansible.cfg
 
