@@ -11,6 +11,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
 # Install system dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
+        # SSH client for testing
+        openssh-client \
         # Basic utilities
         curl \
         && rm -rf /var/lib/apt/lists/*
