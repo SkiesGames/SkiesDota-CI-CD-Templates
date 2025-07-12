@@ -1,12 +1,14 @@
 - name: Ensure .ssh directory exists
   ansible.builtin.file:
-    path: "~/.ssh"
+    path: "{{ ansible_env.HOME }}/.ssh"
     state: directory
     mode: '0700'
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_gid }}"
 
 - name: Generate SSH key pair
   community.crypto.openssh_keypair:
-    path: "~/.ssh/ci_id_ed25519"
+    path: "{{ ansible_env.HOME }}/.ssh/ci_id_ed25519"
     type: ed25519
     state: present
   register: key_result
@@ -15,7 +17,7 @@
 - name: Upload public key to remote host
   ansible.posix.authorized_key:
     user: "{{ ansible_user }}"
-    key: "{{ lookup('file', '~/.ssh/ci_id_ed25519.pub') }}"
+    key: "{{ lookup('file', ansible_env.HOME + '/.ssh/ci_id_ed25519.pub') }}"
     state: present
     exclusive: true
   when: not is_local_testing
