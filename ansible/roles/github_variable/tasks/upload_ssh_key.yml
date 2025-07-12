@@ -14,7 +14,7 @@
 - name: Encrypt SSH key with GitHub public key
   ansible.builtin.shell: |
     set -o pipefail
-    echo "{{ lookup('file', '~/.ssh/ci_id_ed25519') }}" | base64 -w 0
+    echo "{{ lookup('file', lookup('env', 'HOME') + '/.ssh/ci_id_ed25519') }}" | base64 -w 0
   register: ssh_key_base64
   delegate_to: localhost
   no_log: true
