@@ -1,17 +1,17 @@
 - name: Manage SSH keys
   hosts: >-
-    {{ 'localhost' if (lookup('env', 'LOCAL_TESTING', default='false') | bool) 
-       or (inventory_hostname is defined and inventory_hostname == 'localhost') 
+    {{ 'localhost' if (lookup('env', 'LOCAL_TESTING', default='false') | bool)
+       or (inventory_hostname is defined and inventory_hostname == 'localhost')
        or (groups['all'] | length == 0) else 'all' }}
   connection: >-
-    {{ 'local' if (lookup('env', 'LOCAL_TESTING', default='false') | bool) 
-       or (inventory_hostname is defined and inventory_hostname == 'localhost') 
+    {{ 'local' if (lookup('env', 'LOCAL_TESTING', default='false') | bool)
+       or (inventory_hostname is defined and inventory_hostname == 'localhost')
        or (groups['all'] | length == 0) else 'ssh' }}
   gather_facts: false
   vars:
     is_local_testing: >-
-      {{ (lookup('env', 'LOCAL_TESTING', default='false') | bool) 
-         or (inventory_hostname is defined and inventory_hostname == 'localhost') 
+      {{ (lookup('env', 'LOCAL_TESTING', default='false') | bool)
+         or (inventory_hostname is defined and inventory_hostname == 'localhost')
          or (groups['all'] | length == 0) }}
   tasks:
     - name: Generate and deliver SSH keys
@@ -22,4 +22,4 @@
     - name: Upload SSH key to GitHub
       ansible.builtin.import_role:
         name: github_variable
-        tasks_from: upload_ssh_key
+        tasks_from: upload_ssh_key 
