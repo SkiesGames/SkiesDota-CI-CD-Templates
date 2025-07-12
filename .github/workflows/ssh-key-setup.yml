@@ -22,7 +22,7 @@ on:
         default: true
         type: boolean
     secrets:
-      github_token:
+      token:
         required: true
   workflow_dispatch:
     inputs:
@@ -122,7 +122,7 @@ jobs:
           ANSIBLE_HOSTS: ${{ inputs.target_hosts || github.event.inputs.target_hosts }}
           ANSIBLE_USER: ${{ inputs.target_user || github.event.inputs.target_user }}
           ANSIBLE_HOSTS_PASSWORD: ${{ inputs.target_password || github.event.inputs.target_password }}
-          GITHUB_TOKEN: ${{ secrets.github_token }}
+          GITHUB_TOKEN: ${{ secrets.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           docker run --rm \
@@ -147,7 +147,7 @@ jobs:
           ANSIBLE_HOSTS: ${{ inputs.target_hosts || github.event.inputs.target_hosts }}
           ANSIBLE_USER: ${{ inputs.target_user || github.event.inputs.target_user }}
           ANSIBLE_HOSTS_PASSWORD: ${{ inputs.target_password || github.event.inputs.target_password }}
-          GITHUB_TOKEN: ${{ secrets.github_token }}
+          GITHUB_TOKEN: ${{ secrets.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           docker run --rm \

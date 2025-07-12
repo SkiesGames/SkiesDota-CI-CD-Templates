@@ -50,7 +50,7 @@ jobs:
       target_password: ${{ github.event.inputs.target_password }}
       initial_setup: true
     secrets:
-      github_token: ${{ secrets.GITHUB_TOKEN }}
+      token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ### 2. From Other Workflows
@@ -74,7 +74,7 @@ jobs:
       target_password: ${{ secrets.SSH_PASSWORD }}
       initial_setup: true
     secrets:
-      github_token: ${{ secrets.GITHUB_TOKEN }}
+      token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ## Comparison with GitLab CI
@@ -188,7 +188,7 @@ uses: SkiesGames/SkiesDota-CI-CD-Templates/.github/workflows/ssh-key-setup.yml@v
 Pass secrets explicitly:
 ```yaml
 secrets:
-  github_token: ${{ secrets.GITHUB_TOKEN }}
+  token: ${{ secrets.GITHUB_TOKEN }}
   ssh_password: ${{ secrets.SSH_PASSWORD }}
 ```
 
