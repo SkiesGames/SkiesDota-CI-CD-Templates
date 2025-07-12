@@ -162,7 +162,7 @@ jobs:
             python:3.13-slim \
             bash -c "
               apt-get update && apt-get install -y openssh-client
-              pip install --no-cache-dir ansible ansible-posix
+              pip install --no-cache-dir ansible ansible-posix community.crypto
               cd ansible
               ansible-playbook -i ../inventory.ini playbooks/ssh_key_set_up.yml
             "

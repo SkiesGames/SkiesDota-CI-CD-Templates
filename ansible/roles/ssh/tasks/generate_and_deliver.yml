@@ -7,11 +7,10 @@
     group: "{{ ansible_user_gid }}"
 
 - name: Generate SSH key pair
-  ansible.builtin.ssh_key:
+  community.crypto.openssh_keypair:
     path: "{{ ansible_env.HOME }}/.ssh/ci_id_ed25519"
     type: ed25519
-    size: 256
-    force: false
+    state: present
   register: key_result
   delegate_to: localhost
 
