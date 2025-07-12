@@ -22,4 +22,4 @@
     - name: Upload SSH key to GitHub
       ansible.builtin.import_role:
         name: github_variable
-        tasks_from: upload_ssh_key 
+        tasks_from: upload_ssh_key
