@@ -1,0 +1,25 @@
+name: 'Pull Docker Image'
+description: 'Try to pull a Docker image and set availability status'
+
+inputs:
+  image-name:
+    description: 'Full Docker image name to pull'
+    required: true
+  output-name:
+    description: 'Name for the output variable (default: image-available)'
+    required: false
+    default: 'image-available'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Try to pull custom image
+      id: pull-image
+      shell: bash
+      run: |
+        if docker pull ${{ inputs.image-name }}; then
+          echo "${{ inputs.output-name }}=true" >> $GITHUB_OUTPUT
+        else
+          echo "${{ inputs.output-name }}=false" >> $GITHUB_OUTPUT
+        fi
+      continue-on-error: true 
