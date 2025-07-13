@@ -9,15 +9,13 @@ jobs:
   improve-commits:
     uses: ./.github/workflows/reusable-opencommit.yml
     with:
-      # Your specific configuration
       oco-model: 'deepseek-chat'
       oco-ai-provider: 'deepseek'
       oco-emoji: 'true'
       
-      # Optional: override other defaults if needed
       min-commit-length: '15'
       skip-if-already-good: 'true'
-      
+
       oco-tokens-max-input: '4096'
       oco-tokens-max-output: '500'
       oco-description: 'false'
