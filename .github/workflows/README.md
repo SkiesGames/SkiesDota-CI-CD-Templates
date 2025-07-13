@@ -14,6 +14,23 @@ A reusable workflow for setting up SSH keys on target servers.
 - Uploads private keys to GitHub Secrets
 - Supports both manual trigger and reusable workflow calls
 
+### OpenCommit (`reusable-opencommit.yml`)
+
+A reusable workflow for improving commit messages using AI with OpenCommit.
+
+**Features:**
+- Automatically improves commit messages using AI
+- Supports multiple AI providers (DeepSeek, OpenAI, etc.)
+- Configurable parameters for tokens, language, emoji, etc.
+- Uses conventional commit format by default
+- Can be triggered on push events
+
+**Configuration:**
+- `oco-model`: AI model to use (default: 'deepseek-chat')
+- `oco-ai-provider`: AI provider (default: 'deepseek')
+- `oco-emoji`: Enable emoji in commit messages (default: 'true')
+- `oco-api-key`: Required API key for the AI provider
+
 ## How to Use Reusable Workflows
 
 ### 1. In Other Repositories
@@ -75,6 +92,40 @@ jobs:
       initial_setup: true
     secrets:
       token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### 3. OpenCommit Usage Example
+
+To use the OpenCommit workflow for improving commit messages:
+
+```yaml
+# .github/workflows/improve-commits.yml
+name: Improve Commit Messages
+
+on:
+  push:
+    # Remove branches-ignore if you want OpenCommit to run on all branches
+    # branches-ignore: [main master dev development release]
+
+jobs:
+  improve-commits:
+    uses: SkiesGames/SkiesDota-CI-CD-Templates/.github/workflows/reusable-opencommit.yml@main
+    with:
+      # Your specific configuration
+      oco-model: 'deepseek-chat'
+      oco-ai-provider: 'deepseek'
+      oco-emoji: 'true'
+      
+      # Required: API key
+      oco-api-key: ${{ secrets.OCO_API_KEY }}
+      
+      # Optional: override other defaults if needed
+      oco-tokens-max-input: '4096'
+      oco-tokens-max-output: '500'
+      oco-description: 'false'
+      oco-language: 'en'
+      oco-prompt-module: 'conventional-commit'
+      timeout-minutes: '10'
 ```
 
 ## Comparison with GitLab CI
