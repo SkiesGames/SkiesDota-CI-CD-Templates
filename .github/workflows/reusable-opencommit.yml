@@ -78,7 +78,9 @@ jobs:
     timeout-minutes: ${{ inputs.timeout-minutes }}
     name: OpenCommit
     runs-on: ubuntu-latest
-    permissions: write-all
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - name: Setup Node.js Environment
         uses: actions/setup-node@v2
