@@ -11,8 +11,8 @@ on:
       min-commit-length:
         description: 'Minimum commit message length to trigger improvement'
         required: false
-        default: '15'
-        type: string
+        default: 15
+        type: number
       skip-if-already-good:
         description: 'Skip if commit message is already good'
         required: false
@@ -36,22 +36,17 @@ on:
       oco-tokens-max-input:
         description: 'Maximum input tokens'
         required: false
-        default: '4096'
-        type: string
+        default: 4096
+        type: number
       oco-tokens-max-output:
         description: 'Maximum output tokens'
         required: false
-        default: '500'
-        type: string
+        default: 500
+        type: number
       oco-description:
         description: 'Include description in commit messages'
         required: false
         default: 'false'
-        type: string
-      oco-openai-base-path:
-        description: 'OpenAI base path (leave empty for default)'
-        required: false
-        default: ''
         type: string
       oco-language:
         description: 'Language for commit messages'
@@ -64,10 +59,9 @@ on:
         default: 'conventional-commit'
         type: string
       timeout-minutes:
-        description: 'Timeout for the job in minutes'
+        description: 'Timeout for the job in minutes (optional)'
         required: false
-        default: '10'
-        type: string
+        type: number
     secrets:
       oco-api-key:
         description: 'OpenCommit API key'
@@ -75,9 +69,9 @@ on:
 
 jobs:
   opencommit:
-    timeout-minutes: ${{ inputs.timeout-minutes }}
     name: OpenCommit
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ inputs.timeout-minutes }}
     permissions:
       contents: write
       pull-requests: write
