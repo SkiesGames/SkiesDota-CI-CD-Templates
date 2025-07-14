@@ -119,7 +119,6 @@ jobs:
           # Customization options
           OCO_TOKENS_MAX_INPUT: ${{ inputs.oco-tokens-max-input }}
           OCO_TOKENS_MAX_OUTPUT: ${{ inputs.oco-tokens-max-output }}
-          OCO_OPENAI_BASE_PATH: ${{ inputs.oco-openai-base-path }}
           OCO_DESCRIPTION: ${{ inputs.oco-description }}
           OCO_EMOJI: ${{ inputs.oco-emoji }}
           OCO_MODEL: ${{ inputs.oco-model }}
