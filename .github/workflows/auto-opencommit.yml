@@ -5,6 +5,10 @@ on:
     # Remove branches-ignore if you want OpenCommit to run on all branches
     # branches-ignore: [main master dev development release]
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   improve-commits:
     # Only run if this is not a merge commit and not from a fork
