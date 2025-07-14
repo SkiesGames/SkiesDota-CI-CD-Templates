@@ -1,4 +1,4 @@
-name: Full Security Scan
+name: Manual Full Security Scan
 
 on:
   workflow_dispatch:

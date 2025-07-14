@@ -1,4 +1,4 @@
-name: OpenCommit Example Usage
+name: Auto OpenCommit Improvements
 
 on:
   push:

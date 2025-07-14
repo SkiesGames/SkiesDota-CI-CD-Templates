@@ -1,4 +1,4 @@
-name: Deploy Infrastructure
+name: Reusable Deploy Infrastructure
 
 on:
   workflow_call:

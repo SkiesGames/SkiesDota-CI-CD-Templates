@@ -1,4 +1,4 @@
-name: Main Production Workflow
+name: Main Production Pipeline
 
 on:
   push:

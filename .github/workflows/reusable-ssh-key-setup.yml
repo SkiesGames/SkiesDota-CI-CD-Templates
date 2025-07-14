@@ -1,4 +1,4 @@
-name: SSH Key Setup
+name: Reusable SSH Key Setup
 
 on:
   workflow_call:
@@ -24,26 +24,6 @@ on:
     secrets:
       token:
         required: true
-  workflow_dispatch:
-    inputs:
-      target_hosts:
-        description: 'Target host IPs (comma-separated)'
-        required: true
-        type: string
-      target_user:
-        description: 'SSH username'
-        required: true
-        type: string
-        default: 'root'
-      target_password:
-        description: 'SSH password'
-        required: true
-        type: string
-      initial_setup:
-        description: 'Initial setup mode (requires password auth)'
-        required: false
-        default: true
-        type: boolean
 
 permissions:
   contents: read

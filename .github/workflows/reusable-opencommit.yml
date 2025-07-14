@@ -1,4 +1,4 @@
-name: Reusable OpenCommit Workflow
+name: Reusable OpenCommit Improvements
 
 on:
   workflow_call:
