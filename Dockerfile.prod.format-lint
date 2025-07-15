@@ -13,10 +13,16 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         # Basic utilities
         curl \
+        # Node.js and npm for Prettier
+        nodejs \
+        npm \
         && rm -rf /var/lib/apt/lists/*
 
-# Install Python Dependencies
-RUN pip install --no-cache-dir ansible ansible-lint yamllint
+# Install Python Dependencies (for ansible-lint)
+RUN pip install --no-cache-dir ansible ansible-lint
+
+# Install Prettier globally (for formatting YAML files)
+RUN npm install -g prettier
 
 # Copy and install Ansible collections
 COPY ansible/collections/requirements.yml /tmp/collections-requirements.yml

@@ -6,8 +6,8 @@ A comprehensive GitHub Actions template repository for Ansible automation and in
 
 This template repository contains:
 
-- **Docker Images**: Three pre-built Ansible runner images for different CI/CD pipeline stages
-- **GitHub Actions Workflows**: Reusable workflow templates for building, testing, linting, and deployment
+- **Docker Images**: Four pre-built Ansible runner images for different CI/CD pipeline stages
+- **GitHub Actions Workflows**: Reusable workflow templates for building, testing, linting, security scanning, and deployment
 - **Smart Dependency Management**: Conditional dependency system that optimizes pipeline performance
 - **Local Development Tools**: Scripts for local linting and testing
 - **Ansible Playbooks**: Infrastructure automation playbooks
@@ -30,146 +30,92 @@ You can reference these workflows in other repositories by copying the workflow 
 ## Available Workflows
 
 ### Core Workflows
-- `build-images`: Builds three Docker images for different CI/CD stages
-- `test-ansible`: Validates Ansible code quality and syntax with smart build dependencies
-- `lint-ansible`: Performs code formatting and linting with smart build dependencies
-- `deploy`: Infrastructure deployment and automation
+- `ci-cd.prod.yml`: Main production pipeline with smart change detection
+- `auto-opencommit.yml`: Automatic commit message improvements
+- `manual-security-scan.yml`: Comprehensive security scanning
+- `reusable-ssh-key-setup.yml`: SSH key generation and distribution
+- `reusable-opencommit.yml`: Reusable commit improvement workflow
+- `reusable-deploy.yml`: Reusable deployment workflow
 
 ### Manual Operations
-- `bootstrap`: Initial server setup and configuration (manual trigger)
-- `deploy`: Application deployment and updates (auto on main branch or manual)
-- `ssh-key-setup`: SSH key generation and distribution (manual trigger)
+- `manual-security-scan.yml`: Full security scan with git history
+- `reusable-ssh-key-setup.yml`: SSH key generation and distribution (manual trigger)
 
 ## Workflow Details
 
-### Build Images Workflow (`.github/workflows/build-images.yml`)
+### Main Production Pipeline (`.github/workflows/ci-cd.prod.yml`)
 
-**Purpose**: Builds and publishes three Docker images to GitHub Container Registry
+**Purpose**: Comprehensive CI/CD pipeline with smart change detection and conditional execution
 
 **Features**:
-- Builds base Ansible image (`ansible-base:latest`)
-- Builds test Ansible image (`ansible-test:latest`)
-- Builds lint Ansible image (`ansible-lint:latest`)
-- Automatic triggering on Dockerfile changes
-- Manual trigger support
-- Uses reusable workflow for consistency
-- Multi-platform support with Docker Buildx
-- Layer caching for faster builds
+- **Smart Change Detection**: Automatically detects which files changed and runs appropriate jobs
+- **Docker Image Building**: Builds four specialized Docker images:
+  - `ansible-prod`: Main Ansible runner
+  - `ansible-prod-test`: Testing environment
+  - `ansible-prod-format-lint`: Formatting and linting tools
+  - `ansible-prod-security-scan`: Security scanning tools
+- **Conditional Job Execution**: Only runs jobs when relevant files change
+- **Security Scanning**: Fast and comprehensive security scans with TruffleHog
+- **Format and Lint**: YAML formatting with Prettier and Ansible linting
+- **Testing**: Ansible syntax validation and dry-run testing
+- **Fallback Support**: Uses standard images when custom images unavailable
 
 **Triggers**:
-- Push to Dockerfile files
+- Push to `ansible/**/*` files
+- Push to `Dockerfile*` files
+- Pull requests to relevant paths
 - Manual workflow dispatch
 
-### Test Ansible Workflow (`.github/workflows/test-ansible.yml`)
+### Auto OpenCommit (`.github/workflows/auto-opencommit.yml`)
 
-**Purpose**: Validates Ansible code quality and syntax with smart dependency management
-
-**Features**:
-- **Smart Build Dependency**: Automatically waits for build workflow only when necessary
-- Syntax validation for all roles and playbooks using ansible-lint
-- Dry-run testing for all playbooks with `--check --diff`
-- Fallback to standard Python image if custom image unavailable
-- Parallel job execution when possible
-- Automatic triggering on Ansible code changes
-
-**Smart Dependency Management**:
-- Checks if Dockerfile.test changed in the current push/PR
-- Waits for build completion only when test image needs rebuilding
-- Proceeds immediately if test image doesn't need updates
-- Reduces unnecessary delays and improves pipeline efficiency
-
-**Triggers**:
-- Push to ansible directory
-- Push to Dockerfile.test
-- Pull requests to ansible directory
-- Manual workflow dispatch
-
-### Lint Ansible Workflow (`.github/workflows/lint-ansible.yml`)
-
-**Purpose**: Performs code formatting and comprehensive linting with smart dependency management
+**Purpose**: Automatically improves commit messages using AI
 
 **Features**:
-- **Smart Build Dependency**: Automatically waits for build workflow only when necessary
-- YAML formatting with Prettier
-- YAML syntax validation with yamllint
-- Ansible best practices validation with ansible-lint
-- Fallback to standard Python image if custom image unavailable
-- Automatic triggering on Ansible code changes
+- Uses OpenCommit with DeepSeek AI model
+- Conventional commit format
+- Emoji support
+- Skip if commit message is already good
+- Only runs on non-merge commits from non-forks
 
-**Smart Dependency Management**:
-- Checks if Dockerfile.lint changed in the current push/PR
-- Waits for build completion only when lint image needs rebuilding
-- Proceeds immediately if lint image doesn't need updates
-- Optimizes pipeline performance with conditional waiting
+### Manual Security Scan (`.github/workflows/manual-security-scan.yml`)
 
-**Triggers**:
-- Push to ansible directory
-- Push to Dockerfile.lint
-- Pull requests to ansible directory
-- Manual workflow dispatch
-
-### Deploy Workflow (`.github/workflows/deploy.yml`)
-
-**Purpose**: Infrastructure deployment and automation
+**Purpose**: Comprehensive security scanning with git history
 
 **Features**:
-- Bootstrap deployment (manual)
-- Auto-deploy on main branch (only if AUTO_DEPLOY=true)
-- SSH key setup (manual)
-- Pre-flight checks for manual runs
-- Conditional job execution based on inputs
-- Uses reusable workflow for consistency
+- Full repository scan with TruffleHog
+- Git history scanning for secrets
+- Manual trigger only
+- Uses custom security scan image when available
 
-**Triggers**:
-- Push to main branch (ansible changes) - only if AUTO_DEPLOY=true
-- Manual workflow dispatch with playbook selection
+### Reusable SSH Key Setup (`.github/workflows/reusable-ssh-key-setup.yml`)
+
+**Purpose**: SSH key generation and distribution for infrastructure automation
+
+**Features**:
+- Generates SSH key pairs
+- Distributes public keys to target servers
+- Uploads private keys to GitHub Secrets
+- Supports both manual trigger and reusable workflow calls
+- Fallback to standard Python image when custom image unavailable
 
 ## Smart Dependency Management
 
 ### How It Works
 
-The test and lint workflows implement intelligent dependency management that optimizes CI/CD pipeline performance:
+The main production pipeline implements intelligent dependency management that optimizes CI/CD pipeline performance:
 
-1. **Change Detection**: Checks if the relevant Dockerfile changed in the current push/PR
-2. **Conditional Wait**: Only waits if the Docker image needs rebuilding
-3. **Immediate Execution**: Proceeds immediately if no rebuild is needed
-4. **Fallback Support**: Uses standard images if custom images are unavailable
+1. **Change Detection**: Detects which specific files changed in the current push/PR
+2. **Conditional Execution**: Only runs jobs when relevant files change
+3. **Image Availability**: Tries to use custom images first, falls back to standard images
+4. **Parallel Processing**: Runs independent jobs in parallel when possible
 
 ### Benefits
 
-- **Efficiency**: Eliminates unnecessary waiting when images don't need rebuilding
-- **Reliability**: Ensures tests use the latest images when rebuilds are necessary
+- **Efficiency**: Eliminates unnecessary job execution
+- **Reliability**: Ensures all necessary checks are performed
 - **Performance**: Reduces overall pipeline execution time
-- **Flexibility**: Works with any build workflow configuration
+- **Flexibility**: Works with any build configuration
 - **Robustness**: Graceful fallback when custom images are unavailable
-
-### Example Scenarios
-
-**Scenario 1: Image Needs Rebuilding**
-```
-1. User pushes changes to Dockerfile.test
-2. Build workflow starts
-3. User pushes changes to ansible/ directory
-4. Test workflow detects Dockerfile.test changed
-5. Test workflow waits for build completion
-6. Test workflow proceeds with latest image
-```
-
-**Scenario 2: No Image Rebuild Needed**
-```
-1. User pushes changes to ansible/ directory only
-2. Test workflow detects no Dockerfile changes
-3. Test workflow proceeds immediately
-4. Uses existing image from registry
-```
-
-**Scenario 3: Custom Image Unavailable**
-```
-1. Test workflow tries to pull custom image
-2. Pull fails (e.g., first run, network issues)
-3. Test workflow falls back to standard Python image
-4. Installs required packages and proceeds
-```
 
 ## Local Development
 
@@ -210,6 +156,7 @@ Configure these secrets in your GitHub repository (Settings → Secrets and vari
 
 #### Optional Secrets
 - `AUTO_DEPLOY`: Set to "true" to enable automatic deployment on main branch
+- `OCO_API_KEY`: OpenCommit API key for commit message improvements
 
 ### Example Secret Configuration
 
@@ -231,9 +178,9 @@ For first-time SSH key setup:
 
 1. **Configure Secrets**: Set `ANSIBLE_HOSTS`, `ANSIBLE_HOSTS_PASSWORD`, and `ANSIBLE_USER`
 2. **Run SSH Key Setup**: 
-   - Go to Actions → Deploy Infrastructure
+   - Go to Actions → Reusable SSH Key Setup
    - Click "Run workflow"
-   - Select "ssh-key-setup" option
+   - Provide target hosts, user, and password
    - Click "Run workflow"
 3. **Store Generated Key**: The workflow will generate and distribute SSH keys
 4. **Update Secrets**: Add the generated private key as `SSH_PRIVATE_KEY` secret
@@ -243,31 +190,38 @@ For first-time SSH key setup:
 
 ```
 ├── .github/
+│   ├── actions/
+│   │   ├── build-image/           # Docker image building action
+│   │   ├── detect-changes/        # Change detection action
+│   │   ├── pull-image/            # Image availability check action
+│   │   ├── security-scan/         # Security scanning action
+│   │   └── setup-docker/          # Docker setup action
+│   ├── scripts/                   # CI/CD scripts
 │   └── workflows/
-│       ├── build-images.yml           # Docker image building
-│       ├── test-ansible.yml          # Ansible code testing
-│       ├── lint-ansible.yml          # Ansible code linting
-│       ├── reusable-test-ansible.yml # Reusable test workflow
-│       ├── reusable-build-images.yml # Reusable build workflow
-│       ├── reusable-ansible-base.yml # Reusable ansible base workflow
-│       └── deploy.yml                # Infrastructure deployment
+│       ├── ci-cd.prod.yml         # Main production pipeline
+│       ├── auto-opencommit.yml    # Auto commit improvements
+│       ├── manual-security-scan.yml # Manual security scan
+│       ├── reusable-opencommit.yml # Reusable commit workflow
+│       ├── reusable-deploy.yml    # Reusable deploy workflow
+│       ├── reusable-ssh-key-setup.yml # Reusable SSH setup
+│       └── README.md              # Workflows documentation
 ├── ansible/
-│   ├── images_jobs/     # GitLab CI jobs (legacy)
-│   ├── test_jobs/       # GitLab CI jobs (legacy)
-│   ├── jobs/           # GitLab CI jobs (legacy)
-│   ├── playbooks/      # Ansible playbooks
-│   ├── roles/          # Reusable Ansible roles
-│   └── templates/      # Jinja2 templates
+│   ├── collections/               # Ansible collections requirements
+│   ├── jobs/                      # GitLab CI jobs (legacy)
+│   ├── playbooks/                 # Ansible playbooks
+│   ├── roles/                     # Reusable Ansible roles
+│   ├── templates/                 # Jinja2 templates
+│   ├── ansible.cfg                # Ansible configuration
+│   └── README.md                  # Ansible documentation
 ├── scripts/
-│   └── lint-local.sh   # Local linting script
-├── Dockerfile          # Base Ansible image
-├── Dockerfile.test     # Ansible testing image
-├── Dockerfile.lint     # Ansible linting image
-├── .prettierrc         # Prettier configuration
-├── .yamllint           # yamllint configuration
-├── CONDITIONAL_DEPENDENCY_SOLUTION.md # Dependency solution documentation
-├── LINTING.md          # Linting documentation
-└── README.md           # This file
+│   └── lint-local.sh              # Local linting script
+├── Dockerfile.prod                # Main Ansible image
+├── Dockerfile.prod.test           # Testing image
+├── Dockerfile.prod.format-lint    # Formatting and linting image
+├── Dockerfile.prod.security-scan  # Security scanning image
+├── .prettierrc                    # Prettier configuration
+├── LINTING.md                     # Linting documentation
+└── README.md                      # This file
 ```
 
 ## Available Roles
@@ -277,8 +231,7 @@ For first-time SSH key setup:
 - **docker_compose_plugin**: Docker Compose plugin management
 - **environment**: Environment file management
 - **firewall**: UFW firewall configuration
-- **github_variable**: GitHub variable management (new)
-- **gitlab_variable**: GitLab variable management (legacy)
+- **github_variable**: GitHub variable management
 - **mongodb**: MongoDB replica set and index setup
 - **ssh**: SSH key generation and agent setup
 - **ssl**: SSL certificate management
@@ -286,13 +239,13 @@ For first-time SSH key setup:
 
 ## Testing and Linting
 
-The repository includes comprehensive testing and linting capabilities with smart dependency management:
+The repository includes comprehensive testing and linting capabilities:
 
 ### Syntax Testing
 - **ansible-lint**: Validates all roles and playbooks for best practices
 - **Automatic triggers**: Runs on changes to playbooks, roles, or test image
 - **Manual execution**: Available for on-demand testing
-- **Smart dependencies**: Waits for build workflow only when necessary
+- **Smart dependencies**: Only runs when relevant files change
 
 ### Playbook Testing
 - **Dry-run validation**: Uses `--check --diff` to simulate playbook execution
@@ -303,39 +256,39 @@ The repository includes comprehensive testing and linting capabilities with smar
 - **Prettier**: YAML file formatting for consistency
 - **yamllint**: YAML syntax validation and style checking
 - **ansible-lint**: Ansible-specific best practices and syntax validation
-- **Smart dependencies**: Waits for build workflow only when necessary
-
-### Smart Dependency Features
-- **Change-based detection**: Checks if relevant Dockerfiles changed
-- **Conditional waiting**: Only waits when images need rebuilding
-- **Parallel execution**: Runs tests/linting immediately when no build dependency exists
-- **Fallback support**: Uses standard images when custom images unavailable
+- **Smart dependencies**: Only runs when relevant files change
 
 ## Docker Images
 
-### Base Ansible Image (`Dockerfile`)
+### Main Ansible Image (`Dockerfile.prod`)
 - **Base**: Python 3.13 slim
 - **Features**: SSH client, Docker CLI, rsync, curl, jq, OpenSSL
 - **Purpose**: Main Ansible runner for deployment and automation
-- **Registry**: `ghcr.io/${{ github.repository }}/ansible-base:latest`
+- **Registry**: `ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest`
 
-### Test Ansible Image (`Dockerfile.test`)
+### Test Ansible Image (`Dockerfile.prod.test`)
 - **Base**: Python 3.13 slim
 - **Features**: ansible, ansible-lint
 - **Purpose**: Code quality validation and testing
-- **Registry**: `ghcr.io/${{ github.repository }}/ansible-test:latest`
+- **Registry**: `ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod-test:latest`
 
-### Lint Ansible Image (`Dockerfile.lint`)
+### Format and Lint Image (`Dockerfile.prod.format-lint`)
 - **Base**: Python 3.13 slim
 - **Features**: ansible-lint, yamllint, prettier, nodejs, npm
 - **Purpose**: Code formatting and comprehensive linting
-- **Registry**: `ghcr.io/${{ github.repository }}/ansible-lint:latest`
+- **Registry**: `ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod-format-lint:latest`
+
+### Security Scan Image (`Dockerfile.prod.security-scan`)
+- **Base**: Alpine 3.19
+- **Features**: TruffleHog, git, bash
+- **Purpose**: Security scanning and secret detection
+- **Registry**: `ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod-security-scan:latest`
 
 ## Usage Examples
 
 ### Manual Deployment
 1. Go to Actions tab in GitHub
-2. Select "Deploy Infrastructure" workflow
+2. Select "Reusable Deploy Infrastructure" workflow
 3. Click "Run workflow"
 4. Choose playbook type (bootstrap/deploy/ssh-key-setup)
 5. Click "Run workflow"
@@ -345,8 +298,8 @@ Set `AUTO_DEPLOY` secret to "true" to enable automatic deployment on main branch
 
 ### SSH Key Setup
 1. Configure `ANSIBLE_HOSTS` and `ANSIBLE_HOSTS_PASSWORD` secrets
-2. Run "Deploy Infrastructure" workflow manually
-3. Select "ssh-key-setup" option
+2. Run "Reusable SSH Key Setup" workflow manually
+3. Provide target hosts, user, and password
 4. After successful run, remove `ANSIBLE_HOSTS_PASSWORD` secret
 
 ### Local Development
@@ -361,15 +314,18 @@ ansible-lint ansible/roles/my-role/
 ansible-lint ansible/playbooks/my-playbook.yml
 ```
 
-### Testing with Smart Dependencies
-The test and lint workflows automatically handle build dependencies:
-- **When image needs rebuilding**: Waits for completion, then runs tests/linting
-- **When image doesn't need rebuilding**: Proceeds immediately with existing images
-- **When custom image unavailable**: Falls back to standard images with package installation
+### Security Scanning
+```bash
+# Manual comprehensive scan
+# Go to Actions → Manual Full Security Scan → Run workflow
+
+# Fast scan (automatic on changes)
+# Triggered automatically by main pipeline
+```
 
 ## Migration from GitLab CI
 
-This repository has been migrated from GitLab CI/CD to GitHub Actions. See `CONDITIONAL_DEPENDENCY_SOLUTION.md` for detailed implementation documentation.
+This repository has been migrated from GitLab CI/CD to GitHub Actions. The migration includes:
 
 ### Key Changes
 - GitLab CI stages → GitHub Actions workflows
@@ -379,11 +335,12 @@ This repository has been migrated from GitLab CI/CD to GitHub Actions. See `COND
 - Manual dependency management → Smart dependency with change detection
 
 ### New Features
-- **Smart Dependencies**: Conditional waiting based on actual changes
+- **Smart Dependencies**: Conditional execution based on actual changes
 - **Reusable Workflows**: Better code organization and maintainability
 - **Fallback Support**: Graceful handling when custom images unavailable
 - **Local Development**: Local linting script for development workflow
-- **Comprehensive Linting**: Separate linting workflow with formatting and validation
+- **Comprehensive Security**: Dedicated security scanning workflow
+- **Auto Commit Improvements**: AI-powered commit message enhancements
 
 ## Contributing
 
@@ -400,6 +357,7 @@ This repository has been migrated from GitLab CI/CD to GitHub Actions. See `COND
 - Pre-flight validation for manual operations
 - Manual approval for critical operations
 - Encrypted communication with GitHub API
+- Comprehensive security scanning with TruffleHog
 - Smart dependency management reduces attack surface
 
 ## Troubleshooting
@@ -424,7 +382,7 @@ ssh -i ~/.ssh/ci_id_ed25519 $ANSIBLE_USER@$TARGET_HOST
 - Ensure target hosts are accessible
 
 **Smart Dependency Issues**
-- Check if Dockerfile changes are being detected correctly
+- Check if file changes are being detected correctly
 - Verify workflow name matches exactly
 - Review API permissions for GITHUB_TOKEN
 - Check fallback behavior when custom images unavailable
@@ -439,9 +397,9 @@ ssh -i ~/.ssh/ci_id_ed25519 $ANSIBLE_USER@$TARGET_HOST
 ## Performance Optimizations
 
 ### Smart Dependencies
-- **Efficiency**: Tests/linting run immediately when no rebuild needed
-- **Parallel Processing**: Multiple workflows can run simultaneously
-- **Change Detection**: Only waits when actual changes require rebuilding
+- **Efficiency**: Jobs run only when relevant files change
+- **Parallel Processing**: Multiple jobs can run simultaneously
+- **Change Detection**: Only processes what actually changed
 - **Fallback Support**: Reduces dependency on custom image availability
 
 ### Build Optimizations

@@ -16,8 +16,8 @@ on:
         required: false
         default: false
         type: boolean
-      lint:
-        description: 'Lint Ansible code'
+      format-lint:
+        description: 'Format and lint Ansible code'
         required: false
         default: true
         type: boolean
@@ -28,7 +28,7 @@ on:
         type: boolean
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 jobs:
@@ -50,7 +50,7 @@ jobs:
         id: detect
         run: |
           # Configuration
-          DOCKERFILE_PATTERNS=("Dockerfile.prod" "Dockerfile.prod.test" "Dockerfile.prod.lint" "Dockerfile.prod.security-scan")
+          DOCKERFILE_PATTERNS=("Dockerfile.prod" "Dockerfile.prod.test" "Dockerfile.prod.format-lint" "Dockerfile.prod.security-scan")
           ANSIBLE_PATTERN="ansible/"
           
           # Get changed files with error handling
@@ -121,7 +121,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        dockerfile: ${{ fromJson(needs.detect-changes.outputs.dockerfiles-matrix || '["Dockerfile.prod", "Dockerfile.prod.test", "Dockerfile.prod.lint"]') }}
+        dockerfile: ${{ fromJson(needs.detect-changes.outputs.dockerfiles-matrix || '["Dockerfile.prod", "Dockerfile.prod.test", "Dockerfile.prod.format-lint"]') }}
       fail-fast: false
     steps:
       - name: Checkout repository
@@ -130,7 +130,7 @@ jobs:
       - name: Build ${{ matrix.dockerfile }}
         uses: ./.github/actions/build-image
         with:
-          image-name: ${{ matrix.dockerfile == 'Dockerfile.prod' && 'ansible-prod' || matrix.dockerfile == 'Dockerfile.prod.test' && 'ansible-prod-test' || matrix.dockerfile == 'Dockerfile.prod.lint' && 'ansible-prod-lint' || 'ansible-prod-security-scan' }}
+          image-name: ${{ matrix.dockerfile == 'Dockerfile.prod' && 'ansible-prod' || matrix.dockerfile == 'Dockerfile.prod.test' && 'ansible-prod-test' || matrix.dockerfile == 'Dockerfile.prod.format-lint' && 'ansible-prod-format-lint' || 'ansible-prod-security-scan' }}
           dockerfile-path: ./${{ matrix.dockerfile }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
   
@@ -155,16 +155,16 @@ jobs:
           target-files: ${{ needs.detect-changes.outputs.changed-files }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
   
-  lint:
+  format-lint:
     needs: [detect-changes, build, security-scan-fast]
     if: |
       always() &&
       (needs.detect-changes.result == 'success' || needs.detect-changes.result == 'skipped') &&
       (needs.security-scan-fast.result == 'success' || needs.security-scan-fast.result == 'skipped') &&
       (needs.build.result == 'success' || needs.build.result == 'skipped') &&
-      (inputs.lint ||
+      (inputs.format-lint ||
       needs.detect-changes.outputs.ansible-is-changed == 'true' ||
-      contains(fromJson(needs.detect-changes.outputs.dockerfiles-matrix), 'Dockerfile.prod.lint'))
+      contains(fromJson(needs.detect-changes.outputs.dockerfiles-matrix), 'Dockerfile.prod.format-lint'))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -175,34 +175,48 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Try to pull custom lint image
+      - name: Try to pull custom format-lint image
         id: pull-image
         uses: ./.github/actions/pull-image
         with:
-          image-name: ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod-lint:latest
+          image-name: ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod-format-lint:latest
           output-name: custom-image-available
 
-      - name: Run linting (Custom Image)
+      - name: Run formatting and linting (Custom Image)
         if: steps.pull-image.outputs.custom-image-available == 'true'
         run: |
-          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod-lint:latest bash .github/scripts/ansible-prod-lint.sh
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod-format-lint:latest bash .github/scripts/ansible-prod-format-lint.sh
 
-      - name: Run linting (Fallback)
+      - name: Run formatting and linting (Fallback)
         if: steps.pull-image.outputs.custom-image-available == 'false'
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace python:3.13-slim bash -c "
-            pip install --no-cache-dir yamllint ansible ansible-prod-lint
-            bash .github/scripts/ansible-prod-lint.sh
+            apt-get update && apt-get install -y nodejs npm
+            npm install -g prettier
+            pip install --no-cache-dir ansible ansible-lint
+            bash .github/scripts/ansible-prod-format-lint.sh
           "
+
+      - name: Commit formatting changes
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add -A
+          if ! git diff --staged --quiet; then
+            git commit -m "Auto-format YAML files with Prettier"
+            git push
+          else
+            echo "No formatting changes to commit"
+          fi
   
   test:
-    needs: [detect-changes, build, security-scan-fast, lint]
+    needs: [detect-changes, build, security-scan-fast, format-lint]
     if: |
       always() &&
       (needs.detect-changes.result == 'success' || needs.detect-changes.result == 'skipped') &&
       (needs.security-scan-fast.result == 'success' || needs.security-scan-fast.result == 'skipped') &&
       (needs.build.result == 'success' || needs.build.result == 'skipped') &&
-      (needs.lint.result == 'success' || needs.lint.result == 'skipped') &&
+      (needs.format-lint.result == 'success' || needs.format-lint.result == 'skipped') &&
       (inputs.test ||
       needs.detect-changes.outputs.ansible-is-changed == 'true' ||
       contains(fromJson(needs.detect-changes.outputs.dockerfiles-matrix), 'Dockerfile.prod.test'))

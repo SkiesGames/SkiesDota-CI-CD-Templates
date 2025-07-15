@@ -2,7 +2,7 @@
   ansible.builtin.file:
     path: "{{ lookup('env', 'HOME') }}/.ssh"
     state: directory
-    mode: '0700'
+    mode: "0700"
 
 - name: Generate SSH key pair
   ansible.builtin.command: ssh-keygen -t ed25519 -f "{{ lookup('env', 'HOME') }}/.ssh/ci_id_ed25519" -N ""

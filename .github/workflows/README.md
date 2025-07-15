@@ -4,7 +4,55 @@ This directory contains reusable GitHub Actions workflows for CI/CD automation.
 
 ## Available Workflows
 
-### SSH Key Setup (`ssh-key-setup.yml`)
+### Main Production Pipeline (`ci-cd.prod.yml`)
+
+A comprehensive CI/CD pipeline with smart change detection and conditional execution.
+
+**Features:**
+- **Smart Change Detection**: Automatically detects which files changed and runs appropriate jobs
+- **Docker Image Building**: Builds four specialized Docker images for different stages
+- **Conditional Job Execution**: Only runs jobs when relevant files change
+- **Security Scanning**: Fast and comprehensive security scans with TruffleHog
+- **Format and Lint**: YAML formatting with Prettier and Ansible linting
+- **Testing**: Ansible syntax validation and dry-run testing
+- **Fallback Support**: Uses standard images when custom images unavailable
+
+**Triggers:**
+- Push to `ansible/**/*` files
+- Push to `Dockerfile*` files
+- Pull requests to relevant paths
+- Manual workflow dispatch
+
+### Auto OpenCommit (`auto-opencommit.yml`)
+
+Automatically improves commit messages using AI with OpenCommit.
+
+**Features:**
+- Automatically improves commit messages using AI
+- Uses DeepSeek AI model with conventional commit format
+- Emoji support enabled by default
+- Skip if commit message is already good enough
+- Only runs on non-merge commits from non-forks
+- Can be triggered on push events
+
+**Configuration:**
+- `oco-model`: AI model to use (default: 'deepseek-chat')
+- `oco-ai-provider`: AI provider (default: 'deepseek')
+- `oco-emoji`: Enable emoji in commit messages (default: 'true')
+- `oco-api-key`: Required API key for the AI provider
+
+### Manual Security Scan (`manual-security-scan.yml`)
+
+Comprehensive security scanning with git history.
+
+**Features:**
+- Full repository scan with TruffleHog
+- Git history scanning for secrets
+- Manual trigger only
+- Uses custom security scan image when available
+- Fallback to standard installation when custom image unavailable
+
+### Reusable SSH Key Setup (`reusable-ssh-key-setup.yml`)
 
 A reusable workflow for setting up SSH keys on target servers.
 
@@ -13,8 +61,15 @@ A reusable workflow for setting up SSH keys on target servers.
 - Distributes public keys to target servers
 - Uploads private keys to GitHub Secrets
 - Supports both manual trigger and reusable workflow calls
+- Fallback to standard Python image when custom image unavailable
 
-### OpenCommit (`reusable-opencommit.yml`)
+**Inputs:**
+- `target_hosts`: Target host IPs (comma-separated)
+- `target_user`: SSH username (default: 'root')
+- `target_password`: SSH password
+- `initial_setup`: Initial setup mode (default: true)
+
+### Reusable OpenCommit (`reusable-opencommit.yml`)
 
 A reusable workflow for improving commit messages using AI with OpenCommit.
 
@@ -30,6 +85,17 @@ A reusable workflow for improving commit messages using AI with OpenCommit.
 - `oco-ai-provider`: AI provider (default: 'deepseek')
 - `oco-emoji`: Enable emoji in commit messages (default: 'true')
 - `oco-api-key`: Required API key for the AI provider
+
+### Reusable Deploy (`reusable-deploy.yml`)
+
+A reusable workflow for infrastructure deployment.
+
+**Features:**
+- Infrastructure deployment and automation
+- Bootstrap deployment (manual)
+- Auto-deploy on main branch (only if AUTO_DEPLOY=true)
+- Pre-flight checks for manual runs
+- Conditional job execution based on inputs
 
 ## How to Use Reusable Workflows
 
@@ -60,7 +126,7 @@ on:
 
 jobs:
   setup-ssh-keys:
-    uses: SkiesGames/SkiesDota-CI-CD-Templates/.github/workflows/ssh-key-setup.yml@main
+    uses: SkiesGames/SkiesDota-CI-CD-Templates/.github/workflows/reusable-ssh-key-setup.yml@main
     with:
       target_hosts: ${{ github.event.inputs.target_hosts }}
       target_user: ${{ github.event.inputs.target_user }}
@@ -84,7 +150,7 @@ jobs:
 
   setup-ssh:
     needs: some-other-job
-    uses: SkiesGames/SkiesDota-CI-CD-Templates/.github/workflows/ssh-key-setup.yml@main
+    uses: SkiesGames/SkiesDota-CI-CD-Templates/.github/workflows/reusable-ssh-key-setup.yml@main
     with:
       target_hosts: "192.168.1.10,192.168.1.11"
       target_user: "root"
@@ -145,7 +211,7 @@ include:
 # .github/workflows/setup.yml
 jobs:
   setup-ssh:
-    uses: SkiesGames/SkiesDota-CI-CD-Templates/.github/workflows/ssh-key-setup.yml@main
+    uses: SkiesGames/SkiesDota-CI-CD-Templates/.github/workflows/reusable-ssh-key-setup.yml@main
     with:
       target_hosts: ${{ github.event.inputs.target_hosts }}
       # ... other inputs
@@ -184,7 +250,7 @@ jobs:
 ```yaml
 jobs:
   setup-ssh:
-    uses: SkiesGames/SkiesDota-CI-CD-Templates/.github/workflows/ssh-key-setup.yml@main
+    uses: SkiesGames/SkiesDota-CI-CD-Templates/.github/workflows/reusable-ssh-key-setup.yml@main
     with:
       # ... inputs
 ```
