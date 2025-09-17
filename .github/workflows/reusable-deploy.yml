@@ -9,8 +9,8 @@ on:
         default: false
         type: boolean
       ansible-user:
-        description: 'Ansible user for SSH connections'
-        required: true
+        description: 'Ansible user for SSH connections (deprecated - use ANSIBLE_USER secret instead)'
+        required: false
         type: string
         default: 'ubuntu'
     secrets:
@@ -34,42 +34,94 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v4
+      - name: Setup Docker
+        uses: ./.github/actions/setup-docker
         with:
-          python-version: '3.11'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install Ansible
-        run: |
-          python -m pip install --upgrade pip
-          pip install ansible
+      - name: Try to pull custom Ansible image
+        id: pull-image
+        uses: ./.github/actions/pull-image
+        with:
+          image-name: ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest
+          output-name: custom-image-available
 
-      - name: Setup SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          
-          if [ -n "${{ secrets.SSH_KNOWN_HOSTS }}" ]; then
-            echo "${{ secrets.SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
-            chmod 644 ~/.ssh/known_hosts
-          else
-            # Add common hosts to known_hosts to avoid prompts
-            ssh-keyscan -H github.com >> ~/.ssh/known_hosts 2>/dev/null || true
-          fi
-
-      - name: Generate Inventory
+      - name: Generate Inventory (Custom Image)
+        if: steps.pull-image.outputs.custom-image-available == 'true'
         env:
           ANSIBLE_HOSTS: ${{ secrets.ANSIBLE_HOSTS }}
-          ANSIBLE_USER: ${{ secrets.ANSIBLE_USER || inputs.ansible-user }}
+          ANSIBLE_USER: ${{ secrets.ANSIBLE_USER }}
         run: |
-          cd ansible
-          ansible-playbook playbooks/generate_inventory.yml
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            -e ANSIBLE_HOSTS \
+            -e ANSIBLE_USER \
+            ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest \
+            bash -c "
+              cd ansible && 
+              ansible-playbook playbooks/generate_inventory.yml
+            "
 
-      - name: Run Deploy Playbook
+      - name: Run Deploy Playbook (Custom Image)
+        if: steps.pull-image.outputs.custom-image-available == 'true'
         env:
           ANSIBLE_HOSTS: ${{ secrets.ANSIBLE_HOSTS }}
-          ANSIBLE_USER: ${{ secrets.ANSIBLE_USER || inputs.ansible-user }}
+          ANSIBLE_USER: ${{ secrets.ANSIBLE_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
         run: |
-          cd ansible
-          ansible-playbook -i inventory.ini playbooks/deploy.yml --verbose
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            -e ANSIBLE_HOSTS \
+            -e ANSIBLE_USER \
+            -e SSH_PRIVATE_KEY \
+            -e SSH_KNOWN_HOSTS \
+            ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest \
+            bash -c "
+              cd ansible && 
+              ansible-playbook -i inventory.ini playbooks/deploy.yml --verbose
+            "
+
+      - name: Generate Inventory (Fallback)
+        if: steps.pull-image.outputs.custom-image-available == 'false'
+        env:
+          ANSIBLE_HOSTS: ${{ secrets.ANSIBLE_HOSTS }}
+          ANSIBLE_USER: ${{ secrets.ANSIBLE_USER }}
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            -e ANSIBLE_HOSTS \
+            -e ANSIBLE_USER \
+            python:3.13-slim \
+            bash -c "
+              apt-get update && apt-get install -y openssh-client
+              pip install --no-cache-dir ansible
+              cd ansible && 
+              ansible-playbook playbooks/generate_inventory.yml
+            "
+
+      - name: Run Deploy Playbook (Fallback)
+        if: steps.pull-image.outputs.custom-image-available == 'false'
+        env:
+          ANSIBLE_HOSTS: ${{ secrets.ANSIBLE_HOSTS }}
+          ANSIBLE_USER: ${{ secrets.ANSIBLE_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            -e ANSIBLE_HOSTS \
+            -e ANSIBLE_USER \
+            -e SSH_PRIVATE_KEY \
+            -e SSH_KNOWN_HOSTS \
+            python:3.13-slim \
+            bash -c "
+              apt-get update && apt-get install -y openssh-client
+              pip install --no-cache-dir ansible
+              cd ansible && 
+              ansible-playbook -i inventory.ini playbooks/deploy.yml --verbose
+            "
