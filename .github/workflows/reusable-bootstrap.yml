@@ -1,10 +1,10 @@
-name: Reusable Deploy Infrastructure
+name: Reusable Bootstrap Infrastructure
 
 on:
   workflow_call:
     inputs:
-      auto_deploy:
-        description: 'Whether to auto deploy'
+      auto_bootstrap:
+        description: 'Whether to auto bootstrap'
         required: true
         default: false
         type: boolean
@@ -23,12 +23,9 @@ on:
       SSH_KNOWN_HOSTS:
         required: false
 
-env:
-  REGISTRY: ghcr.io
-
 jobs:
-  deploy:
-    if: ${{ inputs.auto_deploy == true }}
+  bootstrap:
+    if: ${{ inputs.auto_bootstrap == true }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -66,10 +63,10 @@ jobs:
           cd ansible
           ansible-playbook playbooks/generate_inventory.yml
 
-      - name: Run Deploy Playbook
+      - name: Run Bootstrap Playbook
         env:
           ANSIBLE_HOSTS: ${{ secrets.ANSIBLE_HOSTS }}
           ANSIBLE_USER: ${{ secrets.ANSIBLE_USER || inputs.ansible-user }}
         run: |
           cd ansible
-          ansible-playbook -i inventory.ini playbooks/deploy.yml --verbose
+          ansible-playbook -i inventory.ini playbooks/setup_ci_env.yml --verbose 
