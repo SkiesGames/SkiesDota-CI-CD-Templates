@@ -17,6 +17,8 @@ on:
         required: true
       SSH_KNOWN_HOSTS:
         required: false
+      ANSIBLE_HOSTS_PASSWORD:
+        required: false  # For initial password-based bootstrap
 
 jobs:
   bootstrap:
@@ -52,7 +54,11 @@ jobs:
             ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest \
             bash -c "
               cd ansible && 
-              ansible-playbook playbooks/generate_inventory.yml
+              if [ -n \"$ANSIBLE_HOSTS_PASSWORD\" ]; then
+                ansible-playbook playbooks/generate_initial_inventory.yml  # Use for password-based initial setup
+              else
+                ansible-playbook playbooks/generate_inventory.yml  # Key-based
+              fi
             "
 
       - name: Run Bootstrap Playbook (Custom Image)
@@ -73,7 +79,7 @@ jobs:
             ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest \
             bash -c "
               cd ansible && 
-              ansible-playbook -i inventory.ini playbooks/setup_ci_env.yml --verbose
+              ansible-playbook -i inventory.ini playbooks/bootstrap.yml --verbose  # Custom bootstrap for full setup (Docker, firewall, sync, deploy)
             "
 
       - name: Generate Inventory (Fallback)
@@ -115,5 +121,5 @@ jobs:
               apt-get update && apt-get install -y openssh-client
               pip install --no-cache-dir ansible
               cd ansible && 
-              ansible-playbook -i inventory.ini playbooks/setup_ci_env.yml --verbose
+              ansible-playbook -i inventory.ini playbooks/bootstrap.yml --verbose  # Custom bootstrap for full setup (Docker, firewall, sync, deploy)
             " 
