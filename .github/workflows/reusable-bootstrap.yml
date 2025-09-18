@@ -38,7 +38,7 @@ jobs:
           token: ${{ secrets.TEMPLATES_PAT }}  # Authenticate for private repo access; use PAT with 'repo' scope
 
       - name: Setup Docker
-        uses: ./.github/actions/setup-docker
+        uses: ./templates/.github/actions/setup-docker  # Point to checked-out templates path
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
