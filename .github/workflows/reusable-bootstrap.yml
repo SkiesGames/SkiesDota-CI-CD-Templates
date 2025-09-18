@@ -19,6 +19,8 @@ on:
         required: false
       ANSIBLE_HOSTS_PASSWORD:
         required: false  # For initial password-based bootstrap
+      TEMPLATES_PAT:
+        required: false  # For private repo access in checkout
 
 jobs:
   bootstrap:
