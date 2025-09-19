@@ -22,6 +22,8 @@ on:
         required: true
       SSH_KNOWN_HOSTS:
         required: false
+      TEMPLATES_PAT:
+        required: false  # For private templates repo access
 
 env:
   REGISTRY: ghcr.io
@@ -34,14 +36,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Checkout templates repo for local actions
+        uses: actions/checkout@v4
+        with:
+          repository: SkiesGames/SkiesDota-CI-CD-Templates
+          path: templates  # Clone to subpath to avoid conflicts
+          token: ${{ secrets.TEMPLATES_PAT }}  # Authenticate for private repo access; use PAT with 'repo' scope
+
       - name: Setup Docker
-        uses: ./.github/actions/setup-docker
+        uses: ./templates/.github/actions/setup-docker
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Try to pull custom Ansible image
         id: pull-image
-        uses: ./.github/actions/pull-image
+        uses: ./templates/.github/actions/pull-image
         with:
           image-name: ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest
           output-name: custom-image-available
