@@ -40,7 +40,7 @@ jobs:
       - name: Setup Docker
         uses: ./templates/.github/actions/setup-docker  # Point to checked-out templates path
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.TEMPLATES_PAT }}  # Use PAT for private GHCR pull access
 
       - name: Try to pull custom Ansible image
         id: pull-image
