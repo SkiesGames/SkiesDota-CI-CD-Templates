@@ -65,7 +65,7 @@ jobs:
             -e ANSIBLE_USER \
             ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest \
             bash -c "
-              cd ansible && 
+              cd templates/ansible && 
               if [ -n \"$ANSIBLE_HOSTS_PASSWORD\" ]; then
                 ansible-playbook playbooks/generate_initial_inventory.yml  # Use for password-based initial setup
               else
@@ -90,7 +90,7 @@ jobs:
             -e SSH_KNOWN_HOSTS \
             ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest \
             bash -c "
-              cd ansible && 
+              cd templates/ansible && 
               ansible-playbook -i inventory.ini playbooks/bootstrap.yml --verbose  # Custom bootstrap for full setup (Docker, firewall, sync, deploy)
             "
 
