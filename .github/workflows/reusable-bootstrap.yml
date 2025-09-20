@@ -65,11 +65,10 @@ jobs:
             -e ANSIBLE_USER \
             ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest \
             bash -c "
-              cd templates/ansible && 
               if [ -n \"$ANSIBLE_HOSTS_PASSWORD\" ]; then
-                ansible-playbook playbooks/generate_initial_inventory.yml  # Use for password-based initial setup
+                ansible-playbook /workspace/templates/ansible/playbooks/generate_initial_inventory.yml
               else
-                ansible-playbook playbooks/generate_inventory.yml  # Key-based
+                ansible-playbook /workspace/templates/ansible/playbooks/generate_inventory.yml
               fi
             "
 
@@ -90,8 +89,7 @@ jobs:
             -e SSH_KNOWN_HOSTS \
             ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest \
             bash -c "
-              cd /workspace/ansible && 
-              ansible-playbook -i /workspace/inventory.ini playbooks/bootstrap.yml --verbose  # Custom bootstrap for full setup (Docker, firewall, sync, deploy)
+              ansible-playbook -i /workspace/inventory.ini /workspace/ansible/playbooks/bootstrap.yml --verbose
             "
 
       - name: Generate Inventory (Fallback)
