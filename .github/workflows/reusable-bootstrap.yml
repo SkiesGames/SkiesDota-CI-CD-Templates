@@ -52,8 +52,14 @@ jobs:
       - name: Debug custom image availability
         run: 'echo "Custom image available: ${{ steps.pull-image.outputs.custom-image-available }}"'
 
+      - name: Force custom image available (temp fix)
+        run: echo "custom-image-available=true" >> $GITHUB_ENV
+
+      - name: Debug all outputs
+        run: 'echo "All env: $GITHUB_ENV"'
+
       - name: Generate Inventory (Custom Image)
-        # if: steps.pull-image.outputs.custom-image-available == 'true'  # Temporarily disabled to force run; uncomment after debug
+        # if: steps.pull-image.outputs.custom-image-available == 'true'  # Hardcoded true for now
         env:
           ANSIBLE_HOSTS: ${{ secrets.ANSIBLE_HOSTS }}
           ANSIBLE_USER: ${{ secrets.ANSIBLE_USER }}
@@ -73,7 +79,7 @@ jobs:
             "
 
       - name: Run Bootstrap Playbook (Custom Image)
-        # if: steps.pull-image.outputs.custom-image-available == 'true'  # Temporarily disabled to force run; uncomment after debug
+        # if: steps.pull-image.outputs.custom-image-available == 'true'  # Hardcoded true for now
         env:
           ANSIBLE_HOSTS: ${{ secrets.ANSIBLE_HOSTS }}
           ANSIBLE_USER: ${{ secrets.ANSIBLE_USER }}
