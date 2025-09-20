@@ -20,8 +20,10 @@ runs:
         if docker pull ${{ inputs.image-name }}; then
           echo "${{ inputs.output-name }}=true" >> $GITHUB_OUTPUT
           echo "Pull succeeded, set ${{ inputs.output-name }}=true"
+          echo "::set-output name=${{ inputs.output-name }}::true"
         else
           echo "${{ inputs.output-name }}=false" >> $GITHUB_OUTPUT
           echo "Pull failed, set ${{ inputs.output-name }}=false"
+          echo "::set-output name=${{ inputs.output-name }}::false"
         fi
       continue-on-error: true 

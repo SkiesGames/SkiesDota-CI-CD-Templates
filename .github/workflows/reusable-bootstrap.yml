@@ -90,8 +90,8 @@ jobs:
             -e SSH_KNOWN_HOSTS \
             ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest \
             bash -c "
-              cd templates/ansible && 
-              ansible-playbook -i inventory.ini playbooks/bootstrap.yml --verbose  # Custom bootstrap for full setup (Docker, firewall, sync, deploy)
+              cd /workspace/ansible && 
+              ansible-playbook -i /workspace/inventory.ini playbooks/bootstrap.yml --verbose  # Custom bootstrap for full setup (Docker, firewall, sync, deploy)
             "
 
       - name: Generate Inventory (Fallback)
