@@ -26,10 +26,10 @@ runs:
           echo "Pull failed, set ${{ inputs.output-name }}=false"
           echo "::set-output name=${{ inputs.output-name }}::false"
         fi
+        
+        if [ -f "$GITHUB_OUTPUT" ]; then
+          echo "Output file exists; content: $(cat $GITHUB_OUTPUT)"
+        else
+          echo "Warning: GITHUB_OUTPUT file not found!"
+        fi
       continue-on-error: true 
-
-if [ -f "$GITHUB_OUTPUT" ]; then
-  echo "Output file exists; content: $(cat $GITHUB_OUTPUT)"
-else
-  echo "Warning: GITHUB_OUTPUT file not found!"
-fi 
