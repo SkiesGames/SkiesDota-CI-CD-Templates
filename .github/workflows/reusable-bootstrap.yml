@@ -35,7 +35,7 @@ jobs:
         with:
           repository: SkiesGames/SkiesDota-CI-CD-Templates
           path: templates  # Clone to subpath to avoid conflicts
-          token: ${{ secrets.TEMPLATES_PAT }}  # Authenticate for private repo access; use PAT with 'repo' scope
+          # No token needed for public repo
 
       - name: Setup Docker
         uses: ./templates/.github/actions/setup-docker  # Point to checked-out templates path
