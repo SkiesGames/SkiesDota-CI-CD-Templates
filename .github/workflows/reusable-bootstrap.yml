@@ -49,8 +49,11 @@ jobs:
           image-name: ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest
           output-name: custom-image-available
 
+      - name: Debug custom image availability
+        run: 'echo "Custom image available: ${{ steps.pull-image.outputs.custom-image-available }}"'
+
       - name: Generate Inventory (Custom Image)
-        if: steps.pull-image.outputs.custom-image-available == 'true'
+        # if: steps.pull-image.outputs.custom-image-available == 'true'  # Temporarily disabled to force run; uncomment after debug
         env:
           ANSIBLE_HOSTS: ${{ secrets.ANSIBLE_HOSTS }}
           ANSIBLE_USER: ${{ secrets.ANSIBLE_USER }}
@@ -71,7 +74,7 @@ jobs:
             "
 
       - name: Run Bootstrap Playbook (Custom Image)
-        if: steps.pull-image.outputs.custom-image-available == 'true'
+        # if: steps.pull-image.outputs.custom-image-available == 'true'  # Temporarily disabled to force run; uncomment after debug
         env:
           ANSIBLE_HOSTS: ${{ secrets.ANSIBLE_HOSTS }}
           ANSIBLE_USER: ${{ secrets.ANSIBLE_USER }}
