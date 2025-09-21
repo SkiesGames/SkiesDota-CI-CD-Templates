@@ -49,9 +49,6 @@ jobs:
           image-name: ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest
           output-name: custom-image-available
 
-      - name: Debug custom image availability
-        run: 'echo "Custom image available: ${{ steps.pull-image.outputs.custom-image-available }}"'
-
       - name: Generate Inventory (Custom Image)
         # if: steps.pull-image.outputs.custom-image-available == 'true'  # Hardcoded true for now
         env:
