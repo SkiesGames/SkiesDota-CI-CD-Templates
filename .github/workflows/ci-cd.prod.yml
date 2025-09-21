@@ -102,6 +102,9 @@ jobs:
           fi
           
           printf "changed_files=%s\n" "$CHANGED_FILES" >> $GITHUB_OUTPUT
+          echo "changed_files<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
           printf "dockerfiles-matrix=%s\n" "$DOCKERFILES_MATRIX" >> $GITHUB_OUTPUT
           printf "ansible-is-changed=%s\n" "$ANSIBLE_IS_CHANGED" >> $GITHUB_OUTPUT
           printf "security_scan_needed=%s\n" "$SECURITY_SCAN_NEEDED" >> $GITHUB_OUTPUT
