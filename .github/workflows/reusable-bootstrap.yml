@@ -87,7 +87,8 @@ jobs:
             ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest \
             bash -c "
               cd ansible &&
-              ansible-playbook -i /workspace/inventory.ini -e \"roles_path=roles:/workspace/templates/ansible/roles\" playbooks/bootstrap.yml --verbose
+              export ANSIBLE_ROLES_PATH=roles:/workspace/templates/ansible/roles &&
+              ansible-playbook -i /workspace/inventory.ini playbooks/bootstrap.yml --verbose
             "
 
       - name: Debug paths and roles
