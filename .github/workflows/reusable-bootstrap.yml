@@ -86,7 +86,8 @@ jobs:
             -e SSH_KNOWN_HOSTS \
             ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest \
             bash -c "
-              ansible-playbook -i /workspace/inventory.ini -e \"roles_path=/workspace/ansible/roles:/workspace/templates/ansible/roles\" /workspace/ansible/playbooks/bootstrap.yml --verbose
+              cd /workspace/ansible &&
+              ansible-playbook -i /workspace/inventory.ini -e \"ansible_roles_path=roles:/workspace/templates/ansible/roles\" playbooks/bootstrap.yml --verbose
             "
 
       - name: Generate Inventory (Fallback)
