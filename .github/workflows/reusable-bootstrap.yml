@@ -86,9 +86,15 @@ jobs:
             -e SSH_KNOWN_HOSTS \
             ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest \
             bash -c "
-              cd /workspace/ansible &&
-              ansible-playbook -i /workspace/inventory.ini -e \"ansible_roles_path=roles:/workspace/templates/ansible/roles\" playbooks/bootstrap.yml --verbose
+              ansible-playbook -i /workspace/inventory.ini -e \"roles_path=/workspace/ansible/roles:/workspace/templates/ansible/roles\" /workspace/ansible/playbooks/bootstrap.yml --verbose
             "
+
+      - name: Debug paths and roles
+        run: |
+          pwd
+          ls -la /workspace/ansible/roles || echo "Local roles dir not found"
+          ls -la /workspace/templates/ansible/roles || echo "Template roles dir not found"
+          cat /etc/ansible/ansible.cfg || echo "ansible.cfg not found"
 
       - name: Generate Inventory (Fallback)
         if: steps.pull-image.outputs.custom-image-available == 'false'
