@@ -1,0 +1,5 @@
+- name: Install Docker Compose plugin
+  ansible.builtin.command: docker plugin install --grant-all-permissions docker/compose
+  register: plugin_install
+  failed_when: false
+  changed_when: plugin_install.rc == 0

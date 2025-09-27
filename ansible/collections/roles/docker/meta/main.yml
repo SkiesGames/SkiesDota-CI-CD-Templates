@@ -1,0 +1,21 @@
+---
+galaxy_info:
+  author: SkiesDota
+  description: Docker installation and configuration role
+  company: SkiesDota
+  license: MIT
+  min_ansible_version: "2.9"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - all
+    - name: Debian
+      versions:
+        - all
+    - name: EL
+      versions:
+        - all
+  galaxy_tags:
+    - docker
+    - containerization
+    - installation

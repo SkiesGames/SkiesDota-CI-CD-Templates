@@ -1,0 +1,27 @@
+---
+galaxy_info:
+  author: SkiesDota
+  description: Application deployment and synchronization role
+  company: SkiesDota
+  license: MIT
+  min_ansible_version: "2.9"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - all
+    - name: Debian
+      versions:
+        - all
+    - name: EL
+      versions:
+        - all
+  galaxy_tags:
+    - deployment
+    - docker
+    - synchronization
+    - environment
+
+dependencies:
+  - role: synchronize
+  - role: environment
+  - role: docker_compose_plugin
