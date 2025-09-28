@@ -40,7 +40,9 @@ RUN curl -fsSL https://download.docker.com/linux/debian/gpg | \
 RUN pip install --no-cache-dir ansible
 
 # Bake in the Ansible collection for efficiency (avoids runtime installs)
-COPY collections/ansible_collections/skiesdota/general /tmp/collection/
+
+COPY ansible/collections /tmp/collection/
+
 RUN ansible-galaxy collection install /tmp/collection && rm -rf /tmp/collection
 
 # Copy Ansible configuration
