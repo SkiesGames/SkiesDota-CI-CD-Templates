@@ -101,7 +101,6 @@ jobs:
             SECURITY_SCAN_NEEDED="true"
           fi
           
-          printf "changed_files=%s\n" "$CHANGED_FILES" >> $GITHUB_OUTPUT
           echo "changed_files<<EOF" >> $GITHUB_OUTPUT
           echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
