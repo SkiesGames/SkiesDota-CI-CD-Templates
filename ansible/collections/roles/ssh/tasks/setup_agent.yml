@@ -28,7 +28,7 @@
     mode: "0700"
 
 - name: Add known hosts
-  ansible.builtin.known_hosts:
+  ansible.posix.known_hosts:
     host: "{{ item }}"
     state: present
   loop: "{{ lookup('env', 'ANSIBLE_HOSTS', default='').split('\n') | select('string') | list }}"
