@@ -131,7 +131,7 @@ jobs:
             bash -c "
               apt-get update && apt-get install -y openssh-client
               pip install --no-cache-dir ansible
-              ansible-playbook ansible/playbooks/setup_ci_env.yml
+              ansible-playbook /workspace/templates/ansible/playbooks/setup_ci_env.yml
               cd ansible && 
               ansible-playbook -i inventory.ini playbooks/bootstrap.yml --verbose  # Custom bootstrap for full setup (Docker, firewall, sync, deploy)
             " 
