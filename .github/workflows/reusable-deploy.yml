@@ -8,11 +8,6 @@ on:
         required: true
         default: false
         type: boolean
-      ansible-user:
-        description: 'Ansible user for SSH connections (deprecated - use ANSIBLE_USER secret instead)'
-        required: false
-        type: string
-        default: 'ubuntu'
     secrets:
       ANSIBLE_HOSTS:
         required: true
@@ -22,8 +17,6 @@ on:
         required: true
       SSH_KNOWN_HOSTS:
         required: false
-      TEMPLATES_PAT:
-        required: false  # For private templates repo access
 
 env:
   REGISTRY: ghcr.io
@@ -40,8 +33,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: SkiesGames/SkiesDota-CI-CD-Templates
-          path: templates  # Clone to subpath to avoid conflicts
-          token: ${{ secrets.TEMPLATES_PAT }}  # Authenticate for private repo access; use PAT with 'repo' scope
+          path: templates
 
       - name: Setup Docker
         uses: ./templates/.github/actions/setup-docker
@@ -89,6 +81,7 @@ jobs:
             -e SSH_KNOWN_HOSTS \
             ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest \
             bash -c "
+              ansible-playbook ansible/playbooks/setup_ci_env.yml
               cd ansible && 
               ansible-playbook -i inventory.ini playbooks/deploy.yml --verbose
             "
@@ -131,6 +124,7 @@ jobs:
             bash -c "
               apt-get update && apt-get install -y openssh-client
               pip install --no-cache-dir ansible
+              ansible-playbook ansible/playbooks/setup_ci_env.yml
               cd ansible && 
               ansible-playbook -i inventory.ini playbooks/deploy.yml --verbose
             "`
