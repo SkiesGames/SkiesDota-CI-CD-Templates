@@ -39,10 +39,9 @@ RUN curl -fsSL https://download.docker.com/linux/debian/gpg | \
 # Install Python Dependencies
 RUN pip install --no-cache-dir ansible
 
-# Copy and install Ansible collections
-COPY ansible/collections/requirements.yml /tmp/collections-requirements.yml
-RUN ansible-galaxy collection install -r /tmp/collections-requirements.yml && \
-    rm /tmp/collections-requirements.yml
+# Bake in the Ansible collection for efficiency (avoids runtime installs)
+COPY collections/ansible_collections/skiesdota/general /tmp/collection/
+RUN ansible-galaxy collection install /tmp/collection && rm -rf /tmp/collection
 
 # Copy Ansible configuration
 COPY ansible/ansible.cfg /etc/ansible/ansible.cfg

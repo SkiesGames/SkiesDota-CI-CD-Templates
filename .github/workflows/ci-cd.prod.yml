@@ -252,3 +252,45 @@ jobs:
             pip install --no-cache-dir ansible ansible-prod-test
             bash .github/scripts/ansible-prod-test.sh
           " 
+
+  build-image-with-collection:
+    needs: [test]
+    if: github.ref == 'refs/heads/main' && needs.test.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build and push ansible-prod with collection
+        uses: ./.github/actions/build-image
+        with:
+          image-name: ansible-prod
+          dockerfile-path: ./Dockerfile.prod
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-collection:
+    needs: [build-image-with-collection]  # Assuming after rebuild
+    if: github.ref == 'refs/heads/main' && needs.build-image-with-collection.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Docker
+        uses: ./.github/actions/setup-docker
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish collection
+        env:
+          GALAXY_API_KEY: ${{ secrets.GALAXY_API_KEY }}
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace/ansible \
+            -e GALAXY_API_KEY \
+            ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest \
+            bash -c "
+              ansible-galaxy collection build --force &&
+              ansible-galaxy collection publish bmsj5-skiesgames-*.tar.gz --api-key $GALAXY_API_KEY
+            " 

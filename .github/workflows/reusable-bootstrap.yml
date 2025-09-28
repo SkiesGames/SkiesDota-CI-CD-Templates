@@ -18,9 +18,7 @@ on:
       SSH_KNOWN_HOSTS:
         required: false
       ANSIBLE_HOSTS_PASSWORD:
-        required: false  # For initial password-based bootstrap
-      TEMPLATES_PAT:
-        required: false  # For private repo access in checkout
+        required: false
 
 jobs:
   bootstrap:
@@ -35,12 +33,9 @@ jobs:
         with:
           repository: SkiesGames/SkiesDota-CI-CD-Templates
           path: templates  # Clone to subpath to avoid conflicts
-          # No token needed for public repo
 
       - name: Setup Docker
         uses: ./templates/.github/actions/setup-docker  # Point to checked-out templates path
-        with:
-          github-token: ${{ secrets.TEMPLATES_PAT }}  # Use PAT for private GHCR pull access
 
       - name: Try to pull custom Ansible image
         id: pull-image
@@ -86,8 +81,8 @@ jobs:
             -e SSH_KNOWN_HOSTS \
             ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest \
             bash -c "
+              ansible-playbook ansible/playbooks/setup_ci_env.yml
               cd ansible &&
-              export ANSIBLE_ROLES_PATH=roles:/workspace/templates/ansible/roles &&
               ansible-playbook -i /workspace/inventory.ini playbooks/bootstrap.yml --verbose
             "
 
@@ -136,6 +131,7 @@ jobs:
             bash -c "
               apt-get update && apt-get install -y openssh-client
               pip install --no-cache-dir ansible
+              ansible-playbook ansible/playbooks/setup_ci_env.yml
               cd ansible && 
               ansible-playbook -i inventory.ini playbooks/bootstrap.yml --verbose  # Custom bootstrap for full setup (Docker, firewall, sync, deploy)
             " 

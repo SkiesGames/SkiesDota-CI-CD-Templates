@@ -8,6 +8,6 @@ echo "✅ YAML files formatted successfully"
 
 echo "🔍 Validating with ansible-lint..."
 cd ansible
-ansible-lint roles/ playbooks/
+ansible-lint collections/roles/ playbooks/
 
 echo "🎉 All formatting and validation completed successfully!" 

@@ -1,7 +1,0 @@
-- name: Remove original certificates
-  ansible.builtin.file:
-    path: "{{ app_dir }}/{{ item }}"
-    state: absent
-  with_items:
-    - certificate.crt
-    - certificate_ca.crt

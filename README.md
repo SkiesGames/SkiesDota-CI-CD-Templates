@@ -308,7 +308,7 @@ Set `AUTO_DEPLOY` secret to "true" to enable automatic deployment on main branch
 ./scripts/lint-local.sh
 
 # Check specific role
-ansible-lint ansible/roles/my-role/
+ansible-lint ansible/collections/roles/my-role/
 
 # Check specific playbook
 ansible-lint ansible/playbooks/my-playbook.yml

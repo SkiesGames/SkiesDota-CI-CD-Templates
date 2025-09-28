@@ -1,8 +1,0 @@
-- name: Import synchronize tasks
-  ansible.builtin.import_tasks: ../synchronize/tasks/main.yml
-
-- name: Import environment tasks
-  ansible.builtin.import_tasks: ../environment/main.yml
-
-- name: Import docker-compose restart tasks
-  ansible.builtin.import_tasks: ../docker_compose_plugin/tasks/restart.yml

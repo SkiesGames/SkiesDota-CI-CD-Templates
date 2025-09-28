@@ -22,7 +22,7 @@ format_yaml() {
 # Function to lint roles
 lint_roles() {
     print_section "LINTING ROLES"
-    for role in roles/*/; do
+    for role in collections/roles/*/; do
         if [ -d "$role" ]; then
             role_name=$(basename "$role")
             echo "LINTING ROLE: $role_name"
