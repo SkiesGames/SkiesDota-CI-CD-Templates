@@ -11,17 +11,17 @@ ENV DEBIAN_FRONTEND=noninteractive \
 # Install system dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        # SSH and file transfer tools
+        build-essential \
+        libffi-dev \
+        libssl-dev \
+        python3-dev \
         openssh-client \
         curl \
         jq \
-        # Network and utility tools
-        # Docker repository setup
         openssl \
+        && pip install --no-cache-dir ansible community.docker community.general ansible.posix ansible-lint molecule docker \
+        && apt-get purge -y --auto-remove build-essential libffi-dev libssl-dev python3-dev \
         && rm -rf /var/lib/apt/lists/*
-
-# Install Python Dependencies
-RUN pip install --no-cache-dir ansible community.docker community.general ansible.posix ansible-lint molecule docker
 
 # Copy Ansible configuration
 COPY ansible/ansible.cfg /etc/ansible/ansible.cfg
