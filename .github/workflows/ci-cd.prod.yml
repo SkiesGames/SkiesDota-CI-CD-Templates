@@ -44,7 +44,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
 
       - name: Detect changes
         id: detect
@@ -53,12 +53,16 @@ jobs:
           DOCKERFILE_PATTERNS=("Dockerfile.prod" "Dockerfile.prod.test" "Dockerfile.prod.format-lint" "Dockerfile.prod.security-scan")
           ANSIBLE_PATTERN="ansible/"
           
-          # Get changed files with error handling
-          if [ -z "${{ github.event.before }}" ] || [ -z "${{ github.sha }}" ]; then
-            echo "Warning: Missing commit references, using empty diff"
-            CHANGED_FILES=""
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            CHANGED_FILES="ansible/**/* Dockerfile*"
           else
-            CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} 2>/dev/null || echo "")
+            # Get changed files with error handling
+            if [ -z "${{ github.event.before }}" ] || [ -z "${{ github.sha }}" ]; then
+              echo "Warning: Missing commit references, using empty diff"
+              CHANGED_FILES=""
+            else
+              CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} 2>/dev/null || echo "")
+            fi
           fi
           
           echo "All changed files: $CHANGED_FILES"

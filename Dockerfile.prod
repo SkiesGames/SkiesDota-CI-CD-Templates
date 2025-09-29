@@ -21,7 +21,7 @@ RUN apt-get update && \
         && rm -rf /var/lib/apt/lists/*
 
 # Install Python Dependencies
-RUN pip install --no-cache-dir ansible community.docker community.general ansible.posix
+RUN pip install --no-cache-dir ansible community.docker community.general ansible.posix ansible-lint molecule docker
 
 # Copy Ansible configuration
 COPY ansible/ansible.cfg /etc/ansible/ansible.cfg
