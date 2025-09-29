@@ -15,13 +15,14 @@ RUN apt-get update && \
         libffi-dev \
         libssl-dev \
         python3-dev \
+        cargo \
         openssh-client \
         curl \
         jq \
         openssl \
         && pip install --no-cache-dir ansible community.docker community.general ansible.posix ansible-lint molecule docker \
-        && apt-get purge -y --auto-remove build-essential libffi-dev libssl-dev python3-dev \
-        && rm -rf /var/lib/apt/lists/*
+        && apt-get purge -y --auto-remove build-essential libffi-dev libssl-dev python3-dev cargo \
+        && rm -rf /var/lib/apt/lists/* /root/.cargo
 
 # Copy Ansible configuration
 COPY ansible/ansible.cfg /etc/ansible/ansible.cfg
