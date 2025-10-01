@@ -11,18 +11,14 @@ ENV DEBIAN_FRONTEND=noninteractive \
 # Install system dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
+        # SSH client for testing
+        openssh-client \
         # Basic utilities
         curl \
-        # Node.js and npm for Prettier
-        nodejs \
-        npm \
         && rm -rf /var/lib/apt/lists/*
 
-# Install Python Dependencies (for ansible-lint)
-RUN pip install --no-cache-dir ansible ansible-lint
-
-# Install Prettier globally (for formatting YAML files)
-RUN npm install -g prettier
+# Install Python Dependencies
+RUN pip install --no-cache-dir ansible
 
 # Copy and install Ansible collections
 COPY ansible/collections/requirements.yml /tmp/collections-requirements.yml

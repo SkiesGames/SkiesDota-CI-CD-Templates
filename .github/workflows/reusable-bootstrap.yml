@@ -57,8 +57,8 @@ jobs:
           ANSIBLE_HOSTS: ${{ secrets.ANSIBLE_HOSTS }}
           ANSIBLE_USER: ${{ secrets.ANSIBLE_USER }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}  
-        run: | 
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
           docker run --rm \
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
@@ -67,4 +67,4 @@ jobs:
             -e SSH_PRIVATE_KEY \
             -e SSH_KNOWN_HOSTS \
             ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest \
-            bash -c 'cd ansible && ansible-playbook -i /workspace/inventory.ini playbooks/bootstrap.yml --verbose' 
+            bash -c "cd ansible && ansible-playbook -i /workspace/inventory.ini playbooks/bootstrap.yml --verbose" 
