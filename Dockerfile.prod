@@ -6,7 +6,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    ANSIBLE_FORCE_COLOR=1
+    ANSIBLE_FORCE_COLOR=1 \
+    ANSIBLE_GALAXY_DISABLE_GPG_VERIFY=1
 
 # Install system dependencies and build tools temporarily
 RUN apt-get update && \
@@ -26,7 +27,7 @@ RUN apt-get update && \
 
 # Install Ansible collections
 COPY ansible/requirements.yml /tmp/requirements.yml
-RUN ansible-galaxy collection install -r /tmp/requirements.yml && rm /tmp/requirements.yml
+RUN ansible-galaxy collection install -r /tmp/requirements.yml --force && rm /tmp/requirements.yml
 
 # Copy Ansible configuration
 COPY ansible/ansible.cfg /etc/ansible/ansible.cfg
