@@ -1,6 +1,0 @@
-- name: Synchronize project files (except .git)
-  ansible.posix.synchronize:
-    src: "{{ lookup('env', 'CI_PROJECT_DIR') }}/"
-    dest: "{{ app_dir }}/"
-    rsync_opts:
-      - "--exclude=.git"
