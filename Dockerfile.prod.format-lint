@@ -27,7 +27,7 @@ RUN npm install -g prettier
 
 # Copy and install Ansible collections
 COPY ansible/requirements.yml /tmp/requirements.yml
-RUN ansible-galaxy collection install -r /tmp/requirements.yml --force && \
+RUN ansible-galaxy collection install -r /tmp/requirements.yml && \
     rm /tmp/requirements.yml
 
 # Copy Ansible configuration
