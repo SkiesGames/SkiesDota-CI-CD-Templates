@@ -80,10 +80,7 @@ jobs:
             -e SSH_PRIVATE_KEY \
             -e SSH_KNOWN_HOSTS \
             ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest \
-            bash -c "
-              cd ansible && 
-              ansible-playbook -i inventory.ini playbooks/deploy.yml --verbose
-            "
+            bash -c 'cd ansible && ansible-playbook -i inventory.ini playbooks/deploy.yml --verbose'
 
       - name: Generate Inventory (Fallback)
         if: steps.pull-image.outputs.custom-image-available == 'false'
