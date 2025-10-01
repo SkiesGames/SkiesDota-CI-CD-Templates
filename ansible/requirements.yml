@@ -1,6 +1,4 @@
 collections:
-  - name: geerlingguy.firewall
-    version: ">=1.0.0"
   - name: community.crypto
     version: ">=1.0.0"
   - name: community.docker
