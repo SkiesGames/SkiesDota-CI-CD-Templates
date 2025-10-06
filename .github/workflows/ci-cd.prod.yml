@@ -5,6 +5,7 @@ on:
     paths:
       - 'ansible/**/*'
       - 'Dockerfile*'
+      - '.github/workflows/**'
   pull_request:
     paths:
       - 'ansible/**/*'
