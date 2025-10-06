@@ -170,8 +170,8 @@ jobs:
       (needs.security-scan-fast.result == 'success' || needs.security-scan-fast.result == 'skipped') &&
       (needs.build.result == 'success' || needs.build.result == 'skipped') &&
       (inputs.format-lint ||
-      needs.detect-changes.outputs.ansible-is-changed == 'true' ||
-      contains(fromJson(needs.detect-changes.outputs.dockerfiles-matrix), 'Dockerfile.prod.format-lint'))
+      (needs.detect-changes.result != 'skipped' && needs.detect-changes.outputs.ansible-is-changed == 'true') ||
+      (needs.detect-changes.result != 'skipped' && needs.detect-changes.outputs.dockerfiles-matrix != '' && contains(fromJson(needs.detect-changes.outputs.dockerfiles-matrix), 'Dockerfile.prod.format-lint')))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -225,8 +225,8 @@ jobs:
       (needs.build.result == 'success' || needs.build.result == 'skipped') &&
       (needs.format-lint.result == 'success' || needs.format-lint.result == 'skipped') &&
       (inputs.test ||
-      needs.detect-changes.outputs.ansible-is-changed == 'true' ||
-      contains(fromJson(needs.detect-changes.outputs.dockerfiles-matrix), 'Dockerfile.prod.test'))
+      (needs.detect-changes.result != 'skipped' && needs.detect-changes.outputs.ansible-is-changed == 'true') ||
+      (needs.detect-changes.result != 'skipped' && needs.detect-changes.outputs.dockerfiles-matrix != '' && contains(fromJson(needs.detect-changes.outputs.dockerfiles-matrix), 'Dockerfile.prod.test')))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
