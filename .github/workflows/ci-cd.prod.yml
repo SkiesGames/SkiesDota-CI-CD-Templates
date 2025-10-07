@@ -182,27 +182,9 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Try to pull custom format-lint image
-        id: pull-image
-        uses: ./.github/actions/pull-image
-        with:
-          image-name: ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod-format-lint:latest
-          output-name: custom-image-available
-
-      - name: Run formatting and linting (Custom Image)
-        if: steps.pull-image.outputs.custom-image-available == 'true'
+      - name: Run formatting and linting
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod-format-lint:latest bash .github/scripts/ansible-prod-format-lint.sh
-
-      - name: Run formatting and linting (Fallback)
-        if: steps.pull-image.outputs.custom-image-available == 'false'
-        run: |
-          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace python:3.13-slim bash -c "
-            apt-get update && apt-get install -y nodejs npm
-            npm install -g prettier
-            pip install --no-cache-dir ansible ansible-lint
-            bash .github/scripts/ansible-prod-format-lint.sh
-          "
 
       - name: Commit formatting changes
         run: |
@@ -215,7 +197,7 @@ jobs:
           else
             echo "No formatting changes to commit"
           fi
-  
+
   test:
     needs: [detect-changes, build, security-scan-fast, format-lint]
     if: |
@@ -237,22 +219,6 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Try to pull custom test image
-        id: pull-image
-        uses: ./.github/actions/pull-image
-        with:
-          image-name: ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod-test:latest
-          output-name: custom-image-available
-
-      - name: Run tests (Custom Image)
-        if: steps.pull-image.outputs.custom-image-available == 'true'
+      - name: Run tests
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod-test:latest bash .github/scripts/ansible-prod-test.sh
-
-      - name: Run tests (Fallback)
-        if: steps.pull-image.outputs.custom-image-available == 'false'
-        run: |
-          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace python:3.13-slim bash -c "
-            pip install --no-cache-dir ansible ansible-prod-test
-            bash .github/scripts/ansible-prod-test.sh
-          " 

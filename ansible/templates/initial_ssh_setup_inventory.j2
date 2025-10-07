@@ -1,6 +1,0 @@
-[all]
-{% set hosts = lookup('env', 'ANSIBLE_HOSTS').split('\n') | select('string') | list %}
-{% set passwords = lookup('env', 'ANSIBLE_HOSTS_PASSWORD').split('\n') | select('string') | list %}
-{% for host, password in hosts | zip(passwords) %}
-{{ host }} ansible_user={{ lookup('env', 'ANSIBLE_USER') }} ansible_python_interpreter=/usr/bin/python3 ansible_ssh_pass={{ password }} ansible_become_pass={{ password }}
-{% endfor %}

@@ -1,0 +1,37 @@
+name: Reusable Ansible Operation
+
+on:
+  workflow_call:
+    inputs:
+      playbook:
+        description: 'Path to the Ansible playbook to run (relative to ansible/ directory)'
+        required: true
+        type: string
+    secrets:
+      ANSIBLE_HOSTS:
+        required: true
+      ANSIBLE_USER:
+        required: true
+      SSH_PRIVATE_KEY:
+        required: true
+
+jobs:
+  ansible:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Checkout templates repo for local actions
+        uses: actions/checkout@v4
+        with:
+          repository: SkiesGames/SkiesDota-CI-CD-Templates
+          path: templates
+
+      - name: Run Ansible Operation
+        uses: ./templates/.github/actions/ansible-run
+        with:
+          ansible_hosts: ${{ secrets.ANSIBLE_HOSTS }}
+          ansible_user: ${{ secrets.ANSIBLE_USER }}
+          ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
+          playbook: ${{ inputs.playbook }}

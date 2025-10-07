@@ -7,3 +7,9 @@ collections:
     version: ">=1.0.0"
   - name: ansible.posix
     version: ">=1.0.0"
+
+roles:
+  - name: geerlingguy.docker
+    version: ">=1.0.0"
+  - name: geerlingguy.firewall
+    version: ">=1.0.0"

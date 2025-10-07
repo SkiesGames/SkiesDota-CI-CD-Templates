@@ -1,0 +1,47 @@
+name: Run Ansible Playbook
+description: Runs Ansible with inventory generation and specified playbook using SSH key authentication.
+
+inputs:
+  ansible_hosts:
+    description: 'Comma-separated list of Ansible host IPs'
+    required: true
+  ansible_user:
+    description: 'Ansible SSH username'
+    required: true
+  ssh_private_key:
+    description: 'SSH private key for authentication'
+    required: true
+  playbook:
+    description: 'Path to the Ansible playbook to run (relative to ansible/ directory)'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Dynamically Scan Known Hosts
+      id: scan
+      run: |
+        KNOWN_HOSTS=""
+        IFS=',' read -ra HOSTS <<< "${{ inputs.ansible_hosts }}"
+        for host in "${HOSTS[@]}"; do
+          SCAN=$(ssh-keyscan -H "$host" 2>/dev/null)
+          if [ -n "$SCAN" ]; then
+            KNOWN_HOSTS="$KNOWN_HOSTS\n$SCAN"
+          else
+            echo "Warning: Failed to scan $host"
+          fi
+        done
+        echo "::set-output name=known_hosts::$KNOWN_HOSTS"
+      shell: bash
+
+    - name: Setup SSH Agent
+      uses: webfactory/ssh-agent@v0
+      with:
+        ssh-private-key: ${{ inputs.ssh_private_key }}
+        ssh-known-hosts: ${{ steps.scan.outputs.known_hosts }}
+
+    - name: Run Ansible Playbooks
+      run: |
+        ansible-playbook /workspace/templates/ansible/playbooks/generate_inventory.yml
+        ansible-playbook -i /workspace/inventory.ini ansible/${{ inputs.playbook }} --verbose
+      shell: bash
