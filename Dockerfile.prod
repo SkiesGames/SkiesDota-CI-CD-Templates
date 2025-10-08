@@ -24,9 +24,11 @@ RUN apt-get update && \
         && apt-get purge -y --auto-remove build-essential libffi-dev libssl-dev python3-dev cargo \
         && rm -rf /var/lib/apt/lists/* /root/.cargo
 
-# Install Ansible collections
+# Install Ansible collections and roles
 COPY ansible/requirements.yml /tmp/requirements.yml
-RUN ansible-galaxy collection install -r /tmp/requirements.yml && rm /tmp/requirements.yml
+RUN ansible-galaxy collection install -r /tmp/requirements.yml && \
+    ansible-galaxy role install -r /tmp/requirements.yml && \
+    rm /tmp/requirements.yml
 
 # Copy Ansible configuration
 COPY ansible/ansible.cfg /etc/ansible/ansible.cfg

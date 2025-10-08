@@ -21,9 +21,10 @@ RUN apt-get update && \
 # Install Python Dependencies
 RUN pip install --no-cache-dir ansible
 
-# Copy and install Ansible collections
+# Copy and install Ansible collections and roles
 COPY ansible/requirements.yml /tmp/requirements.yml
 RUN ansible-galaxy collection install -r /tmp/requirements.yml && \
+    ansible-galaxy role install -r /tmp/requirements.yml && \
     rm /tmp/requirements.yml
 
 # Copy Ansible configuration
