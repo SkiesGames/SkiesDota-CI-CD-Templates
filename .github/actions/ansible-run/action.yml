@@ -3,7 +3,7 @@ description: Runs Ansible with inventory generation and specified playbook using
 
 inputs:
   ansible_hosts:
-    description: 'Comma-separated list of Ansible host IPs'
+    description: 'Line-separated list of Ansible host IPs'
     required: true
   ansible_user:
     description: 'Ansible SSH username'
@@ -26,16 +26,19 @@ runs:
     - name: Dynamically Scan and Add Known Hosts
       run: |
         mkdir -p ~/.ssh
-        IFS=',' read -ra HOSTS <<< "${{ inputs.ansible_hosts }}"
-        for host in "${HOSTS[@]}"; do
-          SCAN=$(ssh-keyscan -H "$host" 2>/dev/null)
-          if [ -n "$SCAN" ]; then
-            echo "$SCAN" >> ~/.ssh/known_hosts
-            echo "Added $host to known_hosts"
-          else
-            echo "Warning: Failed to scan $host"
+        # Read newline-separated hosts
+        while IFS= read -r host; do
+          # Skip empty lines
+          if [ -n "$host" ]; then
+            SCAN=$(ssh-keyscan -H "$host" 2>/dev/null)
+            if [ -n "$SCAN" ]; then
+              echo "$SCAN" >> ~/.ssh/known_hosts
+              echo "Added $host to known_hosts"
+            else
+              echo "Warning: Failed to scan $host"
+            fi
           fi
-        done
+        done <<< "${{ inputs.ansible_hosts }}"
       shell: bash
 
     - name: Run Ansible Playbooks
