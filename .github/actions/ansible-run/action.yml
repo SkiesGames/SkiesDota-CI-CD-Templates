@@ -41,11 +41,16 @@ runs:
         done <<< "${{ inputs.ansible_hosts }}"
       shell: bash
 
-    - name: Run Ansible Playbooks
+    - name: Run Ansible Playbooks in Docker
       run: |
-        ansible-playbook $GITHUB_WORKSPACE/templates/ansible/playbooks/generate_inventory.yml
-        ansible-playbook -i $GITHUB_WORKSPACE/inventory.ini ansible/${{ inputs.playbook }} --verbose
+        docker run --rm \
+          -v $GITHUB_WORKSPACE:/workspace \
+          -v $SSH_AUTH_SOCK:/ssh-agent \
+          -v ~/.ssh/known_hosts:/root/.ssh/known_hosts:ro \
+          -e SSH_AUTH_SOCK=/ssh-agent \
+          -e ANSIBLE_HOSTS="${{ inputs.ansible_hosts }}" \
+          -e ANSIBLE_USER="${{ inputs.ansible_user }}" \
+          -w /workspace \
+          ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest \
+          bash -c "ansible-playbook /workspace/templates/ansible/playbooks/generate_inventory.yml && ansible-playbook -i /workspace/inventory.ini ansible/${{ inputs.playbook }} --verbose"
       shell: bash
-      env:
-        ANSIBLE_HOSTS: ${{ inputs.ansible_hosts }}
-        ANSIBLE_USER: ${{ inputs.ansible_user }}

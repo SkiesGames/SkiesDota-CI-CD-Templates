@@ -28,6 +28,11 @@ jobs:
           repository: SkiesGames/SkiesDota-CI-CD-Templates
           path: templates
 
+      - name: Setup Docker
+        uses: ./templates/.github/actions/setup-docker
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Run Ansible Operation
         uses: ./templates/.github/actions/ansible-run
         with:
