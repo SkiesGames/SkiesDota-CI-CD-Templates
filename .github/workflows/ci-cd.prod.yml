@@ -55,89 +55,16 @@ jobs:
           ANSIBLE_PATTERN="ansible/"
           
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "=== Workflow Dispatch Mode ==="
             CHANGED_FILES="ansible/**/* Dockerfile*"
           else
-            echo "=== Automatic Change Detection Mode ==="
-            echo "Event: ${{ github.event_name }}"
-            echo "Before commit: ${{ github.event.before }}"
-            echo "After commit: ${{ github.sha }}"
-            
-            # Get changed files with multiple fallback strategies
-            CHANGED_FILES=""
-            DETECTION_METHOD=""
-            
-            # Strategy 1: Try git diff with event commits
-            if [ -n "${{ github.event.before }}" ] && [ -n "${{ github.sha }}" ]; then
-              echo ""
-              echo "Strategy 1: git diff with event commits"
-              CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} 2>/dev/null || echo "")
-              if [ -n "$CHANGED_FILES" ]; then
-                DETECTION_METHOD="Strategy 1 (event commits)"
-                echo "✅ Success! Found files:"
-                echo "$CHANGED_FILES" | sed 's/^/  - /'
-              else
-                echo "❌ No changes detected"
-              fi
-            fi
-            
-            # Strategy 2: If empty, try HEAD~1..HEAD (for single commits)
-            if [ -z "$CHANGED_FILES" ]; then
-              echo ""
-              echo "Strategy 2: HEAD~1..HEAD comparison"
-              CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
-              if [ -n "$CHANGED_FILES" ]; then
-                DETECTION_METHOD="Strategy 2 (HEAD~1..HEAD)"
-                echo "✅ Success! Found files:"
-                echo "$CHANGED_FILES" | sed 's/^/  - /'
-              else
-                echo "❌ No changes detected"
-              fi
-            fi
-            
-            # Strategy 3: If still empty, show last commit changes
-            if [ -z "$CHANGED_FILES" ]; then
-              echo ""
-              echo "Strategy 3: git show HEAD"
-              CHANGED_FILES=$(git show --name-only --pretty="" HEAD 2>/dev/null || echo "")
-              if [ -n "$CHANGED_FILES" ]; then
-                DETECTION_METHOD="Strategy 3 (git show)"
-                echo "✅ Success! Found files:"
-                echo "$CHANGED_FILES" | sed 's/^/  - /'
-              else
-                echo "❌ No changes detected"
-              fi
-            fi
-            
-            # Strategy 4: If workflow was triggered by path filter but we found no files, 
-            # use the path patterns that triggered it
-            if [ -z "$CHANGED_FILES" ]; then
-              echo ""
-              echo "Strategy 4: Fallback to trigger paths"
-              echo "⚠️  All git strategies failed, but workflow was triggered by path filter"
-              echo "Assuming Dockerfile.prod changed"
-              CHANGED_FILES="Dockerfile.prod"
-              DETECTION_METHOD="Strategy 4 (fallback)"
-            fi
-            
-            echo ""
-            echo "=== Detection Result ==="
-            echo "Method used: $DETECTION_METHOD"
+            CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} 2>/dev/null || echo "")
           fi
           
-          echo "All changed files: $CHANGED_FILES"
-          
           # Detect Dockerfile changes
-          echo ""
-          echo "=== Dockerfile Detection ==="
           DOCKERFILES_CHANGED=""
-          
           for pattern in "${DOCKERFILE_PATTERNS[@]}"; do
             if echo "$CHANGED_FILES" | grep -q "^${pattern}$"; then
-              echo "✅ Found: ${pattern}"
               DOCKERFILES_CHANGED="${DOCKERFILES_CHANGED:+$DOCKERFILES_CHANGED }$pattern"
-            else
-              echo "❌ Not found: ${pattern}"
             fi
           done
           
@@ -150,12 +77,9 @@ jobs:
           # Build matrix for Docker builds
           DOCKERFILES_MATRIX="[]"
           if [ -n "$DOCKERFILES_CHANGED" ]; then
-            # Remove leading/trailing whitespace and ensure we have content
             DOCKERFILES_TRIMMED=$(echo "$DOCKERFILES_CHANGED" | xargs)
             if [ -n "$DOCKERFILES_TRIMMED" ]; then
-              # Create JSON array more reliably using jq directly with compact output
               DOCKERFILES_MATRIX=$(jq -n -c --arg files "$DOCKERFILES_TRIMMED" '$files | split(" ") | map(select(length > 0))')
-              # Validate JSON format
               if ! echo "$DOCKERFILES_MATRIX" | jq . >/dev/null 2>&1; then
                 echo "Error: Invalid JSON generated for matrix"
                 exit 1
@@ -169,6 +93,7 @@ jobs:
             SECURITY_SCAN_NEEDED="true"
           fi
           
+          # Set outputs
           echo "changed_files<<EOF" >> $GITHUB_OUTPUT
           echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -176,30 +101,11 @@ jobs:
           printf "ansible-is-changed=%s\n" "$ANSIBLE_IS_CHANGED" >> $GITHUB_OUTPUT
           printf "security_scan_needed=%s\n" "$SECURITY_SCAN_NEEDED" >> $GITHUB_OUTPUT
           
-          echo ""
-          echo "=== Final Outputs Summary ==="
+          # Summary
           echo "Changed files: $CHANGED_FILES"
-          echo "Dockerfiles changed: $DOCKERFILES_CHANGED"
           echo "Dockerfiles matrix: $DOCKERFILES_MATRIX"
-          echo "Ansible is changed: $ANSIBLE_IS_CHANGED"
-          echo "Security scan needed: $SECURITY_SCAN_NEEDED"
-          echo ""
-          echo "=== Job Triggers Preview ==="
-          if [ "$DOCKERFILES_MATRIX" != "[]" ]; then
-            echo "✅ Build job WILL run (dockerfiles-matrix is not empty)"
-          else
-            echo "⚠️  Build job might be skipped (dockerfiles-matrix is empty)"
-          fi
-          if [ "$ANSIBLE_IS_CHANGED" = "true" ]; then
-            echo "✅ Ansible jobs (format-lint, test) WILL run"
-          else
-            echo "❌ Ansible jobs will be skipped"
-          fi
-          if [ "$SECURITY_SCAN_NEEDED" = "true" ]; then
-            echo "✅ Security scan WILL run"
-          else
-            echo "❌ Security scan will be skipped"
-          fi
+          echo "Ansible changed: $ANSIBLE_IS_CHANGED"
+          echo "Security scan: $SECURITY_SCAN_NEEDED"
 
   build:
     needs: [detect-changes]
