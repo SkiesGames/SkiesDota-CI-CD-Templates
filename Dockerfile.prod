@@ -1,6 +1,8 @@
 # Use Python 3.13 slim image as base
 FROM python:3.13-slim
 
+# Build date: 2025-10-10 (testing workflow change detection)
+
 # Set environment variables for better security and performance
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
