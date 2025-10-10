@@ -52,5 +52,5 @@ runs:
           -e ANSIBLE_USER="${{ inputs.ansible_user }}" \
           -w /workspace \
           ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest \
-          bash -c "ansible-playbook /workspace/templates/ansible/playbooks/generate_inventory.yml && ansible-playbook -i /workspace/inventory.ini ansible/${{ inputs.playbook }} --verbose"
+          bash -c "ansible-playbook /workspace/templates/ansible/playbooks/generate_inventory.yml && ansible-playbook -i /workspace/inventory.ini ansible/${{ inputs.playbook }}"
       shell: bash

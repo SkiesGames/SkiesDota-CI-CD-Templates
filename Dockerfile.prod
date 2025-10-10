@@ -20,6 +20,7 @@ RUN apt-get update && \
         curl \
         jq \
         openssl \
+        rsync \
         && pip install --no-cache-dir ansible ansible-lint molecule docker \
         && apt-get purge -y --auto-remove build-essential libffi-dev libssl-dev python3-dev cargo \
         && rm -rf /var/lib/apt/lists/* /root/.cargo
