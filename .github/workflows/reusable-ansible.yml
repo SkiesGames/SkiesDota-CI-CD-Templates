@@ -14,8 +14,11 @@ on:
         required: true
       SSH_PRIVATE_KEY:
         required: true
-      # Optional project-specific secrets (will be empty if not provided)
-      EXTRA_ENV_JSON:
+      # Optional project-specific environment variables (non-sensitive)
+      ANSIBLE_EXTRA_ENV_JSON:
+        required: false
+      # Optional project-specific secrets (sensitive)
+      ANSIBLE_EXTRA_SECRETS_JSON:
         required: false
 
 jobs:
@@ -43,4 +46,5 @@ jobs:
           ansible_user: ${{ secrets.ANSIBLE_USER }}
           ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
           playbook: ${{ inputs.playbook }}
-          extra_environment_vars: ${{ secrets.EXTRA_ENV_JSON || '{}' }}
+          ansible_extra_env_json: ${{ secrets.ANSIBLE_EXTRA_ENV_JSON || '{}' }}
+          ansible_extra_secrets_json: ${{ secrets.ANSIBLE_EXTRA_SECRETS_JSON || '{}' }}

@@ -14,8 +14,12 @@ inputs:
   playbook:
     description: 'Path to the Ansible playbook to run (relative to ansible/ directory)'
     required: true
-  extra_environment_vars:
-    description: 'Additional environment variables as JSON object'
+  ansible_extra_env_json:
+    description: 'Additional environment variables as JSON object (non-sensitive)'
+    required: false
+    default: '{}'
+  ansible_extra_secrets_json:
+    description: 'Additional secrets as JSON object (sensitive)'
     required: false
     default: '{}'
 
@@ -47,16 +51,17 @@ runs:
 
     - name: Run Ansible Playbooks in Docker
       run: |
-        # Parse extra environment variables from JSON
+        # Merge extra env vars and secrets JSONs
+        MERGED_JSON=$(jq -s '.[0] * .[1]' \
+          <(echo '${{ inputs.ansible_extra_env_json }}') \
+          <(echo '${{ inputs.ansible_extra_secrets_json }}'))
+        
+        # Parse merged JSON to Docker env flags
         EXTRA_ENV_FLAGS=""
-        if [ "${{ inputs.extra_environment_vars }}" != "{}" ]; then
-          echo "Parsing extra environment variables..."
-          echo '${{ inputs.extra_environment_vars }}' | jq -r 'to_entries[] | "-e \(.key)=\(.value | @sh)"' | while read -r flag; do
-            EXTRA_ENV_FLAGS="$EXTRA_ENV_FLAGS $flag"
-          done
-          # Re-read into variable (subshell workaround)
-          EXTRA_ENV_FLAGS=$(echo '${{ inputs.extra_environment_vars }}' | jq -r 'to_entries[] | "-e \(.key)=\"\(.value)\""' | tr '\n' ' ')
-          echo "Extra environment flags: $EXTRA_ENV_FLAGS"
+        if [ "$MERGED_JSON" != "{}" ] && [ -n "$MERGED_JSON" ]; then
+          echo "Parsing extra environment variables and secrets..."
+          EXTRA_ENV_FLAGS=$(echo "$MERGED_JSON" | jq -r 'to_entries[] | "-e \(.key)=\"\(.value)\""' | tr '\n' ' ')
+          echo "Extra environment flags configured (count: $(echo "$MERGED_JSON" | jq 'length'))"
         fi
         
         # Run Ansible with all environment variables
