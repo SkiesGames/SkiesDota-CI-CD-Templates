@@ -14,6 +14,10 @@ inputs:
   playbook:
     description: 'Path to the Ansible playbook to run (relative to ansible/ directory)'
     required: true
+  extra_environment_vars:
+    description: 'Additional environment variables as JSON object'
+    required: false
+    default: '{}'
 
 runs:
   using: composite
@@ -43,6 +47,19 @@ runs:
 
     - name: Run Ansible Playbooks in Docker
       run: |
+        # Parse extra environment variables from JSON
+        EXTRA_ENV_FLAGS=""
+        if [ "${{ inputs.extra_environment_vars }}" != "{}" ]; then
+          echo "Parsing extra environment variables..."
+          echo '${{ inputs.extra_environment_vars }}' | jq -r 'to_entries[] | "-e \(.key)=\(.value | @sh)"' | while read -r flag; do
+            EXTRA_ENV_FLAGS="$EXTRA_ENV_FLAGS $flag"
+          done
+          # Re-read into variable (subshell workaround)
+          EXTRA_ENV_FLAGS=$(echo '${{ inputs.extra_environment_vars }}' | jq -r 'to_entries[] | "-e \(.key)=\"\(.value)\""' | tr '\n' ' ')
+          echo "Extra environment flags: $EXTRA_ENV_FLAGS"
+        fi
+        
+        # Run Ansible with all environment variables
         docker run --rm \
           -v $GITHUB_WORKSPACE:/workspace \
           -v $SSH_AUTH_SOCK:/ssh-agent \
@@ -50,6 +67,7 @@ runs:
           -e SSH_AUTH_SOCK=/ssh-agent \
           -e ANSIBLE_HOSTS="${{ inputs.ansible_hosts }}" \
           -e ANSIBLE_USER="${{ inputs.ansible_user }}" \
+          $EXTRA_ENV_FLAGS \
           -w /workspace \
           ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest \
           bash -c "ansible-playbook /workspace/templates/ansible/playbooks/generate_inventory.yml && ansible-playbook -i /workspace/inventory.ini ansible/${{ inputs.playbook }}"
