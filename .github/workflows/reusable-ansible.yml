@@ -7,11 +7,6 @@ on:
         description: 'Path to the Ansible playbook to run (relative to ansible/ directory)'
         required: true
         type: string
-      extra_env_json:
-        description: 'JSON object with extra environment variables (can include secrets via format)'
-        required: false
-        type: string
-        default: '{}'
     secrets:
       ANSIBLE_HOSTS:
         required: true
@@ -19,6 +14,9 @@ on:
         required: true
       SSH_PRIVATE_KEY:
         required: true
+      # Optional project-specific secrets (will be empty if not provided)
+      EXTRA_ENV_JSON:
+        required: false
 
 jobs:
   ansible:
@@ -45,4 +43,4 @@ jobs:
           ansible_user: ${{ secrets.ANSIBLE_USER }}
           ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
           playbook: ${{ inputs.playbook }}
-          extra_environment_vars: ${{ inputs.extra_env_json }}
+          extra_environment_vars: ${{ secrets.EXTRA_ENV_JSON || '{}' }}
