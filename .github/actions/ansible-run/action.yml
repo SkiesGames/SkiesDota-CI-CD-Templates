@@ -60,7 +60,7 @@ runs:
         EXTRA_ENV_FLAGS=""
         if [ "$MERGED_JSON" != "{}" ] && [ -n "$MERGED_JSON" ]; then
           echo "Parsing extra environment variables and secrets..."
-          EXTRA_ENV_FLAGS=$(echo "$MERGED_JSON" | jq -r 'to_entries[] | "-e \(.key)=\"\(.value)\""' | tr '\n' ' ')
+          EXTRA_ENV_FLAGS=$(echo "$MERGED_JSON" | jq -r 'to_entries[] | "-e \(.key)=\(.value)"' | tr '\n' ' ')
           echo "Extra environment flags configured (count: $(echo "$MERGED_JSON" | jq 'length'))"
         fi
         
