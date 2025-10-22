@@ -113,7 +113,7 @@ jobs:
           GITHUB_TOKEN: ${{ inputs.github-token }}
         env:
           # Use secret for API key
-          OCO_API_KEY: ${{ secrets.oco-api-key }}
+          OCO_API_KEY: ${{ secrets.OCO_API_KEY }}
           
           # Customization options
           OCO_TOKENS_MAX_INPUT: ${{ inputs.oco-tokens-max-input }}
