@@ -1,14 +1,6 @@
-# Use Python 3.13 slim image as base
-FROM python:3.13-slim
+# === Build Stage ===
+FROM python:3.13-slim as builder
 
-# Set environment variables for better security and performance
-ENV DEBIAN_FRONTEND=noninteractive \
-    PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    ANSIBLE_FORCE_COLOR=1
-
-# Install system dependencies and build tools temporarily
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         build-essential \
@@ -16,23 +8,50 @@ RUN apt-get update && \
         libssl-dev \
         python3-dev \
         cargo \
+        && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /workspace
+
+COPY requirements.txt .
+COPY ansible/requirements.yml .
+
+# Create wheels for all dependencies
+RUN pip wheel --no-cache-dir --wheel-dir /wheels -r requirements.txt
+
+# Install Ansible dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends openssh-client && \
+    rm -rf /var/lib/apt/lists/*
+RUN pip install ansible
+RUN ansible-galaxy collection install -r ansible/requirements.yml && \
+    ansible-galaxy role install -r ansible/requirements.yml
+
+# === FINAL STAGE ===
+FROM python:3.13-slim
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    ANSIBLE_FORCE_COLOR=1
+
+# Only runtime dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
         openssh-client \
         curl \
         jq \
         openssl \
         rsync \
-        && pip install --no-cache-dir ansible ansible-lint molecule docker \
-        && apt-get purge -y --auto-remove build-essential libffi-dev libssl-dev python3-dev cargo \
-        && rm -rf /var/lib/apt/lists/* /root/.cargo
+        && rm -rf /var/lib/apt/lists/*
 
-# Install Ansible collections and roles
-COPY ansible/requirements.yml /tmp/requirements.yml
-RUN ansible-galaxy collection install -r /tmp/requirements.yml && \
-    ansible-galaxy role install -r /tmp/requirements.yml && \
-    rm /tmp/requirements.yml
+WORKDIR /workspace
 
-# Copy Ansible configuration
+# Copy pre-built wheels
+COPY --from=builder /wheels /wheels
+RUN pip install --no-cache /wheels/* && rm -rf /wheels
+
+# Copy Ansible configuration and Galaxy content
+COPY --from=builder /root/.ansible /root/.ansible
 COPY ansible/ansible.cfg /etc/ansible/ansible.cfg
 
-# Set Working Directory
-WORKDIR /workspace
+CMD ["ansible", "--version"]

@@ -1,7 +1,25 @@
-# Use Python 3.13 slim image as base
+# === Build Stage ===
+FROM python:3.13-slim as builder
+
+# Install build dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        curl \
+        nodejs \
+        npm \
+        && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /workspace
+
+# Install Prettier
+RUN npm install -g prettier
+
+# Create Python wheels
+RUN pip wheel --no-cache-dir --wheel-dir /wheels ansible ansible-lint
+
+# === Final Stage ===
 FROM python:3.13-slim
 
-# Set environment variables for better security and performance
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
@@ -9,24 +27,21 @@ ENV DEBIAN_FRONTEND=noninteractive \
     ANSIBLE_FORCE_COLOR=1 \
     ANSIBLE_GALAXY_DISABLE_GPG_VERIFY=1
 
-# Install system dependencies
+# Install only runtime dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        # Basic utilities
         curl \
-        # Node.js and npm for Prettier
         nodejs \
-        npm \
         && rm -rf /var/lib/apt/lists/*
 
-# Install Python Dependencies (for ansible-lint)
-RUN pip install --no-cache-dir ansible ansible-lint
+WORKDIR /workspace
 
-# Install Prettier globally (for formatting YAML files)
-RUN npm install -g prettier
+# Copy Prettier and Python packages
+COPY --from=builder /usr/local/lib/node_modules /usr/local/lib/node_modules
+COPY --from=builder /usr/local/bin/prettier /usr/local/bin/prettier
+COPY --from=builder /wheels /wheels
+RUN pip install --no-cache /wheels/* && rm -rf /wheels
 
-# Copy Ansible configuration
 COPY ansible/ansible.cfg /etc/ansible/ansible.cfg
 
-# Set Working Directory
-WORKDIR /workspace
+CMD ["ansible", "--version"]
