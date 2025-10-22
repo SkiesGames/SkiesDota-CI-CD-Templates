@@ -112,8 +112,10 @@ jobs:
         with:
           GITHUB_TOKEN: ${{ inputs.github-token }}
         env:
-          # Use secret for API key
-          OCO_API_KEY: ${{ secrets.OCO_API_KEY }}
+          # Use secret for API key (opencommit expects OCO_OPENAI_API_KEY even for DeepSeek)
+          OCO_OPENAI_API_KEY: ${{ secrets.OCO_API_KEY }}
+          # Set DeepSeek API base URL
+          OCO_API_BASE_URL: 'https://api.deepseek.com/v1'
           
           # Customization options
           OCO_TOKENS_MAX_INPUT: ${{ inputs.oco-tokens-max-input }}
