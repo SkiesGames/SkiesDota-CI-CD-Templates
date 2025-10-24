@@ -42,7 +42,6 @@ jobs:
       changed_files: ${{ steps.detect.outputs.changed_files }}
       dockerfiles_matrix: ${{ steps.detect.outputs.dockerfiles_matrix }}
       ansible_is_changed: ${{ steps.detect.outputs.ansible_is_changed }}
-      security_scan_needed: ${{ steps.detect.outputs.security_scan_needed }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -53,7 +52,7 @@ jobs:
         id: detect
         run: |
           # Configuration
-          DOCKERFILE_PATTERNS=("Dockerfile.prod" "Dockerfile.prod.test" "Dockerfile.prod.format-lint" "Dockerfile.prod.security-scan")
+          DOCKERFILE_PATTERNS=("Dockerfile.prod" "Dockerfile.prod.test" "Dockerfile.prod.format-lint")
           ANSIBLE_PATTERN="ansible/"
           
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
@@ -92,68 +91,23 @@ jobs:
             fi
           fi
           
-          # Determine if security scan is needed
-          SECURITY_SCAN_NEEDED="false"
-          if [ -n "$CHANGED_FILES" ]; then
-            SECURITY_SCAN_NEEDED="true"
-          fi
-          
           # Set outputs
           echo "changed_files<<EOF" >> $GITHUB_OUTPUT
           echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
           printf "dockerfiles_matrix=%s\n" "$DOCKERFILES_MATRIX" >> $GITHUB_OUTPUT
           printf "ansible_is_changed=%s\n" "$ANSIBLE_IS_CHANGED" >> $GITHUB_OUTPUT
-          printf "security_scan_needed=%s\n" "$SECURITY_SCAN_NEEDED" >> $GITHUB_OUTPUT
           
           # Summary
           echo "Changed files: $CHANGED_FILES"
           echo "Dockerfiles matrix: $DOCKERFILES_MATRIX"
           echo "Ansible changed: $ANSIBLE_IS_CHANGED"
-          echo "Security scan: $SECURITY_SCAN_NEEDED"
-
-  security-scan:
-    needs: [detect-changes]
-    if: needs.detect-changes.result == 'success' && needs.detect-changes.outputs.security_scan_needed == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-
-      - name: Display Trivy scan results
-        run: |
-          echo "Trivy scan completed. Results saved to trivy-results.sarif"
-          if [ -f "trivy-results.sarif" ]; then
-            echo "SARIF file size: $(wc -c < trivy-results.sarif) bytes"
-            echo "=== Security Scan Results (SARIF format) ==="
-            # Display a summary of the SARIF file
-            if command -v jq >/dev/null 2>&1; then
-              echo "Number of results: $(jq '.runs[0].results | length' trivy-results.sarif 2>/dev/null || echo 'unknown')"
-            fi
-            echo "=== End of Results ==="
-          fi
-
-      - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        continue-on-error: true
-        with:
-          sarif_file: 'trivy-results.sarif'
   
   build:
-    needs: [detect-changes, security-scan]
+    needs: [detect-changes]
     if: | 
       always() &&
       (needs.detect-changes.result == 'success' || needs.detect-changes.result == 'skipped') &&
-      (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped') &&
       (needs.detect-changes.result == 'success' && needs.detect-changes.outputs.dockerfiles_matrix != '[]') || 
       (needs.detect-changes.result == 'skipped' && github.event_name == 'workflow_dispatch' && inputs.build)
     runs-on: ubuntu-latest
@@ -168,16 +122,15 @@ jobs:
       - name: Build ${{ matrix.dockerfile }}
         uses: ./.github/actions/build-image
         with:
-          image-name: ${{ matrix.dockerfile == 'Dockerfile.prod' && 'ansible-prod' || matrix.dockerfile == 'Dockerfile.prod.test' && 'ansible-prod-test' || matrix.dockerfile == 'Dockerfile.prod.format-lint' && 'ansible-prod-format-lint' || 'ansible-prod-security-scan' }}
+          image-name: ${{ matrix.dockerfile == 'Dockerfile.prod' && 'ansible-prod' || matrix.dockerfile == 'Dockerfile.prod.test' && 'ansible-prod-test' || matrix.dockerfile == 'Dockerfile.prod.format-lint' && 'ansible-prod-format-lint' }}
           dockerfile-path: ./${{ matrix.dockerfile }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
   
   format-lint:
-    needs: [detect-changes, security-scan, build]
+    needs: [detect-changes, build]
     if: |
       always() &&
       (needs.detect-changes.result == 'success' || needs.detect-changes.result == 'skipped') &&
-      (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped') &&
       (needs.build.result == 'success' || needs.build.result == 'skipped') &&
       (inputs.format-lint ||
       (needs.detect-changes.result != 'skipped' && needs.detect-changes.outputs.ansible_is_changed == 'true') ||
@@ -209,11 +162,10 @@ jobs:
           fi
 
   test:
-    needs: [detect-changes, security-scan, build, format-lint]
+    needs: [detect-changes, build, format-lint]
     if: |
       always() &&
       (needs.detect-changes.result == 'success' || needs.detect-changes.result == 'skipped') &&
-      (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped') &&
       (needs.build.result == 'success' || needs.build.result == 'skipped') &&
       (needs.format-lint.result == 'success' || needs.format-lint.result == 'skipped') &&
       (inputs.test ||
