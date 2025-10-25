@@ -1,5 +1,5 @@
 # cross-repo-dependencies.yml
-name: Cross-Repo Dependencies Check
+name: Reusable Cross-Repo Dependencies Checker
 
 on:
   workflow_call:
