@@ -11,9 +11,6 @@ RUN apt-get update && \
 
 WORKDIR /workspace
 
-# Install Prettier
-RUN npm install -g prettier
-
 # Create Python wheels
 RUN pip wheel --no-cache-dir --wheel-dir /wheels ansible ansible-lint
 
@@ -32,13 +29,15 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         curl \
         nodejs \
+        npm \
         && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /workspace
 
-# Copy Prettier and Python packages
-COPY --from=builder /usr/local/lib/node_modules /usr/local/lib/node_modules
-COPY --from=builder /usr/local/bin/prettier /usr/local/bin/prettier
+# Install Prettier globally in the final stage
+RUN npm install -g prettier
+
+# Install Python packages
 COPY --from=builder /wheels /wheels
 RUN pip install --no-cache /wheels/* && rm -rf /wheels
 
