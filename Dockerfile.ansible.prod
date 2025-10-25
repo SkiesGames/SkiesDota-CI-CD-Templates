@@ -44,6 +44,7 @@ WORKDIR /workspace
 
 # Copy Ansible configuration and Galaxy content
 COPY --from=builder /root/.ansible /root/.ansible
+COPY --from=builder /usr/local/bin/ansible* /usr/local/bin/
 COPY ansible/ansible.cfg /etc/ansible/ansible.cfg
 
 CMD ["ansible", "--version"]
