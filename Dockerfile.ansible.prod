@@ -12,11 +12,7 @@ RUN apt-get update && \
 
 WORKDIR /workspace
 
-COPY requirements.txt .
 COPY ansible/requirements.yml .
-
-# Create wheels for all dependencies
-RUN pip wheel --no-cache-dir --wheel-dir /wheels -r requirements.txt
 
 # Install Ansible dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends openssh-client && \
@@ -45,10 +41,6 @@ RUN apt-get update && \
         && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /workspace
-
-# Copy pre-built wheels
-COPY --from=builder /wheels /wheels
-RUN pip install --no-cache /wheels/* && rm -rf /wheels
 
 # Copy Ansible configuration and Galaxy content
 COPY --from=builder /root/.ansible /root/.ansible

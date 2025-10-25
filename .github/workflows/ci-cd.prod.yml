@@ -10,23 +10,6 @@ on:
     paths:
       - 'ansible/**/*'
       - 'Dockerfile*'
-  workflow_dispatch:
-    inputs:
-      build:
-        description: 'Build Docker images'
-        required: false
-        default: false
-        type: boolean
-      format-lint:
-        description: 'Format and lint Ansible code'
-        required: false
-        default: true
-        type: boolean
-      test:
-        description: 'Test Ansible code'
-        required: false
-        default: true
-        type: boolean
 
 permissions:
   contents: write
@@ -34,12 +17,8 @@ permissions:
 
 jobs:
   detect-changes:
-    if: |
-      github.event_name != 'workflow_dispatch' || 
-      (github.event_name == 'workflow_dispatch' && !inputs.build)
     runs-on: ubuntu-latest
     outputs:
-      changed_files: ${{ steps.detect.outputs.changed_files }}
       dockerfiles_matrix: ${{ steps.detect.outputs.dockerfiles_matrix }}
       ansible_is_changed: ${{ steps.detect.outputs.ansible_is_changed }}
     steps:
@@ -52,25 +31,27 @@ jobs:
         id: detect
         run: |
           # Configuration
-          DOCKERFILE_PATTERNS=("Dockerfile.prod" "Dockerfile.prod.test" "Dockerfile.prod.format-lint")
+          DOCKERFILES_PATTERNS=("Dockerfile.ansible.prod" "Dockerfile.ansible.prod.test" "Dockerfile.ansible.prod.format-lint")
+          ANSIBLE_REQUIREMENTS_PATTERN="ansible/requirements.yml"
           ANSIBLE_PATTERN="ansible/"
           
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            CHANGED_FILES="ansible/**/* Dockerfile*"
-          else
             CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} 2>/dev/null || echo "")
-          fi
-
-          echo Changed files: 
-          echo "$CHANGED_FILES"
           
-          # Detect Dockerfile changes
+          # Detect Dockerfiles changes
           DOCKERFILES_CHANGED=""
-          for pattern in "${DOCKERFILE_PATTERNS[@]}"; do
+          for pattern in "${DOCKERFILES_PATTERNS[@]}"; do
             if echo "$CHANGED_FILES" | grep -q "^${pattern}$"; then
               DOCKERFILES_CHANGED="${DOCKERFILES_CHANGED:+$DOCKERFILES_CHANGED }$pattern"
             fi
           done
+          
+          # Detect requirements.yml changes to trigger Dockerfile.ansible.prod rebuild
+          if echo "$CHANGED_FILES" | grep -q "$ANSIBLE_REQUIREMENTS_PATTERN"; then
+            # Add Dockerfile.ansible.prod to DOCKERFILES_CHANGED to trigger rebuild (only if not already present)
+            if ! echo "$DOCKERFILES_CHANGED" | grep -q "Dockerfile.ansible.prod"; then
+              DOCKERFILES_CHANGED="${DOCKERFILES_CHANGED:+$DOCKERFILES_CHANGED }Dockerfile.ansible.prod"
+            fi
+          fi
           
           # Detect Ansible changes
           ANSIBLE_IS_CHANGED="false"
@@ -92,28 +73,25 @@ jobs:
           fi
           
           # Set outputs
-          echo "changed_files<<EOF" >> $GITHUB_OUTPUT
-          echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
           printf "dockerfiles_matrix=%s\n" "$DOCKERFILES_MATRIX" >> $GITHUB_OUTPUT
           printf "ansible_is_changed=%s\n" "$ANSIBLE_IS_CHANGED" >> $GITHUB_OUTPUT
           
           # Summary
           echo "Changed files: $CHANGED_FILES"
+          echo "Dockerfiles changed: $DOCKERFILES_CHANGED"
           echo "Dockerfiles matrix: $DOCKERFILES_MATRIX"
-          echo "Ansible changed: $ANSIBLE_IS_CHANGED"
+          echo "Ansible is changed: $ANSIBLE_IS_CHANGED"
   
   build:
     needs: [detect-changes]
     if: | 
       always() &&
-      (needs.detect-changes.result == 'success' || needs.detect-changes.result == 'skipped') &&
-      (needs.detect-changes.result == 'success' && needs.detect-changes.outputs.dockerfiles_matrix != '[]') || 
-      (needs.detect-changes.result == 'skipped' && github.event_name == 'workflow_dispatch' && inputs.build)
+      needs.detect-changes.result == 'success' &&
+      needs.detect-changes.outputs.dockerfiles_matrix != '[]'
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        dockerfile: ${{ fromJson(needs.detect-changes.outputs.dockerfiles_matrix || '["Dockerfile.prod", "Dockerfile.prod.test", "Dockerfile.prod.format-lint"]') }}
+        dockerfile: ${{ fromJson(needs.detect-changes.outputs.dockerfiles_matrix) }}
       fail-fast: false
     steps:
       - name: Checkout repository
@@ -122,7 +100,7 @@ jobs:
       - name: Build ${{ matrix.dockerfile }}
         uses: ./.github/actions/build-image
         with:
-          image-name: ${{ matrix.dockerfile == 'Dockerfile.prod' && 'ansible-prod' || matrix.dockerfile == 'Dockerfile.prod.test' && 'ansible-prod-test' || matrix.dockerfile == 'Dockerfile.prod.format-lint' && 'ansible-prod-format-lint' }}
+          image-name: ${{ matrix.dockerfile == 'Dockerfile.ansible.prod' && 'ansible-prod' || matrix.dockerfile == 'Dockerfile.ansible.prod.test' && 'ansible-prod-test' || matrix.dockerfile == 'Dockerfile.ansible.prod.format-lint' && 'ansible-prod-format-lint' }}
           dockerfile-path: ./${{ matrix.dockerfile }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
   
@@ -130,11 +108,10 @@ jobs:
     needs: [detect-changes, build]
     if: |
       always() &&
-      (needs.detect-changes.result == 'success' || needs.detect-changes.result == 'skipped') &&
+      needs.detect-changes.result == 'success' && 
       (needs.build.result == 'success' || needs.build.result == 'skipped') &&
-      (inputs.format-lint ||
-      (needs.detect-changes.result != 'skipped' && needs.detect-changes.outputs.ansible_is_changed == 'true') ||
-      (needs.detect-changes.result != 'skipped' && needs.detect-changes.outputs.dockerfiles_matrix != '' && contains(fromJson(needs.detect-changes.outputs.dockerfiles_matrix), 'Dockerfile.prod.format-lint')))
+      needs.detect-changes.outputs.ansible_is_changed == 'true' ||
+      needs.detect-changes.outputs.dockerfiles_matrix != '' && contains(fromJson(needs.detect-changes.outputs.dockerfiles_matrix), 'Dockerfile.ansible.prod.format-lint')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -165,12 +142,11 @@ jobs:
     needs: [detect-changes, build, format-lint]
     if: |
       always() &&
-      (needs.detect-changes.result == 'success' || needs.detect-changes.result == 'skipped') &&
+      needs.detect-changes.result == 'success' &&
       (needs.build.result == 'success' || needs.build.result == 'skipped') &&
       (needs.format-lint.result == 'success' || needs.format-lint.result == 'skipped') &&
-      (inputs.test ||
-      (needs.detect-changes.result != 'skipped' && needs.detect-changes.outputs.ansible_is_changed == 'true') ||
-      (needs.detect-changes.result != 'skipped' && needs.detect-changes.outputs.dockerfiles_matrix != '' && contains(fromJson(needs.detect-changes.outputs.dockerfiles_matrix), 'Dockerfile.prod.test')))
+      needs.detect-changes.outputs.ansible_is_changed == 'true' ||
+      needs.detect-changes.outputs.dockerfiles_matrix != '' && contains(fromJson(needs.detect-changes.outputs.dockerfiles_matrix), 'Dockerfile.ansible.prod.test')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository

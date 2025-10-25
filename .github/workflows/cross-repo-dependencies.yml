@@ -1,0 +1,208 @@
+# cross-repo-dependencies.yml
+name: Cross-Repo Dependencies Check
+
+on:
+  workflow_call:
+    inputs:
+      template-repo:
+        required: true
+        type: string
+        default: 'SkiesGames/SkiesDota-CI-CD-Templates'
+      check-files:
+        required: false
+        type: string
+      wait-timeout:
+        required: false
+        type: number
+        default: 5
+        description: 'Maximum minutes to wait for template repository'
+      template_workflow:
+        required: false
+        type: string
+        default: 'ci-cd.prod.yml'
+    secrets:
+      token:
+        required: true
+
+jobs:
+  check-template-dependencies:
+    runs-on: ubuntu-latest
+    outputs:
+      template-ready: ${{ steps.check.outputs.template_ready }}
+      template-commit: ${{ steps.check.outputs.template_commit }}
+      last-change: ${{ steps.check.outputs.last_change }}
+      needs-wait: ${{ steps.check.outputs.needs_wait }}
+    steps:
+      - name: Check template repository dependencies
+        id: check
+        run: |
+          TEMPLATE_REPO="${{ inputs.template-repo }}"
+          TEMPLATE_WORKFLOW="${{ inputs.template_workflow }}"
+          CHECK_FILES="${{ inputs.check-files }}"
+          
+          TEMPLATE_COMMIT_RESPONSE=$(curl -s -f -H "Authorization: token ${{ secrets.token }}" \
+            "https://api.github.com/repos/$TEMPLATE_REPO/commits/main" || echo "{}")
+          
+          TEMPLATE_COMMIT=$(echo "$TEMPLATE_COMMIT_RESPONSE" | jq -r '.sha // empty')
+          
+          if [ -z "$TEMPLATE_COMMIT" ]; then
+            echo "Warning: Failed to fetch template commit. Setting ready=false."
+            TEMPLATE_READY="false"
+          else
+            echo "Latest template commit: $TEMPLATE_COMMIT"
+            
+            LAST_RUN_RESPONSE=$(curl -s -H "Authorization: token ${{ secrets.token }}" \
+              "https://api.github.com/repos/$TEMPLATE_REPO/actions/workflows/$TEMPLATE_WORKFLOW/runs?branch=main&per_page=1")
+            
+            LAST_RUN_SHA=$(echo "$LAST_RUN_RESPONSE" | jq -r '.workflow_runs[0].head_sha // empty')
+            LAST_RUN_STATUS=$(echo "$LAST_RUN_RESPONSE" | jq -r '.workflow_runs[0].status // empty')
+            LAST_RUN_CONCLUSION=$(echo "$LAST_RUN_RESPONSE" | jq -r '.workflow_runs[0].conclusion // empty')
+            LAST_RUN_TIME=$(echo "$LAST_RUN_RESPONSE" | jq -r '.workflow_runs[0].created_at // empty')
+            
+            echo "Last run SHA: $LAST_RUN_SHA, Status: $LAST_RUN_STATUS, Conclusion: $LAST_RUN_CONCLUSION, Time: $LAST_RUN_TIME"
+            
+            if [ "$LAST_RUN_CONCLUSION" = "failure" ]; then
+              # Check if the failed run is for the latest commit
+              if [ "$LAST_RUN_SHA" = "$TEMPLATE_COMMIT" ]; then
+                # Check if any of the tracked files changed in this commit
+                FAILED_WITH_RELEVANT_CHANGES="false"
+                IFS=',' read -ra FILES <<< "$CHECK_FILES"
+                for file in "${FILES[@]}"; do
+                  file=$(echo "$file" | xargs)
+                  
+                  FILE_CHANGE_RESPONSE=$(curl -s -H "Authorization: token ${{ secrets.token }}" \
+                    "https://api.github.com/repos/$TEMPLATE_REPO/commits?path=$file&per_page=1")
+                  
+                  FILE_CHANGE_SHA=$(echo "$FILE_CHANGE_RESPONSE" | jq -r '.[0].sha // empty')
+                  
+                  if [ "$FILE_CHANGE_SHA" = "$TEMPLATE_COMMIT" ]; then
+                    FAILED_WITH_RELEVANT_CHANGES="true"
+                    echo "Tracked file $file changed in failed commit"
+                  fi
+                done
+                
+                if [ "$FAILED_WITH_RELEVANT_CHANGES" = "true" ]; then
+                  echo "Last run failed for latest commit with relevant file changes - failing."
+                  exit 1
+                else
+                  echo "Last run failed for latest commit but no relevant file changes - setting ready=true."
+                  TEMPLATE_READY="true"
+                fi
+              else
+                echo "Last run failed for older commit ($LAST_RUN_SHA), will check latest commit ($TEMPLATE_COMMIT) status."
+              fi
+            fi
+            
+            if [ "$LAST_RUN_STATUS" = "in_progress" ]; then
+              echo "Active workflow running - will wait."
+              NEEDS_WAIT="true"
+            else
+              NEEDS_WAIT="false"
+            fi
+            
+            # Check for successful run on the latest commit
+            WORKFLOW_FOR_LATEST=$(curl -s -H "Authorization: token ${{ secrets.token }}" \
+              "https://api.github.com/repos/$TEMPLATE_REPO/actions/workflows/$TEMPLATE_WORKFLOW/runs?head_sha=$TEMPLATE_COMMIT&per_page=1")
+            
+            LATEST_COMMIT_RUN_STATUS=$(echo "$WORKFLOW_FOR_LATEST" | jq -r '.workflow_runs[0].status // empty')
+            LATEST_COMMIT_RUN_CONCLUSION=$(echo "$WORKFLOW_FOR_LATEST" | jq -r '.workflow_runs[0].conclusion // empty')
+            
+            echo "Workflow for latest commit ($TEMPLATE_COMMIT): Status=$LATEST_COMMIT_RUN_STATUS, Conclusion=$LATEST_COMMIT_RUN_CONCLUSION"
+            
+            # If there's a successful run for the latest commit, we're good
+            if [ "$LATEST_COMMIT_RUN_CONCLUSION" = "success" ]; then
+              echo "Latest commit has successful workflow run - ready to proceed"
+              NEEDS_WAIT="false"
+            elif [ "$LATEST_COMMIT_RUN_STATUS" = "in_progress" ]; then
+              echo "Workflow is in progress for latest commit - will wait"
+              NEEDS_WAIT="true"
+            else
+              # No workflow run for latest commit, or it failed
+              LAST_CHANGE=""
+              IFS=',' read -ra FILES <<< "$CHECK_FILES"
+              for file in "${FILES[@]}"; do
+                file=$(echo "$file" | xargs)
+                
+                FILE_CHANGE_RESPONSE=$(curl -s -H "Authorization: token ${{ secrets.token }}" \
+                  "https://api.github.com/repos/$TEMPLATE_REPO/commits?path=$file&per_page=1")
+                
+                FILE_CHANGE_SHA=$(echo "$FILE_CHANGE_RESPONSE" | jq -r '.[0].sha // empty')
+                
+                # Check if this file change is in the latest commit
+                if [ "$FILE_CHANGE_SHA" = "$TEMPLATE_COMMIT" ]; then
+                  LAST_CHANGE="$LAST_CHANGE $file (changed in latest commit)"
+                fi
+              done
+              
+              if [ -n "$LAST_CHANGE" ]; then
+                echo "Pending changes in:$LAST_CHANGE but no active/successful workflow - failing."
+                exit 1
+              else
+                echo "No relevant file changes in latest commit - ready to proceed"
+                NEEDS_WAIT="false"
+              fi
+            fi
+            
+            TEMPLATE_READY=$([ "$NEEDS_WAIT" = "false" ] && echo "true" || echo "false")
+            
+            echo "template_ready=$TEMPLATE_READY" >> $GITHUB_OUTPUT
+            echo "template_commit=$TEMPLATE_COMMIT" >> $GITHUB_OUTPUT
+            echo "last_change=$LAST_CHANGE" >> $GITHUB_OUTPUT
+            echo "needs_wait=$NEEDS_WAIT" >> $GITHUB_OUTPUT
+            
+            echo "Template ready: $TEMPLATE_READY"
+            echo "Last change: $LAST_CHANGE"
+          fi
+
+  wait-for-template:
+    needs: [check-template-dependencies]
+    if: always() && needs.check-template-dependencies.result == 'success' && needs.check-template-dependencies.outputs.needs-wait == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ inputs.wait-timeout }}
+    steps:
+      - name: Wait for template repository
+        run: |
+          WAIT_TIMEOUT=${{ inputs.wait-timeout }}
+          SLEEP_INTERVAL=30
+          MAX_ATTEMPTS=$(( (WAIT_TIMEOUT * 60) / SLEEP_INTERVAL ))
+          
+          echo "⏳ Waiting for template repository to complete builds..."
+          echo "Template commit: ${{ needs.check-template-dependencies.outputs.template-commit }}"
+          echo "Max wait time: ${WAIT_TIMEOUT} minutes (${MAX_ATTEMPTS} attempts × ${SLEEP_INTERVAL}s)"
+          echo ""
+          
+          TEMPLATE_REPO="${{ inputs.template-repo }}"
+          TEMPLATE_WORKFLOW="${{ inputs.template_workflow }}"
+          TEMPLATE_COMMIT="${{ needs.check-template-dependencies.outputs.template-commit }}"
+          
+          for i in $(seq 1 $MAX_ATTEMPTS); do
+            echo "🔍 Attempt $i/$MAX_ATTEMPTS - Checking workflow status..."
+            
+            WORKFLOW_RUNS=$(curl -s -H "Authorization: token ${{ secrets.token }}" \
+              "https://api.github.com/repos/$TEMPLATE_REPO/actions/workflows/$TEMPLATE_WORKFLOW/runs?head_sha=$TEMPLATE_COMMIT&per_page=5")
+            
+            LATEST_SUCCESS=$(echo "$WORKFLOW_RUNS" | jq -r '.workflow_runs[] | select(.conclusion == "success") | .head_sha' | head -1)
+            
+            if [ "$LATEST_SUCCESS" = "$TEMPLATE_COMMIT" ]; then
+              echo "✅ Template repository is ready!"
+              exit 0
+            fi
+            
+            # Don't sleep on last attempt
+            if [ $i -lt $MAX_ATTEMPTS ]; then
+              echo "⏱️  Not ready yet, waiting 30 seconds..."
+              sleep 30
+            fi
+          done
+          
+          # Max attempts reached
+          echo ""
+          echo "❌ Timeout: Template repository did not complete within ${WAIT_TIMEOUT} minutes"
+          echo "Template commit: $TEMPLATE_COMMIT"
+          echo "Last successful commit: ${LATEST_SUCCESS:-none}"
+          echo ""
+          echo "This usually means:"
+          echo "  1. Template repository workflow is still running (check manually)"
+          echo "  2. Template repository workflow failed (check workflow logs)"
+          echo "  3. No workflow triggered for this commit (check triggers)"
+          exit 1

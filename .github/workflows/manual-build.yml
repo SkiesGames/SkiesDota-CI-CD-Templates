@@ -1,0 +1,37 @@
+name: Manual Build Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      dockerfile:
+        description: 'Dockerfile to build'
+        required: true
+        default: 'Dockerfile.ansible.prod'
+        type: choice
+        options:
+          - 'Dockerfile.ansible.prod'
+          - 'Dockerfile.ansible.prod.test'
+          - 'Dockerfile.ansible.prod.format-lint'
+          - 'all'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dockerfile: ${{ fromJson(github.event.inputs.dockerfile == 'all' && '["Dockerfile.ansible.prod", "Dockerfile.ansible.prod.test", "Dockerfile.ansible.prod.format-lint"]' || format('["{0}"]', github.event.inputs.dockerfile)) }}
+      fail-fast: false
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build ${{ matrix.dockerfile }}
+        uses: ./.github/actions/build-image
+        with:
+          image-name: ${{ matrix.dockerfile == 'Dockerfile.ansible.prod' && 'ansible-prod' || matrix.dockerfile == 'Dockerfile.ansible.prod.test' && 'ansible-prod-test' || matrix.dockerfile == 'Dockerfile.ansible.prod.format-lint' && 'ansible-prod-format-lint' }}
+          dockerfile-path: ./${{ matrix.dockerfile }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
