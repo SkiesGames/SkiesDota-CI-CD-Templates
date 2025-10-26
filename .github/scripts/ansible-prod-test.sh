@@ -15,7 +15,7 @@ test_playbooks() {
         if [ -f "$playbook" ]; then
             playbook_name=$(basename "$playbook")
             echo "TESTING PLAYBOOK: $playbook_name"
-            ansible-playbook "$playbook" --check --diff -i localhost, || exit 1
+            ansible-playbook "$playbook" --check --diff -i localhost, --connection=local || exit 1
         fi
     done
 }
