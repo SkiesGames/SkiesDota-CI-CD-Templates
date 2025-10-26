@@ -45,9 +45,6 @@ RUN apt-get update && \
         jq \
         openssl \
         rsync \
-        python3-apt \
-        iptables \
-        ufw \
         && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /workspace

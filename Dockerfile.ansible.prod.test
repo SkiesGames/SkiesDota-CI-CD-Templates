@@ -6,12 +6,6 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         openssh-client \
         curl \
-        python3-apt \
-        iptables \
-        ufw \
-        systemd \
-        systemd-sysv \
-        dbus \
         && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /workspace
@@ -40,12 +34,6 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         openssh-client \
         curl \
-        python3-apt \
-        iptables \
-        ufw \
-        systemd \
-        systemd-sysv \
-        dbus \
         && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /workspace
