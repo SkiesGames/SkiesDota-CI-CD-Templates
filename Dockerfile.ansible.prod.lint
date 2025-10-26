@@ -4,12 +4,13 @@ FROM python:3.13-slim AS builder
 # Install build dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
+        openssh-client \
         curl \
         && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /workspace
 
-# Create Python wheels
+# Create wheels
 RUN pip wheel --no-cache-dir --wheel-dir /wheels ansible ansible-lint
 
 # Install Ansible collections and roles
@@ -28,20 +29,16 @@ ENV DEBIAN_FRONTEND=noninteractive \
     ANSIBLE_FORCE_COLOR=1 \
     ANSIBLE_GALAXY_DISABLE_GPG_VERIFY=1
 
-# Install only runtime dependencies including npm
+# Install runtime dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
+        openssh-client \
         curl \
-        nodejs \
-        npm \
         && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /workspace
 
-# Install Prettier in final stage
-RUN npm install -g prettier
-
-# Install Python packages
+# Copy wheels and install
 COPY --from=builder /wheels /wheels
 RUN pip install --no-cache /wheels/* && rm -rf /wheels
 

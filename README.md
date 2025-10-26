@@ -52,11 +52,11 @@ You can reference these workflows in other repositories by copying the workflow 
 - **Docker Image Building**: Builds four specialized Docker images:
   - `ansible-prod`: Main Ansible runner
   - `ansible-prod-test`: Testing environment
-  - `ansible-prod-format-lint`: Formatting and linting tools
+  - `ansible-prod-lint`: Linting tools
   - `ansible-prod-security-scan`: Security scanning tools
 - **Conditional Job Execution**: Only runs jobs when relevant files change
 - **Security Scanning**: Fast and comprehensive security scans with TruffleHog
-- **Format and Lint**: YAML formatting with Prettier and Ansible linting
+- **Lint**: Ansible linting and validation
 - **Testing**: Ansible syntax validation and dry-run testing
 - **Fallback Support**: Uses standard images when custom images unavailable
 
@@ -253,8 +253,6 @@ The repository includes comprehensive testing and linting capabilities:
 - **Safety checks**: Prevents accidental changes during testing
 
 ### Code Linting
-- **Prettier**: YAML file formatting for consistency
-- **yamllint**: YAML syntax validation and style checking
 - **ansible-lint**: Ansible-specific best practices and syntax validation
 - **Smart dependencies**: Only runs when relevant files change
 
@@ -272,11 +270,11 @@ The repository includes comprehensive testing and linting capabilities:
 - **Purpose**: Code quality validation and testing
 - **Registry**: `ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod-test:latest`
 
-### Format and Lint Image (`Dockerfile.prod.format-lint`)
+### Lint Image (`Dockerfile.prod.lint`)
 - **Base**: Python 3.13 slim
-- **Features**: ansible-lint, yamllint, prettier, nodejs, npm
-- **Purpose**: Code formatting and comprehensive linting
-- **Registry**: `ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod-format-lint:latest`
+- **Features**: ansible-lint
+- **Purpose**: Code linting and validation
+- **Registry**: `ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod-lint:latest`
 
 ### Security Scan Image (`Dockerfile.prod.security-scan`)
 - **Base**: Alpine 3.19

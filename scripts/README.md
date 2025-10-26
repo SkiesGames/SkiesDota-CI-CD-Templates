@@ -4,14 +4,13 @@ This directory contains local development scripts for the SkiesDota CI/CD Templa
 
 ## Available Scripts
 
-### format-lint-local.sh
+### lint-local.sh
 
-A local development script for formatting and linting Ansible code.
+A local development script for linting Ansible code.
 
-**Purpose**: Provides the same formatting and linting capabilities as the CI pipeline for local development
+**Purpose**: Provides the same linting capabilities as the CI pipeline for local development
 
 **Features:**
-- YAML file formatting with Prettier
 - Ansible code validation with ansible-lint
 - Consistent with CI pipeline tools
 - Fast local execution
@@ -19,28 +18,24 @@ A local development script for formatting and linting Ansible code.
 **Usage:**
 ```bash
 # Make script executable (first time only)
-chmod +x scripts/format-lint-local.sh
+chmod +x scripts/lint-local.sh
 
-# Run formatting and linting
-./scripts/format-lint-local.sh
+# Run linting
+./scripts/lint-local.sh
 ```
 
 **What it does:**
-1. **Formats YAML files** using Prettier with project configuration
-2. **Validates Ansible code** using ansible-lint
-3. **Provides feedback** on formatting and validation results
+1. **Validates Ansible code** using ansible-lint
+2. **Provides feedback** on validation results
 
 **Requirements:**
-- Prettier installed globally: `npm install -g prettier`
 - ansible-lint installed: `pip install ansible-lint`
 - Run from repository root directory
 
 **Example Output:**
 ```
-🎨 Formatting YAML files with Prettier...
-✅ YAML files formatted successfully
 🔍 Validating with ansible-lint...
-🎉 All formatting and validation completed successfully!
+🎉 All linting completed successfully!
 ```
 
 ## Alternative Local Development Methods
@@ -50,12 +45,12 @@ chmod +x scripts/format-lint-local.sh
 For consistent environment with CI pipeline:
 
 ```bash
-# Build the format-lint image
-docker build -f Dockerfile.prod.format-lint -t local-ansible-format-lint .
+# Build the lint image
+docker build -f Dockerfile.prod.lint -t local-ansible-lint .
 
-# Run formatting and linting
-docker run --rm -v "$(pwd):/workspace" -w /workspace local-ansible-format-lint \
-  bash .github/scripts/ansible-prod-format-lint.sh
+# Run linting
+docker run --rm -v "$(pwd):/workspace" -w /workspace local-ansible-lint \
+  bash .github/scripts/ansible-prod-lint.sh
 ```
 
 ### Using CI Script Directly
@@ -64,16 +59,13 @@ Run the same script used in CI:
 
 ```bash
 # Run the CI script directly
-bash .github/scripts/ansible-prod-format-lint.sh
+bash .github/scripts/ansible-prod-lint.sh
 ```
 
 ## Prerequisites
 
 ### For Native Script Execution
 ```bash
-# Install Prettier globally
-npm install -g prettier
-
 # Install ansible-lint
 pip install ansible-lint
 
@@ -89,9 +81,6 @@ pip install ansible
 
 ## Configuration
 
-### Prettier Configuration
-The script uses the project's `.prettierrc` configuration file for consistent formatting.
-
 ### ansible-lint Configuration
 Uses default ansible-lint rules with project-specific considerations:
 - FQCN (Fully Qualified Collection Names) preferred
@@ -103,19 +92,14 @@ Uses default ansible-lint rules with project-specific considerations:
 
 ### Common Issues
 
-1. **"prettier: command not found"**
-   ```bash
-   npm install -g prettier
-   ```
-
-2. **"ansible-lint: command not found"**
+1. **"ansible-lint: command not found"**
    ```bash
    pip install ansible-lint
    ```
 
-3. **"Permission denied"**
+2. **"Permission denied"**
    ```bash
-   chmod +x scripts/format-lint-local.sh
+   chmod +x scripts/lint-local.sh
    ```
 
 4. **"No such file or directory"**
@@ -126,7 +110,7 @@ Uses default ansible-lint rules with project-specific considerations:
 
 1. **"Docker image not found"**
    ```bash
-   docker build -f Dockerfile.prod.format-lint -t local-ansible-format-lint .
+   docker build -f Dockerfile.prod.lint -t local-ansible-lint .
    ```
 
 2. **"Permission denied" in Docker**
@@ -156,18 +140,13 @@ Configure VS Code to use the same tools:
 
 ```json
 {
-  "editor.formatOnSave": true,
-  "editor.defaultFormatter": "esbenp.prettier-vscode",
-  "[yaml]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
   "ansible.ansibleLint.enabled": true,
   "ansible.ansibleLint.path": "ansible-lint"
 }
 ```
 
 ### Pre-commit Hooks
-Consider adding pre-commit hooks to automatically run formatting:
+Consider adding pre-commit hooks to automatically run linting:
 
 ```bash
 # Install pre-commit

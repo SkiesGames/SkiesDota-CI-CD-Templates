@@ -1,10 +1,10 @@
-name: Manual Format-Lint and Test Pipeline
+name: Manual Lint and Test Pipeline
 
 on:
   workflow_dispatch:
     inputs:
-      format-lint:
-        description: 'Run format and lint'
+      lint:
+        description: 'Run lint'
         required: false
         default: true
         type: boolean
@@ -19,8 +19,8 @@ permissions:
   packages: read
 
 jobs:
-  format-lint:
-    if: inputs.format-lint
+  lint:
+    if: inputs.lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -31,26 +31,13 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run formatting and linting
+      - name: Run linting
         run: |
           docker run --rm \
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
-            ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod-format-lint:latest \
-            bash .github/scripts/ansible-prod-format-lint.sh
-
-      - name: Commit formatting changes
-        run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          # Only add YAML files that were formatted
-          git add ansible/**/*.yml ansible/**/*.yaml || true
-          if ! git diff --staged --quiet; then
-            git commit -m "Auto-format YAML files with Prettier"
-            git push
-          else
-            echo "No formatting changes to commit"
-          fi
+            ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod-lint:latest \
+            bash .github/scripts/ansible-prod-lint.sh
 
   test:
     if: inputs.test

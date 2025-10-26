@@ -8,17 +8,6 @@ print_section() {
     echo "=========================================="
 }
 
-# Function to auto-format YAML files
-format_yaml() {
-    print_section "AUTO-FORMATTING YAML FILES"
-    echo "Running Prettier to format YAML files..."
-    prettier --write 'ansible/**/*.yml' || {
-        echo "❌ YAML formatting failed!"
-        exit 1
-    }
-    echo "✅ YAML files formatted successfully"
-}
-
 # Function to lint roles
 lint_roles() {
     print_section "LINTING ROLES"
@@ -43,12 +32,11 @@ lint_playbooks() {
     done
 }
 
-# Auto-format YAML files first
-format_yaml
-
 # Change to ansible directory to respect ansible.cfg
 cd ansible
 
 # Run ansible-lint (validates both YAML syntax and Ansible best practices)
 lint_roles
 lint_playbooks
+
+echo "🎉 All linting completed successfully!"

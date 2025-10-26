@@ -13,7 +13,7 @@ A comprehensive CI/CD pipeline with smart change detection and conditional execu
 - **Docker Image Building**: Builds four specialized Docker images for different stages
 - **Conditional Job Execution**: Only runs jobs when relevant files change
 - **Security Scanning**: Fast and comprehensive security scans with TruffleHog
-- **Format and Lint**: YAML formatting with Prettier and Ansible linting
+- **Lint**: Ansible linting and validation
 - **Testing**: Ansible syntax validation and dry-run testing
 - **Fallback Support**: Uses standard images when custom images unavailable
 

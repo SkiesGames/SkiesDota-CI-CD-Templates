@@ -4,46 +4,46 @@ This directory contains scripts used by GitHub Actions workflows for CI/CD autom
 
 ## Available Scripts
 
-### ansible-prod-format-lint.sh
+### ansible-prod-lint.sh
 
-Comprehensive formatting and linting script for Ansible code.
+Ansible linting script for code quality validation.
 
-**Purpose**: Performs YAML formatting and Ansible validation in CI/CD pipeline
+**Purpose**: Performs Ansible validation in CI/CD pipeline
 
 **Features:**
-- YAML file formatting with Prettier
 - Ansible code validation with ansible-lint
-- Auto-commit of formatting changes
+- Role and playbook linting
 - Comprehensive error handling
 - Consistent with local development tools
 
 **Usage in CI/CD:**
 ```bash
 # Used in GitHub Actions workflow
-bash .github/scripts/ansible-prod-format-lint.sh
+bash .github/scripts/ansible-prod-lint.sh
 ```
 
 **What it does:**
-1. **Formats YAML files** using Prettier with project configuration
-2. **Validates Ansible code** using ansible-lint
-3. **Commits formatting changes** if any were made
-4. **Provides detailed feedback** on all operations
+1. **Validates Ansible code** using ansible-lint
+2. **Lints roles and playbooks** for best practices
+3. **Provides detailed feedback** on all operations
 
 **Environment Requirements:**
-- Git configured with CI user
-- Prettier and ansible-lint available
+- ansible-lint available
 - Proper file permissions
-- GitHub token for pushing changes
 
 **Example Output:**
 ```
-🎨 Formatting YAML files with Prettier...
-✅ YAML files formatted successfully
-🔍 Validating with ansible-lint...
-✅ Ansible validation passed
-📝 Committing formatting changes...
-✅ Changes committed successfully
-🎉 All formatting and validation completed successfully!
+==========================================
+LINTING ROLES
+==========================================
+LINTING ROLE: example-role
+✅ Role validation passed
+==========================================
+LINTING PLAYBOOKS
+==========================================
+LINTING PLAYBOOK: bootstrap.yml
+✅ Playbook validation passed
+🎉 All linting completed successfully!
 ```
 
 ### ansible-prod-test.sh
