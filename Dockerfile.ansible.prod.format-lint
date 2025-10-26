@@ -5,14 +5,9 @@ FROM python:3.13-slim AS builder
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         curl \
-        nodejs \
-        npm \
         && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /workspace
-
-# Install Prettier in builder
-RUN npm install -g prettier
 
 # Create Python wheels
 RUN pip wheel --no-cache-dir --wheel-dir /wheels ansible ansible-lint
@@ -27,18 +22,20 @@ ENV DEBIAN_FRONTEND=noninteractive \
     ANSIBLE_FORCE_COLOR=1 \
     ANSIBLE_GALAXY_DISABLE_GPG_VERIFY=1
 
-# Install only runtime dependencies
+# Install only runtime dependencies including npm
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         curl \
         nodejs \
+        npm \
         && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /workspace
 
-# Copy Prettier and Python packages
-COPY --from=builder /usr/local/lib/node_modules /usr/local/lib/node_modules
-COPY --from=builder /usr/local/bin/prettier /usr/local/bin/prettier
+# Install Prettier in final stage
+RUN npm install -g prettier
+
+# Install Python packages
 COPY --from=builder /wheels /wheels
 RUN pip install --no-cache /wheels/* && rm -rf /wheels
 
