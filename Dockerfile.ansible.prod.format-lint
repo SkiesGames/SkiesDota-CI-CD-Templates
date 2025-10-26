@@ -12,6 +12,12 @@ WORKDIR /workspace
 # Create Python wheels
 RUN pip wheel --no-cache-dir --wheel-dir /wheels ansible ansible-lint
 
+# Install Ansible collections and roles
+COPY ansible/requirements.yml /tmp/requirements.yml
+RUN pip install ansible ansible-lint
+RUN ansible-galaxy collection install -r /tmp/requirements.yml && \
+    ansible-galaxy role install -r /tmp/requirements.yml
+
 # === Final Stage ===
 FROM python:3.13-slim
 
@@ -39,6 +45,8 @@ RUN npm install -g prettier
 COPY --from=builder /wheels /wheels
 RUN pip install --no-cache /wheels/* && rm -rf /wheels
 
+# Copy Ansible content
+COPY --from=builder /root/.ansible /root/.ansible
 COPY ansible/ansible.cfg /etc/ansible/ansible.cfg
 
 CMD ["ansible", "--version"]
