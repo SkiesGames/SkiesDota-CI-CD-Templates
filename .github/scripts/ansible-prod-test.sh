@@ -12,10 +12,7 @@ print_section() {
 test_playbooks() {
     print_section "TESTING PLAYBOOKS"
     
-    print_section "GENERATING INVENTORY"
-    ansible-playbook /templates/ansible/playbooks/generate_inventory.yml
-    
-    # Test each playbook (skip generate_inventory.yml as it's not a deployment playbook)
+    # Test each playbook
     for playbook in playbooks/*.yml; do
         if [ -f "$playbook" ]; then
             playbook_name=$(basename "$playbook")

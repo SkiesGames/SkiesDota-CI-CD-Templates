@@ -33,7 +33,11 @@ jobs:
 
       - name: Run formatting and linting
         run: |
-          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod-format-lint:latest bash .github/scripts/ansible-prod-format-lint.sh
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod-format-lint:latest \
+            bash .github/scripts/ansible-prod-format-lint.sh
 
       - name: Commit formatting changes
         run: |
@@ -62,4 +66,8 @@ jobs:
 
       - name: Run tests
         run: |
-          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod-test:latest bash .github/scripts/ansible-prod-test.sh
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod-test:latest \
+            bash .github/scripts/ansible-prod-test.sh

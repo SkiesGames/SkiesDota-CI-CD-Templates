@@ -75,5 +75,5 @@ runs:
           $EXTRA_ENV_FLAGS \
           -w /workspace \
           ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest \
-          bash -c "ansible-playbook /workspace/templates/ansible/playbooks/generate_inventory.yml && ansible-playbook -i /workspace/inventory.ini ansible/${{ inputs.playbook }}"
+          bash -c "ansible-playbook templates/ansible/playbooks/generate_inventory.yml && ansible-playbook -i inventory.ini ansible/${{ inputs.playbook }}"
       shell: bash
