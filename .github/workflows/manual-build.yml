@@ -10,8 +10,7 @@ on:
         type: choice
         options:
           - 'Dockerfile.ansible.prod'
-          - 'Dockerfile.ansible.prod.test'
-          - 'Dockerfile.ansible.prod.format-lint'
+          - 'Dockerfile.ansible.prod.lint'
           - 'all'
 
 permissions:
@@ -23,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        dockerfile: ${{ fromJson(github.event.inputs.dockerfile == 'all' && '["Dockerfile.ansible.prod", "Dockerfile.ansible.prod.test", "Dockerfile.ansible.prod.format-lint"]' || format('["{0}"]', github.event.inputs.dockerfile)) }}
+        dockerfile: ${{ fromJson(github.event.inputs.dockerfile == 'all' && '["Dockerfile.ansible.prod", "Dockerfile.ansible.prod.lint"]' || format('["{0}"]', github.event.inputs.dockerfile)) }}
       fail-fast: false
     steps:
       - name: Checkout repository
@@ -32,6 +31,6 @@ jobs:
       - name: Build ${{ matrix.dockerfile }}
         uses: ./.github/actions/build-image
         with:
-          image-name: ${{ matrix.dockerfile == 'Dockerfile.ansible.prod' && 'ansible-prod' || matrix.dockerfile == 'Dockerfile.ansible.prod.test' && 'ansible-prod-test' || matrix.dockerfile == 'Dockerfile.ansible.prod.format-lint' && 'ansible-prod-format-lint' }}
+          image-name: ${{ matrix.dockerfile == 'Dockerfile.ansible.prod' && 'ansible-prod' || matrix.dockerfile == 'Dockerfile.ansible.prod.lint' && 'ansible-prod-lint' }}
           dockerfile-path: ./${{ matrix.dockerfile }}
           github-token: ${{ secrets.GITHUB_TOKEN }}

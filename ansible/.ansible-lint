@@ -1,0 +1,19 @@
+# ansible-lint configuration for CI/CD pipeline
+# This is used by the lint job to check playbook structure and best practices
+
+# Skip role resolution checks since roles are installed in the prod image
+skip_list:
+  - role-name[path]  # Skip role path resolution
+  
+# Don't require role dependencies to be installed for linting
+offline: false
+
+# Warn on unknown tags
+warn_list:
+  - experimental
+  - no-changed-when
+  - no-handler
+
+# Enable progressive mode for strict checking
+progressive: false
+

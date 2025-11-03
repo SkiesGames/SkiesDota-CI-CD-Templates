@@ -27,7 +27,8 @@ lint_playbooks() {
         if [ -f "$playbook" ]; then
             playbook_name=$(basename "$playbook")
             echo "LINTING PLAYBOOK: $playbook_name"
-            ansible-lint "$playbook" --nocolor || exit 1
+            # Skip syntax-check since it validates role existence (roles are in prod image, not lint image)
+            ansible-lint "$playbook" --nocolor --skip-list syntax-check || exit 1
         fi
     done
 }

@@ -49,11 +49,9 @@ You can reference these workflows in other repositories by copying the workflow 
 
 **Features**:
 - **Smart Change Detection**: Automatically detects which files changed and runs appropriate jobs
-- **Docker Image Building**: Builds four specialized Docker images:
-  - `ansible-prod`: Main Ansible runner
-  - `ansible-prod-test`: Testing environment
-  - `ansible-prod-lint`: Linting tools
-  - `ansible-prod-security-scan`: Security scanning tools
+- **Docker Image Building**: Builds specialized Docker images:
+  - `ansible-prod`: Main Ansible runner with all roles and collections (also used for testing)
+  - `ansible-prod-lint`: Generic linting tools (no project-specific dependencies)
 - **Conditional Job Execution**: Only runs jobs when relevant files change
 - **Security Scanning**: Fast and comprehensive security scans with TruffleHog
 - **Lint**: Ansible linting and validation
@@ -215,10 +213,8 @@ For first-time SSH key setup:
 │   └── README.md                  # Ansible documentation
 ├── scripts/
 │   └── lint-local.sh              # Local linting script
-├── Dockerfile.prod                # Main Ansible image
-├── Dockerfile.prod.test           # Testing image
-├── Dockerfile.prod.format-lint    # Formatting and linting image
-├── Dockerfile.prod.security-scan  # Security scanning image
+├── Dockerfile.ansible.prod        # Main Ansible image (runtime & testing)
+├── Dockerfile.ansible.prod.lint   # Linting image (generic tools)
 ├── .prettierrc                    # Prettier configuration
 ├── LINTING.md                     # Linting documentation
 └── README.md                      # This file
@@ -241,40 +237,44 @@ For first-time SSH key setup:
 
 The repository includes comprehensive testing and linting capabilities:
 
-### Syntax Testing
-- **ansible-lint**: Validates all roles and playbooks for best practices
-- **Automatic triggers**: Runs on changes to playbooks, roles, or test image
-- **Manual execution**: Available for on-demand testing
-- **Smart dependencies**: Only runs when relevant files change
+### Linting (ansible-lint)
+- **Tool**: ansible-lint via `ansible-prod-lint` image
+- **Purpose**: Validates YAML syntax and Ansible best practices
+- **Skips**: Role existence checks (roles are in prod image, not lint image)
+- **Automatic triggers**: Runs on Ansible file changes
+- **Manual execution**: Available for on-demand linting
 
 ### Playbook Testing
-- **Dry-run validation**: Uses `--check --diff` to simulate playbook execution
-- **Dependency chain**: Runs after syntax validation
-- **Safety checks**: Prevents accidental changes during testing
-
-### Code Linting
-- **ansible-lint**: Ansible-specific best practices and syntax validation
-- **Smart dependencies**: Only runs when relevant files change
+- **Tool**: ansible-playbook via `ansible-prod` image (has all roles)
+- **Command**: `ansible-playbook --check --diff`
+- **Purpose**: Validates playbook execution without making changes
+- **Dependency chain**: Runs after linting passes
+- **Safety checks**: Simulates changes but doesn't apply them
 
 ## Docker Images
 
-### Main Ansible Image (`Dockerfile.prod`)
+### Main Ansible Image (`Dockerfile.ansible.prod`)
 - **Base**: Python 3.13 slim
-- **Features**: SSH client, Docker CLI, rsync, curl, jq, OpenSSL
-- **Purpose**: Main Ansible runner for deployment and automation
+- **Features**: 
+  - Ansible with all collections and roles from `requirements.yml`
+  - kubectl, helm for Kubernetes management
+  - SSH client, rsync, curl, jq, OpenSSL
+- **Purpose**: 
+  - Runtime execution of Ansible playbooks
+  - Testing with `ansible-playbook --check`
 - **Registry**: `ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest`
+- **Rebuild Triggers**: Changes to Dockerfile, `requirements.yml`, or `ansible.cfg`
 
-### Test Ansible Image (`Dockerfile.prod.test`)
+### Lint Image (`Dockerfile.ansible.prod.lint`)
 - **Base**: Python 3.13 slim
-- **Features**: ansible, ansible-lint
-- **Purpose**: Code quality validation and testing
-- **Registry**: `ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod-test:latest`
-
-### Lint Image (`Dockerfile.prod.lint`)
-- **Base**: Python 3.13 slim
-- **Features**: ansible-lint
-- **Purpose**: Code linting and validation
+- **Features**: ansible-lint (generic tool, no project-specific roles)
+- **Purpose**: 
+  - YAML syntax validation
+  - Ansible best practices checking
+  - Code style enforcement
 - **Registry**: `ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod-lint:latest`
+- **Rebuild Triggers**: Changes to Dockerfile or ansible-lint version
+- **Note**: Skips `syntax-check` rule as it doesn't need role resolution
 
 ### Security Scan Image (`Dockerfile.prod.security-scan`)
 - **Base**: Alpine 3.19

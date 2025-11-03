@@ -56,5 +56,5 @@ jobs:
           docker run --rm \
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
-            ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod-test:latest \
+            ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest \
             bash .github/scripts/ansible-prod-test.sh
