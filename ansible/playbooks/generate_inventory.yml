@@ -3,6 +3,9 @@
   hosts: localhost
   connection: local
   gather_facts: false
+  vars:
+    ansible_hosts: "{{ lookup('env', 'ANSIBLE_HOSTS') }}"
+    ansible_user: "{{ lookup('env', 'ANSIBLE_USER') }}"
   tasks:
     - name: Generate inventory file
       ansible.builtin.copy:
