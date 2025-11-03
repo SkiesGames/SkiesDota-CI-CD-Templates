@@ -27,13 +27,14 @@ lint_playbooks() {
         if [ -f "$playbook" ]; then
             playbook_name=$(basename "$playbook")
             echo "LINTING PLAYBOOK: $playbook_name"
-            # Skip syntax-check since it validates role existence (roles are in prod image, not lint image)
-            ansible-lint "$playbook" --nocolor --skip-list syntax-check || exit 1
+            # Use offline mode and profile to avoid deep dependency checking
+            # This allows lint image to be generic without project-specific roles
+            ansible-lint "$playbook" --nocolor --offline --profile=basic || exit 1
         fi
     done
 }
 
-# Change to ansible directory to respect ansible.cfg
+# Change to ansible directory
 cd ansible
 
 # Run ansible-lint (validates both YAML syntax and Ansible best practices)
