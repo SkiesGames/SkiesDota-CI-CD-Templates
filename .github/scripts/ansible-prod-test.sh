@@ -17,7 +17,7 @@ test_playbooks() {
         if [ -f "$playbook" ]; then
             playbook_name=$(basename "$playbook")
             echo "TESTING PLAYBOOK: $playbook_name"
-            ansible-playbook "$playbook" --check --diff -i ../inventory.ini || exit 1
+            ansible-playbook "$playbook" --check --diff -i inventory.ini || exit 1
             echo "✅ $playbook_name passed"
         fi
     done
