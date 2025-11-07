@@ -28,8 +28,9 @@ lint_playbooks() {
             playbook_name=$(basename "$playbook")
             echo "LINTING PLAYBOOK: $playbook_name"
             # Use offline mode and profile to avoid deep dependency checking
+            # Skip syntax-check to allow linting without external roles installed
             # This allows lint image to be generic without project-specific roles
-            ansible-lint "$playbook" --nocolor --offline --profile=basic || exit 1
+            ansible-lint "$playbook" --nocolor --offline --profile=basic --skip-list=syntax-check || exit 1
         fi
     done
 }
