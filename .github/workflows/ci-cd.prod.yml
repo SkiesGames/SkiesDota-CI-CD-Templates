@@ -31,7 +31,7 @@ jobs:
         id: detect
         run: |
           # Configuration
-          DOCKERFILES_PATTERNS=("Dockerfile.ansible.prod" "Dockerfile.ansible.prod.lint")
+          DOCKERFILES_PATTERNS=("Dockerfile.ansible.prod")
           ANSIBLE_REQUIREMENTS_PATTERN="ansible/requirements.yml"
           ANSIBLE_PATTERN="ansible/"
           
@@ -100,7 +100,7 @@ jobs:
       - name: Build ${{ matrix.dockerfile }}
         uses: ./.github/actions/build-image
         with:
-          image-name: ${{ matrix.dockerfile == 'Dockerfile.ansible.prod' && 'ansible-prod' || matrix.dockerfile == 'Dockerfile.ansible.prod.lint' && 'ansible-prod-lint' }}
+          image-name: ${{ matrix.dockerfile == 'Dockerfile.ansible.prod' && 'ansible-prod'}}
           dockerfile-path: ./${{ matrix.dockerfile }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
   
@@ -111,7 +111,7 @@ jobs:
       needs.detect-changes.result == 'success' && 
       (needs.build.result == 'success' || needs.build.result == 'skipped') &&
       needs.detect-changes.outputs.ansible_is_changed == 'true' ||
-      needs.detect-changes.outputs.dockerfiles_matrix != '' && contains(fromJson(needs.detect-changes.outputs.dockerfiles_matrix), 'Dockerfile.ansible.prod.lint')
+      needs.detect-changes.outputs.dockerfiles_matrix != '' && contains(fromJson(needs.detect-changes.outputs.dockerfiles_matrix), 'Dockerfile.ansible.prod')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -127,7 +127,7 @@ jobs:
           docker run --rm \
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
-            ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod-lint:latest \
+            ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest \
             bash .github/scripts/ansible-prod-lint.sh
 
   test:
