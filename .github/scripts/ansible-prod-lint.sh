@@ -27,8 +27,7 @@ lint_playbooks() {
         if [ -f "$playbook" ]; then
             playbook_name=$(basename "$playbook")
             echo "LINTING PLAYBOOK: $playbook_name"
-            # Use offline mode and profile to avoid deep dependency checking
-            ansible-lint "$playbook" --nocolor --offline --profile=basic || exit 1
+            ansible-lint "$playbook" --nocolor || exit 1
         fi
     done
 }
