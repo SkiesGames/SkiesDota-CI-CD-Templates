@@ -20,9 +20,6 @@ exclude_paths:
   - test/
   - molecule/
 
-# Enable colored output
-colored: true
-
 # Warnings only (don't fail on these)
 warn_list:
   - experimental
