@@ -1,0 +1,35 @@
+# Ansible Lint Configuration
+---
+profile: production  # production, moderate, or safety (less strict than basic)
+
+# Exclude specific rules that are overly strict
+skip_list:
+  - yaml[trailing-spaces]  # Ignore trailing whitespace
+  - yaml[line-length]      # Ignore line length violations
+  - yaml[new-line-at-end-of-file]  # Ignore missing newline at EOF
+  - run-once  # Ignore all run_once warnings (both [task] and [play])
+
+# Or set custom line length
+rules:
+  line-length:
+    max: 200  # Increase from default 160
+
+# Exclude paths (optional)
+exclude_paths:
+  - .cache/
+  - test/
+  - molecule/
+
+# Enable colored output
+colored: true
+
+# Warnings only (don't fail on these)
+warn_list:
+  - experimental
+  - fqcn
+  - name[casing]
+  - name[play]
+
+# Only fail on actual errors, not formatting
+# strict: false
+

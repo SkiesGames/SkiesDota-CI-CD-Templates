@@ -5,7 +5,7 @@ on:
     paths:
       - 'ansible/**/*'
       - 'Dockerfile*'
-      - '.github/workflows/**'
+      - '.github/workflows/ci-cd.prod.yml'
   pull_request:
     paths:
       - 'ansible/**/*'

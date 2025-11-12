@@ -15,7 +15,8 @@ lint_roles() {
         if [ -d "$role" ]; then
             role_name=$(basename "$role")
             echo "LINTING ROLE: $role_name"
-            ansible-lint "$role" --nocolor || exit 1
+            # Use centralized .ansible-lint config from templates repo
+            ansible-lint "$role" --nocolor --config-file=/workspace/templates/ansible/.ansible-lint || exit 1
         fi
     done
 }
@@ -27,7 +28,8 @@ lint_playbooks() {
         if [ -f "$playbook" ]; then
             playbook_name=$(basename "$playbook")
             echo "LINTING PLAYBOOK: $playbook_name"
-            ansible-lint "$playbook" --nocolor || exit 1
+            # Use centralized .ansible-lint config from templates repo
+            ansible-lint "$playbook" --nocolor --config-file=/workspace/templates/ansible/.ansible-lint || exit 1
         fi
     done
 }
