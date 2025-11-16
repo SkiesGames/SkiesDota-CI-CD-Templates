@@ -33,6 +33,7 @@ You can reference these workflows in other repositories by copying the workflow 
 - `ci-cd.prod.yml`: Main production pipeline with smart change detection
 - `auto-opencommit.yml`: Automatic commit message improvements
 - `manual-security-scan.yml`: Comprehensive security scanning
+- `reusable-ansible.yml`: Reusable Ansible playbook execution workflow
 - `reusable-ssh-key-setup.yml`: SSH key generation and distribution
 - `reusable-opencommit.yml`: Reusable commit improvement workflow
 - `reusable-deploy.yml`: Reusable deployment workflow
@@ -84,6 +85,32 @@ You can reference these workflows in other repositories by copying the workflow 
 - Git history scanning for secrets
 - Manual trigger only
 - Uses custom security scan image when available
+
+### Reusable Ansible Workflow (`.github/workflows/reusable-ansible.yml`)
+
+**Purpose**: Execute any Ansible playbook from calling repository or template repository
+
+**Features**:
+- Run playbooks from calling repository's ansible/ directory
+- Run playbooks from template repository (use_template_playbook: true)
+- Dynamic inventory generation from secrets
+- SSH key-based authentication
+- Environment variable and secret injection
+- Docker-based execution for consistency
+
+**Usage Example**:
+```yaml
+jobs:
+  run-playbook:
+    uses: SkiesGames/SkiesDota-CI-CD-Templates/.github/workflows/reusable-ansible.yml@main
+    with:
+      playbook: playbooks/bootstrap-k3s.yml
+      use_template_playbook: true  # Use playbook from template repo
+    secrets:
+      ANSIBLE_HOSTS: ${{ secrets.ANSIBLE_HOSTS }}
+      ANSIBLE_USER: ${{ secrets.ANSIBLE_USER }}
+      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+```
 
 ### Reusable SSH Key Setup (`.github/workflows/reusable-ssh-key-setup.yml`)
 
@@ -219,6 +246,20 @@ For first-time SSH key setup:
 ├── LINTING.md                     # Linting documentation
 └── README.md                      # This file
 ```
+
+## Available Playbooks
+
+The template repository includes production-ready playbooks that can be used directly:
+
+- **bootstrap-k3s.yml**: Bootstrap High Availability K3s Kubernetes cluster
+  - Configures all nodes as server nodes for HA
+  - Uses xanmanning.k3s role for reliable deployment
+  - Usage: Set `use_template_playbook: true` in reusable-ansible workflow
+
+- **generate_inventory.yml**: Generate dynamic Ansible inventory from environment variables
+- **ssh_key_set_up.yml**: SSH key lifecycle management
+
+See `ansible/playbooks/README.md` for detailed documentation.
 
 ## Available Roles
 

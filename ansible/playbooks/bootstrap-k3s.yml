@@ -1,0 +1,13 @@
+---
+- name: Bootstrap HA K3s Cluster
+  hosts: all
+  become: true
+
+  pre_tasks:
+    - name: Set k3s_control_node fact for ALL nodes (all are servers in HA)
+      ansible.builtin.set_fact:
+        k3s_control_node: true
+
+  roles:
+    - role: xanmanning.k3s
+

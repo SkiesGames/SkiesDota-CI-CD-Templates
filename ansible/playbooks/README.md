@@ -4,6 +4,39 @@ This directory contains Ansible playbooks for setting up CI/CD environments, man
 
 ## Playbooks
 
+### bootstrap-k3s.yml
+Bootstraps a High Availability K3s Kubernetes cluster.
+
+**Purpose**: Sets up a production-ready HA K3s cluster on target servers
+
+**Features:**
+- High Availability (HA) cluster configuration
+- All nodes configured as server nodes
+- Automated cluster bootstrapping
+- Uses xanmanning.k3s role for reliable deployment
+
+**Usage:**
+```yaml
+# In GitHub Actions workflow
+uses: SkiesGames/SkiesDota-CI-CD-Templates/.github/workflows/reusable-ansible.yml@main
+with:
+  playbook: playbooks/bootstrap-k3s.yml
+  use_template_playbook: true
+secrets:
+  ANSIBLE_HOSTS: ${{ secrets.ANSIBLE_HOSTS }}
+  ANSIBLE_USER: ${{ secrets.ANSIBLE_USER }}
+  SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+```
+
+**Requirements:**
+- Target servers must be accessible via SSH
+- Sufficient resources for K3s server nodes
+- xanmanning.k3s role installed (via ansible/requirements.yml)
+
+**Environment Variables:**
+- `ANSIBLE_HOSTS`: Target host IPs for K3s cluster
+- `ANSIBLE_USER`: SSH username
+
 ### setup_ci_env.yml
 Sets up the CI/CD environment by configuring SSH agent and environment.
 

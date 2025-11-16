@@ -14,6 +14,10 @@ inputs:
   playbook:
     description: 'Path to the Ansible playbook to run (relative to ansible/ directory)'
     required: true
+  use_template_playbook:
+    description: 'If true, use playbook from templates repo instead of calling repo'
+    required: false
+    default: 'false'
   ansible_extra_env_json:
     description: 'Additional environment variables as JSON object (non-sensitive)'
     required: false
@@ -64,6 +68,13 @@ runs:
           echo "Extra environment flags configured (count: $(echo "$MERGED_JSON" | jq 'length'))"
         fi
         
+        # Determine playbook path based on use_template_playbook flag
+        if [ "${{ inputs.use_template_playbook }}" = "true" ]; then
+          PLAYBOOK_PATH="templates/ansible/${{ inputs.playbook }}"
+        else
+          PLAYBOOK_PATH="ansible/${{ inputs.playbook }}"
+        fi
+        
         # Run Ansible with all environment variables
         docker run --rm \
           -v $GITHUB_WORKSPACE:/workspace \
@@ -75,5 +86,5 @@ runs:
           $EXTRA_ENV_FLAGS \
           -w /workspace \
           ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest \
-          bash -c "ansible-playbook templates/ansible/playbooks/generate_inventory.yml && ansible-playbook -i ansible/inventory.ini ansible/${{ inputs.playbook }}"
+          bash -c "ansible-playbook templates/ansible/playbooks/generate_inventory.yml && ansible-playbook -i ansible/inventory.ini $PLAYBOOK_PATH"
       shell: bash

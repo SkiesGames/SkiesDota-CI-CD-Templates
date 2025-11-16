@@ -7,6 +7,11 @@ on:
         description: 'Path to the Ansible playbook to run (relative to ansible/ directory)'
         required: true
         type: string
+      use_template_playbook:
+        description: 'If true, use playbook from templates repo instead of calling repo'
+        required: false
+        type: boolean
+        default: false
       ansible_extra_env_json:
         description: 'JSON object with non-sensitive environment variables'
         required: false
@@ -48,5 +53,6 @@ jobs:
           ansible_user: ${{ secrets.ANSIBLE_USER }}
           ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
           playbook: ${{ inputs.playbook }}
+          use_template_playbook: ${{ inputs.use_template_playbook }}
           ansible_extra_env_json: ${{ inputs.ansible_extra_env_json }}
           ansible_extra_secrets_json: ${{ secrets.ANSIBLE_EXTRA_SECRETS_JSON || '{}' }}
