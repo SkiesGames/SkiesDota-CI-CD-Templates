@@ -7,6 +7,7 @@ skip_list:
   - yaml[trailing-spaces]  # Ignore trailing whitespace
   - yaml[line-length]      # Ignore line length violations
   - yaml[new-line-at-end-of-file]  # Ignore missing newline at EOF
+  - yaml[empty-lines]      # Ignore trailing blank lines at end of files
   - run-once  # Ignore all run_once warnings (both [task] and [play])
 
 # Exclude paths (optional)
