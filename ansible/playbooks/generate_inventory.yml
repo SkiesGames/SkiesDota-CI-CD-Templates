@@ -7,6 +7,12 @@
     ansible_hosts: "{{ lookup('env', 'ANSIBLE_HOSTS') }}"
     ansible_user: "{{ lookup('env', 'ANSIBLE_USER') }}"
   tasks:
+    - name: Ensure /workspace/ansible directory exists
+      ansible.builtin.file:
+        path: /workspace/ansible
+        state: directory
+        mode: "0755"
+
     - name: Generate inventory file
       ansible.builtin.copy:
         content: "{{ lookup('template', playbook_dir + '/../templates/inventory.j2') }}"
