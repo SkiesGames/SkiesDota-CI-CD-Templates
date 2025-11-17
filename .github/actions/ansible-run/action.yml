@@ -7,7 +7,8 @@ inputs:
     required: true
   ansible_user:
     description: 'Ansible SSH username'
-    required: true
+    required: false
+    default: 'root'
   ssh_private_key:
     description: 'SSH private key for authentication'
     required: true
