@@ -3,6 +3,9 @@
   hosts: all
   become: true
 
+  vars_files:
+    - group_vars/k3s.yml
+
   pre_tasks:
     - name: Set k3s_control_node fact for ALL nodes (all are servers in HA)
       ansible.builtin.set_fact:
