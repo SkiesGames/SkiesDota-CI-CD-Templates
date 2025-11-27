@@ -6,7 +6,12 @@ Fixes common issues like unescaped newlines in private keys.
 import json
 import sys
 
-json_str = sys.stdin.read()
+json_str = sys.stdin.read().strip()
+
+# Handle empty input
+if not json_str or json_str == "{}":
+    print("{}")
+    sys.exit(0)
 
 # Try to parse as-is first
 try:

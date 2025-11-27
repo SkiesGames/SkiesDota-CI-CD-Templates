@@ -60,6 +60,19 @@ runs:
         # This fixes common issues like unescaped newlines in private keys
         escape_json_string() {
           local json_str="$1"
+          
+          # Handle truly empty input (but not "{}" as a string - that's valid JSON)
+          if [ -z "$json_str" ]; then
+            echo "{}"
+            return 0
+          fi
+          
+          # If it's already the JSON object {}, return it
+          if [ "$json_str" = "{}" ]; then
+            echo "{}"
+            return 0
+          fi
+          
           # Try to parse as-is first
           if echo "$json_str" | jq empty 2>/dev/null; then
             echo "$json_str"
@@ -67,33 +80,67 @@ runs:
           fi
           
           # If parsing fails, use the helper script to fix control characters
-          echo "$json_str" | python3 "$GITHUB_ACTION_PATH/escape_json.py"
+          local escaped_json
+          local temp_stderr
+          temp_stderr=$(mktemp)
+          
+          # Capture stdout, let stderr go to stderr (will show in logs)
+          escaped_json=$(echo "$json_str" | python3 "$GITHUB_ACTION_PATH/escape_json.py" 2>"$temp_stderr")
+          local exit_code=$?
+          
+          if [ $exit_code -ne 0 ]; then
+            echo "Error: Failed to escape JSON string" >&2
+            [ -s "$temp_stderr" ] && cat "$temp_stderr" >&2
+            rm -f "$temp_stderr"
+            return 1
+          fi
+          
+          rm -f "$temp_stderr"
+          
+          # Ensure we got valid JSON output
+          if [ -z "$escaped_json" ] || ! echo "$escaped_json" | jq empty 2>/dev/null; then
+            echo "Error: Escaped JSON is invalid or empty" >&2
+            return 1
+          fi
+          
+          echo "$escaped_json"
         }
         
         # Validate and merge extra env vars and secrets JSONs
-        # First, validate each JSON input separately to provide clear error messages
         ENV_JSON_RAW='${{ inputs.ansible_extra_env_json }}'
         SECRETS_JSON_RAW='${{ inputs.ansible_extra_secrets_json }}'
         
+        echo "Processing JSON inputs (ENV length: ${#ENV_JSON_RAW}, SECRETS length: ${#SECRETS_JSON_RAW})"
+        
         # Escape control characters if needed
-        ENV_JSON=$(echo "$ENV_JSON_RAW" | escape_json_string)
-        SECRETS_JSON=$(echo "$SECRETS_JSON_RAW" | escape_json_string)
-        
-        # Validate ansible_extra_env_json
-        if ! echo "$ENV_JSON" | jq empty 2>/dev/null; then
-          echo "Error: ansible_extra_env_json contains invalid JSON after auto-escaping"
-          echo "Please ensure your JSON is valid. Control characters should be escaped."
+        if ! ENV_JSON=$(escape_json_string "$ENV_JSON_RAW"); then
+          echo "Error: Failed to process ansible_extra_env_json"
           exit 1
         fi
         
-        # Validate ansible_extra_secrets_json
-        if ! echo "$SECRETS_JSON" | jq empty 2>/dev/null; then
-          echo "Error: ansible_extra_secrets_json contains invalid JSON after auto-escaping"
-          echo "Please ensure your JSON is valid. Control characters should be escaped."
+        if ! SECRETS_JSON=$(escape_json_string "$SECRETS_JSON_RAW"); then
+          echo "Error: Failed to process ansible_extra_secrets_json"
           exit 1
         fi
         
-        # Merge the validated JSONs
+        echo "JSON processing complete (ENV: ${#ENV_JSON} chars, SECRETS: ${#SECRETS_JSON} chars)"
+        
+        # Ensure both are valid JSON objects
+        ENV_JSON=$(echo "$ENV_JSON" | jq -c 'if . == null or . == "" then {} else . end' 2>/dev/null || echo "{}")
+        SECRETS_JSON=$(echo "$SECRETS_JSON" | jq -c 'if . == null or . == "" then {} else . end' 2>/dev/null || echo "{}")
+        
+        # Validate both JSONs are objects
+        if ! echo "$ENV_JSON" | jq 'type == "object"' -e >/dev/null 2>&1; then
+          echo "Error: ansible_extra_env_json must be a JSON object"
+          exit 1
+        fi
+        
+        if ! echo "$SECRETS_JSON" | jq 'type == "object"' -e >/dev/null 2>&1; then
+          echo "Error: ansible_extra_secrets_json must be a JSON object"
+          exit 1
+        fi
+        
+        # Merge the validated JSONs (both are guaranteed to be objects now)
         MERGED_JSON=$(jq -s '.[0] * .[1]' <(echo "$ENV_JSON") <(echo "$SECRETS_JSON"))
         
         # Parse merged JSON to Docker env flags
