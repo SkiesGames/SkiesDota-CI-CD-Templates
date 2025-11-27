@@ -127,7 +127,6 @@
                     organization: "{{ runner_organization }}"
                     labels:
                       - self-hosted
-                      - linux
                       - k3s
                     dockerdWithinRunnerContainer: true
                     resources:
