@@ -27,6 +27,10 @@ inputs:
     description: 'Additional secrets as JSON object (sensitive)'
     required: false
     default: '{}'
+  disable_host_key_checking:
+    description: 'If true, disables SSH host key checking (useful for same-cluster runners)'
+    required: false
+    default: 'false'
 
 runs:
   using: composite
@@ -56,48 +60,34 @@ runs:
 
     - name: Run Ansible Playbooks in Docker
       run: |
-        # Process and merge JSON inputs
-        ENV_JSON='${{ inputs.ansible_extra_env_json }}'
-        SECRETS_JSON='${{ inputs.ansible_extra_secrets_json }}'
-        
-        # Fix JSON if needed (handles unescaped newlines in private keys)
         fix_json() {
-          local s="$1"
-          [ -z "$s" ] && echo "{}" && return
-          echo "$s" | jq empty 2>/dev/null && echo "$s" && return
-          echo "$s" | python3 "$GITHUB_ACTION_PATH/escape_json.py" || echo "{}"
+          [ -z "$1" ] && echo "{}" && return
+          echo "$1" | jq empty 2>/dev/null && echo "$1" || echo "$1" | python3 "$GITHUB_ACTION_PATH/escape_json.py" || echo "{}"
         }
         
-        ENV_JSON=$(fix_json "$ENV_JSON")
-        SECRETS_JSON=$(fix_json "$SECRETS_JSON")
+        ENV_JSON=$(fix_json '${{ inputs.ansible_extra_env_json }}')
+        SECRETS_JSON=$(fix_json '${{ inputs.ansible_extra_secrets_json }}')
         MERGED_JSON=$(jq -s '.[0] * .[1]' <(echo "$ENV_JSON") <(echo "$SECRETS_JSON"))
         
-        # Build Docker env args
-        DOCKER_ENV_ARGS=()
-        if [ "$MERGED_JSON" != "{}" ]; then
-          while IFS= read -r line; do
-            [ -n "$line" ] && DOCKER_ENV_ARGS+=("$line")
-          done < <(echo "$MERGED_JSON" | jq -r 'to_entries[] | "-e \(.key)=\(.value | @sh)"')
-        fi
+        PLAYBOOK_PATH="$([ "${{ inputs.use_template_playbook }}" = "true" ] && echo "templates/ansible/${{ inputs.playbook }}" || echo "ansible/${{ inputs.playbook }}")"
         
-        # Determine playbook path based on use_template_playbook flag
-        if [ "${{ inputs.use_template_playbook }}" = "true" ]; then
-          PLAYBOOK_PATH="templates/ansible/${{ inputs.playbook }}"
-        else
-          PLAYBOOK_PATH="ansible/${{ inputs.playbook }}"
-        fi
+        DOCKER_ARGS=(
+          -v "$GITHUB_WORKSPACE:/workspace"
+          -v "$SSH_AUTH_SOCK:/ssh-agent"
+          -v ~/.ssh/known_hosts:/root/.ssh/known_hosts:ro
+          -e "SSH_AUTH_SOCK=/ssh-agent"
+          -e "ANSIBLE_HOSTS=${{ inputs.ansible_hosts }}"
+          -e "ANSIBLE_USER=${{ inputs.ansible_user }}"
+        )
         
-        # Run Ansible with all environment variables
-        # Use eval to properly expand the array in the docker command
-        eval "docker run --rm \
-          -v \$GITHUB_WORKSPACE:/workspace \
-          -v \$SSH_AUTH_SOCK:/ssh-agent \
-          -v ~/.ssh/known_hosts:/root/.ssh/known_hosts:ro \
-          -e SSH_AUTH_SOCK=/ssh-agent \
-          -e ANSIBLE_HOSTS=\"${{ inputs.ansible_hosts }}\" \
-          -e ANSIBLE_USER=\"${{ inputs.ansible_user }}\" \
-          \"\${DOCKER_ENV_ARGS[@]}\" \
-          -w /workspace \
+        # Conditionally disable host key checking if requested (for same-cluster runners)
+        [ "${{ inputs.disable_host_key_checking }}" = "true" ] && DOCKER_ARGS+=(-e "ANSIBLE_HOST_KEY_CHECKING=False")
+        
+        [ "$MERGED_JSON" != "{}" ] && while IFS= read -r line; do
+          [ -n "$line" ] && DOCKER_ARGS+=(-e "$line")
+        done < <(echo "$MERGED_JSON" | jq -r 'to_entries[] | "\(.key)=\(.value | @sh)"')
+        
+        docker run --rm "${DOCKER_ARGS[@]}" -w /workspace \
           ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest \
-          bash -c \"ansible-playbook templates/ansible/playbooks/generate_inventory.yml && ansible-playbook -i ansible/inventory.ini $PLAYBOOK_PATH\""
+          bash -c "ansible-playbook templates/ansible/playbooks/generate_inventory.yml && ansible-playbook -i ansible/inventory.ini $PLAYBOOK_PATH"
       shell: bash
