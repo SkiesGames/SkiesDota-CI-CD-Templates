@@ -82,6 +82,7 @@ runs:
         
         # Conditionally disable host key checking if requested (for same-cluster runners)
         DISABLE_CHECK="${{ inputs.disable_host_key_checking }}"
+        echo "disable_host_key_checking value: [$DISABLE_CHECK]"
         if [ "$DISABLE_CHECK" = "true" ] || [ "$DISABLE_CHECK" = "True" ]; then
           DOCKER_ARGS+=(-e "ANSIBLE_HOST_KEY_CHECKING=False")
           echo "Host key checking disabled"
