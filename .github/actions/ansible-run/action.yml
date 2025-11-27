@@ -143,15 +143,15 @@ runs:
         # Merge the validated JSONs (both are guaranteed to be objects now)
         MERGED_JSON=$(jq -s '.[0] * .[1]' <(echo "$ENV_JSON") <(echo "$SECRETS_JSON"))
         
-        # Parse merged JSON to Docker env flags
-        EXTRA_ENV_FLAGS=()
+        # Create env file for Docker to avoid shell quoting issues
+        ENV_FILE=$(mktemp)
         if [ "$MERGED_JSON" != "{}" ] && [ -n "$MERGED_JSON" ]; then
           echo "Parsing extra environment variables and secrets..."
-          # Read jq output into array to handle multi-line values safely
-          while IFS= read -r flag; do
-            [ -n "$flag" ] && EXTRA_ENV_FLAGS+=("$flag")
-          done < <(echo "$MERGED_JSON" | jq -r 'to_entries[] | "-e \(.key)=\(.value | @sh)"')
+          # Write key=value pairs to env file (one per line, no quotes needed)
+          echo "$MERGED_JSON" | jq -r 'to_entries[] | "\(.key)=\(.value)"' > "$ENV_FILE"
           echo "Extra environment flags configured (count: $(echo "$MERGED_JSON" | jq 'length'))"
+        else
+          touch "$ENV_FILE"
         fi
         
         # Determine playbook path based on use_template_playbook flag
@@ -166,11 +166,14 @@ runs:
           -v $GITHUB_WORKSPACE:/workspace \
           -v $SSH_AUTH_SOCK:/ssh-agent \
           -v ~/.ssh/known_hosts:/root/.ssh/known_hosts:ro \
+          --env-file "$ENV_FILE" \
           -e SSH_AUTH_SOCK=/ssh-agent \
           -e ANSIBLE_HOSTS="${{ inputs.ansible_hosts }}" \
           -e ANSIBLE_USER="${{ inputs.ansible_user }}" \
-          "${EXTRA_ENV_FLAGS[@]}" \
           -w /workspace \
           ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest \
           bash -c "ansible-playbook templates/ansible/playbooks/generate_inventory.yml && ansible-playbook -i ansible/inventory.ini $PLAYBOOK_PATH"
+        
+        # Cleanup
+        rm -f "$ENV_FILE"
       shell: bash
