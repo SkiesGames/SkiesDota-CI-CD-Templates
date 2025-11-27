@@ -7,9 +7,24 @@
     - group_vars/k3s.yml
 
   pre_tasks:
-    - name: Set k3s_control_node fact for ALL nodes (all are servers in HA)
+    - name: Get number of control plane nodes from environment
       ansible.builtin.set_fact:
-        k3s_control_node: true
+        num_control_nodes: "{{ lookup('env', 'NUMBER_OF_CONTROL_PLANE_NODES') | default('', true) }}"
+    
+    - name: Calculate node index in inventory
+      ansible.builtin.set_fact:
+        node_index: "{{ groups['all'].index(inventory_hostname) }}"
+    
+    - name: Set k3s_control_node fact based on NUMBER_OF_CONTROL_PLANE_NODES
+      ansible.builtin.set_fact:
+        k3s_control_node: >-
+          {%- if num_control_nodes == '' or num_control_nodes is not defined -%}
+          true
+          {%- elif num_control_nodes | int > 0 and node_index < (num_control_nodes | int) -%}
+          true
+          {%- else -%}
+          false
+          {%- endif -%}
 
   roles:
     - role: xanmanning.k3s

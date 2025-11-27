@@ -8,7 +8,7 @@ RUN apt-get update && \
         libssl-dev \
         python3-dev \
         cargo \
-        && rm -rf /var/lib/apt/lists/*
+        && rm -rf /var/lib/apt/lists/*ausc
 
 WORKDIR /workspace
 
