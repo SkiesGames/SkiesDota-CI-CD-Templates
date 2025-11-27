@@ -57,7 +57,7 @@
             namespace: actions-runner-system
             kubeconfig: "{{ kubeconfig_path }}"
             state: absent
-          ignore_errors: true
+          failed_when: false
 
         - name: Install Actions Runner Controller via Helm (without secret first)
           kubernetes.core.helm:
