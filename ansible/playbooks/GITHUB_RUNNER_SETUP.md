@@ -109,12 +109,11 @@ In your `SkiesDotaInfra` repository (or wherever you'll run the workflow), add t
 ### Runner Configuration
 
 The playbook deploys runners with the following **fixed configuration**:
-- **Replicas**: 1 (single runner pod)
-- **Labels**: `self-hosted`, `linux`, `k3s`
-- **Namespace**: `actions-runner-system`
-- **Resources**:
-  - CPU: 250m request / 1000m (1 core) limit
-  - Memory: 256Mi request / 768Mi limit
+- **Min/Max Runners**: 1 (single runner pod)
+- **Runner Label**: `arc-runner-set` (matches the Helm release name)
+- **Namespace**: `arc-runners`
+- **Docker Support**: Enabled via Docker-in-Docker (`containerMode.type=dind`)
+- **Architecture**: Uses the new official ARC format (`gha-runner-scale-set`)
 
 ## Step 3: Deploy the Runner
 
@@ -132,31 +131,37 @@ ansible-playbook playbooks/deploy-github-runner.yml
 
 ## Step 4: Verify Runner Deployment
 
-1. Check runners in Kubernetes:
+1. Check runner scale set in Kubernetes:
    ```bash
-   kubectl get runners -n actions-runner-system
-   kubectl get pods -n actions-runner-system
+   kubectl get autoscalingrunnerset -n arc-runners
+   kubectl get pods -n arc-runners
+   kubectl get pods -n arc-runners -l app.kubernetes.io/name=gha-runner-scale-set-listener
    ```
 
-2. Check runners in GitHub:
+2. Check controller and listener pods:
+   ```bash
+   kubectl get pods -n arc-runners -l app.kubernetes.io/name=gha-runner-scale-set-controller
+   ```
+
+3. Check runners in GitHub:
    - Go to: `https://github.com/organizations/YOUR_ORG/settings/actions/runner-groups`
-   - You should see your runners listed
+   - You should see your runners listed under the "Default" group
 
 ## Step 5: Update Your Workflows
 
-To use the self-hosted runners, update your workflow files to use the runner labels:
+To use the self-hosted runners, update your workflow files to use the runner scale set name:
 
 ```yaml
 jobs:
   build:
-    runs-on: [self-hosted, k3s, linux]  # Match your runner labels
+    runs-on: arc-runner-set  # Matches the Helm release name
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
       # ... rest of your steps
 ```
 
-**Important**: Make sure the labels in `runs-on` match the labels you configured (default: `self-hosted,linux,k3s`).
+**Important**: The `runs-on` value must match the Helm release name (`arc-runner-set`). This is the label that GitHub Actions uses to route jobs to your runners.
 
 ### Workflow Permissions
 
@@ -181,7 +186,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: [self-hosted, k3s, linux]
+    runs-on: arc-runner-set
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -198,7 +203,7 @@ jobs:
           tags: ghcr.io/org/repo/image:latest
 ```
 
-**Your existing workflows** (like `ci-cd.prod.yml`) already have `permissions: contents: write, packages: write` - that's perfect! Just change `runs-on` to use your self-hosted runner labels.
+**Your existing workflows** (like `ci-cd.prod.yml`) already have `permissions: contents: write, packages: write` - that's perfect! Just change `runs-on` to `arc-runner-set`.
 
 ## Troubleshooting
 
@@ -206,24 +211,35 @@ jobs:
 
 1. Check ARC controller logs:
    ```bash
-   kubectl logs -n actions-runner-system -l app=actions-runner-controller
+   kubectl logs -n arc-runners -l app.kubernetes.io/name=gha-runner-scale-set-controller --tail=100
+   ```
+
+2. Check listener pod logs:
+   ```bash
+   kubectl logs -n arc-runners -l app.kubernetes.io/name=gha-runner-scale-set-listener --tail=100
+   ```
+
+3. Check AutoscalingRunnerSet status:
+   ```bash
+   kubectl describe autoscalingrunnerset arc-runner-set -n arc-runners
+   ```
+
+4. Verify GitHub App permissions and installation
+
+### Runner Pod Failing
+
+1. Check runner pod status (created on-demand when jobs are queued):
+   ```bash
+   kubectl get pods -n arc-runners
+   kubectl describe pod -n arc-runners -l actions.github.com/scale-set-name=arc-runner-set
    ```
 
 2. Check runner pod logs:
    ```bash
-   kubectl logs -n actions-runner-system -l runner-deployment=organization-runner
+   kubectl logs -n arc-runners -l actions.github.com/scale-set-name=arc-runner-set --tail=100
    ```
 
-3. Verify GitHub App permissions and installation
-
-### Runner Pod Failing
-
-1. Check pod status:
-   ```bash
-   kubectl describe pod -n actions-runner-system -l runner-deployment=organization-runner
-   ```
-
-2. Check resource limits - ensure your cluster has enough resources
+3. Check resource limits - ensure your cluster has enough resources
 
 ### Authentication Issues
 
@@ -233,20 +249,26 @@ jobs:
 
 ## Architecture
 
-The playbook deploys:
+The playbook deploys using the **new official ARC format**:
 
-1. **Actions Runner Controller (ARC)**: Kubernetes operator that manages runners
-2. **RunnerDeployment**: Custom resource that defines your organization runners
-3. **Runner Pods**: Individual runner instances that execute your workflows
+1. **ARC Controller** (`gha-runner-scale-set-controller`): Kubernetes operator that manages runner scale sets
+2. **AutoscalingRunnerSet**: Custom resource that defines your organization runners (managed via Helm)
+3. **Listener Pod**: Watches for queued jobs and scales runner pods
+4. **Runner Pods**: Individual runner instances created on-demand when jobs are queued
 
 ARC automatically:
-- Creates runner pods when jobs are queued
+- Creates runner pods when jobs are queued (ephemeral runners)
 - Cleans up pods when jobs complete
 - Manages runner registration with GitHub
+- Uses Docker-in-Docker (`dind`) for Docker support in workflows
 
 ## Scaling
 
-ARC supports autoscaling based on job queue length. To enable autoscaling, you can create a `HorizontalRunnerAutoscaler` resource. See [ARC documentation](https://github.com/actions/actions-runner-controller) for more details.
+The current configuration uses `minRunners=1` and `maxRunners=1` for a single persistent runner. To enable autoscaling based on job queue length, modify the Helm values in the playbook:
+- `minRunners`: Minimum number of runners to keep running
+- `maxRunners`: Maximum number of runners that can be created
+
+See [ARC documentation](https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners-with-actions-runner-controller) for more details on scaling configuration.
 
 ## Security Considerations
 
@@ -257,7 +279,7 @@ ARC supports autoscaling based on job queue length. To enable autoscaling, you c
 
 ## Additional Resources
 
-- [Actions Runner Controller Documentation](https://github.com/actions/actions-runner-controller)
+- [Official ARC Documentation](https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners-with-actions-runner-controller)
 - [GitHub Actions Self-Hosted Runners](https://docs.github.com/en/actions/hosting-your-own-runners)
-- [ARC Helm Chart Values](https://github.com/actions/actions-runner-controller/tree/master/charts/actions-runner-controller)
+- [ARC Runner Scale Set Helm Charts](https://github.com/actions/actions-runner-controller-charts)
 

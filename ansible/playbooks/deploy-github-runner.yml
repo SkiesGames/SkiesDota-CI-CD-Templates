@@ -34,105 +34,39 @@
           ansible.builtin.set_fact:
             kubeconfig_path: /tmp/k3s-config.yaml
 
-        # --- Actions Runner Controller (ARC) Installation ---
-        - name: Add ARC Helm repository
-          kubernetes.core.helm_repository:
-            name: actions-runner-controller
-            repo_url: https://actions-runner-controller.github.io/actions-runner-controller
-            kubeconfig: "{{ kubeconfig_path }}"
-
-        - name: Create actions-runner-system namespace if it doesn't exist
-          kubernetes.core.k8s:
-            name: actions-runner-system
-            api_version: v1
-            kind: Namespace
-            kubeconfig: "{{ kubeconfig_path }}"
-            state: present
-
-        - name: Delete existing controller-manager secret if it exists
-          kubernetes.core.k8s:
-            api_version: v1
-            kind: Secret
-            name: controller-manager
-            namespace: actions-runner-system
-            kubeconfig: "{{ kubeconfig_path }}"
-            state: absent
-          failed_when: false
-
-        - name: Install Actions Runner Controller via Helm (without secret first)
+        # --- Runner Scale Set Deployment ---
+        - name: Install Actions Runner Controller (New Official Format)
           kubernetes.core.helm:
-            name: actions-runner-controller
-            chart_ref: actions-runner-controller/actions-runner-controller
-            release_namespace: actions-runner-system
+            name: arc
+            chart_ref: oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set-controller
+            release_namespace: "arc-runners"
             create_namespace: true
-            wait: false
-            kubeconfig: "{{ kubeconfig_path }}"
-            set_values:
-              - value: authSecret.create=false
-                value_type: string
-
-        - name: Create GitHub App credentials secret with Helm labels
-          kubernetes.core.k8s:
-            state: present
-            kubeconfig: "{{ kubeconfig_path }}"
-            definition:
-              apiVersion: v1
-              kind: Secret
-              metadata:
-                name: controller-manager
-                namespace: actions-runner-system
-                labels:
-                  app.kubernetes.io/managed-by: Helm
-                annotations:
-                  meta.helm.sh/release-name: actions-runner-controller
-                  meta.helm.sh/release-namespace: actions-runner-system
-              type: Opaque
-              stringData:
-                github_app_id: "{{ lookup('env', 'GITHUB_APP_ID') }}"
-                github_app_installation_id: "{{ lookup('env', 'GITHUB_APP_INSTALLATION_ID') }}"
-                github_app_private_key: "{{ lookup('env', 'GITHUB_APP_PRIVATE_KEY') }}"
-          no_log: true
-
-        - name: Wait for ARC controller to be ready using Helm
-          kubernetes.core.helm:
-            name: actions-runner-controller
-            chart_ref: actions-runner-controller/actions-runner-controller
-            release_namespace: actions-runner-system
-            kubeconfig: "{{ kubeconfig_path }}"
             wait: true
             timeout: 5m
-            set_values:
-              - value: authSecret.create=false
-                value_type: string
-
-        # --- Organization Runner Deployment ---
-        - name: Get organization name from environment
-          ansible.builtin.set_fact:
-            runner_organization: "{{ lookup('env', 'GITHUB_ORGANIZATION') }}"
-
-        - name: Create RunnerDeployment for organization
-          kubernetes.core.k8s:
-            state: present
             kubeconfig: "{{ kubeconfig_path }}"
-            definition:
-              apiVersion: actions.summerwind.dev/v1alpha1
-              kind: RunnerDeployment
-              metadata:
-                name: organization-runner
-                namespace: actions-runner-system
-              spec:
-                replicas: 1
-                template:
-                  spec:
-                    organization: "{{ runner_organization }}"
-                    labels:
-                      - self-hosted
-                      - k3s
-                    dockerdWithinRunnerContainer: true
-                    resources:
-                      limits:
-                        cpu: "1000m"
-                        memory: "768Mi"
-                      requests:
-                        cpu: "250m"
-                        memory: "256Mi"
+
+        - name: Install Runner Scale Set (New Official Format)
+          kubernetes.core.helm:
+            name: arc-runner-set
+            chart_ref: oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set
+            release_namespace: "arc-runners"
+            create_namespace: true
+            wait: true
+            timeout: 5m
+            kubeconfig: "{{ kubeconfig_path }}"
+            set_values:
+              - value: "githubConfigUrl=https://github.com/{{ lookup('env', 'GITHUB_ORGANIZATION') }}"
+                value_type: string
+              - value: "githubConfigSecret.github_app_id={{ lookup('env', 'GITHUB_APP_ID') }}"
+                value_type: string
+              - value: "githubConfigSecret.github_app_installation_id={{ lookup('env', 'GITHUB_APP_INSTALLATION_ID') }}"
+                value_type: string
+              - value: "githubConfigSecret.github_app_private_key={{ lookup('env', 'GITHUB_APP_PRIVATE_KEY') }}"
+                value_type: string
+              - value: "containerMode.type=dind"
+                value_type: string
+              - value: "minRunners=1"
+                value_type: string
+              - value: "maxRunners=1"
+                value_type: string
+          no_log: true
