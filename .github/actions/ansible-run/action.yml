@@ -81,8 +81,10 @@ runs:
         )
         
         # Conditionally disable host key checking if requested (for same-cluster runners)
-        if [ "${{ inputs.disable_host_key_checking }}" = "true" ]; then
+        DISABLE_CHECK="${{ inputs.disable_host_key_checking }}"
+        if [ "$DISABLE_CHECK" = "true" ] || [ "$DISABLE_CHECK" = "True" ]; then
           DOCKER_ARGS+=(-e "ANSIBLE_HOST_KEY_CHECKING=False")
+          echo "Host key checking disabled"
         fi
         
         [ "$MERGED_JSON" != "{}" ] && while IFS= read -r line; do
