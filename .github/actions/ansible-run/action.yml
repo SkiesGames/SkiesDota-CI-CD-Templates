@@ -74,18 +74,15 @@ runs:
         DOCKER_ARGS=(
           -v "$GITHUB_WORKSPACE:/workspace"
           -v "$SSH_AUTH_SOCK:/ssh-agent"
-          -v ~/.ssh/known_hosts:/root/.ssh/known_hosts:ro
           -e "SSH_AUTH_SOCK=/ssh-agent"
           -e "ANSIBLE_HOSTS=${{ inputs.ansible_hosts }}"
           -e "ANSIBLE_USER=${{ inputs.ansible_user }}"
         )
         
-        # Conditionally disable host key checking if requested (for same-cluster runners)
-        DISABLE_CHECK="${{ inputs.disable_host_key_checking }}"
-        echo "disable_host_key_checking value: [$DISABLE_CHECK]"
-        if [ "$DISABLE_CHECK" = "true" ] || [ "$DISABLE_CHECK" = "True" ]; then
-          DOCKER_ARGS+=(-e "ANSIBLE_HOST_KEY_CHECKING=False")
-          echo "Host key checking disabled"
+        if [ "${{ inputs.disable_host_key_checking }}" = "true" ]; then
+          DOCKER_ARGS+=(-e "ANSIBLE_HOST_KEY_CHECKING=False" -e "ANSIBLE_SSH_ARGS=-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null")
+        else
+          DOCKER_ARGS+=(-v ~/.ssh/known_hosts:/root/.ssh/known_hosts:ro)
         fi
         
         [ "$MERGED_JSON" != "{}" ] && while IFS= read -r line; do
