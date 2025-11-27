@@ -12,7 +12,7 @@ on:
         required: false
         type: boolean
         default: false
-      ansible_extra_env_json:
+      ANSIBLE_EXTRA_ENV_JSON:
         description: 'JSON object with non-sensitive environment variables'
         required: false
         type: string

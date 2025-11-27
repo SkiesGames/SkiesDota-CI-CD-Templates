@@ -1,0 +1,134 @@
+---
+- name: Deploy GitHub Actions Runner for Organization
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Run Deployment on Controller
+      run_once: true
+      delegate_to: localhost
+      block:
+        - name: Fetch kubeconfig from primary K3s server using cat
+          ansible.builtin.command: cat /etc/rancher/k3s/k3s.yaml
+          register: kubeconfig_raw
+          delegate_to: "{{ groups['all'][0] }}"
+          become: true
+          changed_when: false
+          vars:
+            ansible_python_interpreter: auto_silent
+
+        - name: Get primary server IP
+          ansible.builtin.set_fact:
+            primary_server_ip: "{{ groups['all'][0] }}"
+
+        - name: Fix kubeconfig (replace 127.0.0.1 with server IP)
+          ansible.builtin.set_fact:
+            kubeconfig_content: "{{ kubeconfig_raw.stdout | regex_replace('127.0.0.1', primary_server_ip) }}"
+
+        - name: Save corrected kubeconfig to local file
+          ansible.builtin.copy:
+            content: "{{ kubeconfig_content }}"
+            dest: /tmp/k3s-config.yaml
+            mode: '0600'
+
+        - name: Set KUBECONFIG_PATH fact
+          ansible.builtin.set_fact:
+            kubeconfig_path: /tmp/k3s-config.yaml
+
+        # --- Actions Runner Controller (ARC) Installation ---
+        - name: Add ARC Helm repository
+          kubernetes.core.helm_repository:
+            name: actions-runner-controller
+            repo_url: https://actions-runner-controller.github.io/actions-runner-controller
+            kubeconfig: "{{ kubeconfig_path }}"
+
+        - name: Create actions-runner-system namespace if it doesn't exist
+          kubernetes.core.k8s:
+            name: actions-runner-system
+            api_version: v1
+            kind: Namespace
+            kubeconfig: "{{ kubeconfig_path }}"
+            state: present
+
+        - name: Create GitHub App credentials secret
+          kubernetes.core.k8s:
+            state: present
+            kubeconfig: "{{ kubeconfig_path }}"
+            definition:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: controller-manager
+                namespace: actions-runner-system
+              type: Opaque
+              stringData:
+                github_app_id: "{{ lookup('env', 'GITHUB_APP_ID') }}"
+                github_app_installation_id: "{{ lookup('env', 'GITHUB_APP_INSTALLATION_ID') }}"
+                github_app_private_key: "{{ lookup('env', 'GITHUB_APP_PRIVATE_KEY') }}"
+          no_log: true
+
+        - name: Install Actions Runner Controller via Helm
+          kubernetes.core.helm:
+            name: actions-runner-controller
+            chart_ref: actions-runner-controller/actions-runner-controller
+            release_namespace: actions-runner-system
+            create_namespace: true
+            wait: true
+            timeout: 5m
+            kubeconfig: "{{ kubeconfig_path }}"
+            set_values:
+              - value: authSecret.create=false
+                value_type: string
+              - value: authSecret.name=controller-manager
+                value_type: string
+
+        # --- Organization Runner Deployment ---
+        - name: Get organization name from environment
+          ansible.builtin.set_fact:
+            runner_organization: "{{ lookup('env', 'GITHUB_ORGANIZATION') }}"
+
+        - name: Create RunnerDeployment for organization
+          kubernetes.core.k8s:
+            state: present
+            kubeconfig: "{{ kubeconfig_path }}"
+            definition:
+              apiVersion: actions.summerwind.dev/v1alpha1
+              kind: RunnerDeployment
+              metadata:
+                name: organization-runner
+                namespace: actions-runner-system
+              spec:
+                replicas: 1
+                template:
+                  spec:
+                    organization: "{{ runner_organization }}"
+                    labels:
+                      - self-hosted
+                      - linux
+                      - k3s
+                    dockerdWithinRunnerContainer: true
+                    resources:
+                      limits:
+                        cpu: "1000m"
+                        memory: "768Mi"
+                      requests:
+                        cpu: "250m"
+                        memory: "256Mi"
+
+        - name: Wait for runners to be ready
+          kubernetes.core.k8s_info:
+            api_version: actions.summerwind.dev/v1alpha1
+            kind: Runner
+            namespace: actions-runner-system
+            kubeconfig: "{{ kubeconfig_path }}"
+            label_selectors:
+              - runner-deployment=organization-runner
+          register: runners
+          until: runners.resources is defined and runners.resources | length >= 1
+          retries: 30
+          delay: 10
+          ignore_errors: true
+
+        - name: Display runner status
+          ansible.builtin.debug:
+            msg: "GitHub Actions runner deployment completed. {{ runners.resources | default([]) | length }} of 1 runner(s) deployed."
+

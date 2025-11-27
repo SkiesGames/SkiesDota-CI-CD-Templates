@@ -132,6 +132,99 @@ ansible-playbook generate_initial_inventory.yml
 **Output:**
 - Creates `inventory.ini` file in the parent directory
 
+### deploy-infra-services.yml
+Deploys core infrastructure services to the K3s cluster.
+
+**Purpose**: Sets up essential infrastructure components like cert-manager and Let's Encrypt
+
+**Features:**
+- cert-manager installation via Helm
+- Let's Encrypt ClusterIssuer creation
+- Automatic kubeconfig handling
+- Runs on controller node only
+
+**Usage:**
+```yaml
+# In GitHub Actions workflow
+uses: SkiesGames/SkiesDota-CI-CD-Templates/.github/workflows/reusable-ansible.yml@main
+with:
+  playbook: playbooks/deploy-infra-services.yml
+  use_template_playbook: true
+secrets:
+  ANSIBLE_HOSTS: ${{ secrets.ANSIBLE_HOSTS }}
+  SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+```
+
+**Requirements:**
+- K3s cluster must be bootstrapped first
+- kubectl and helm must be available
+
+**Environment Variables:**
+- `LETS_ENCRYPT_EMAIL`: Email for Let's Encrypt notifications
+
+### deploy-github-runner.yml
+Deploys GitHub Actions self-hosted runners for your organization in the K3s cluster.
+
+**Purpose**: Sets up organization-level GitHub Actions runners using Actions Runner Controller (ARC)
+
+**Features:**
+- Actions Runner Controller (ARC) installation via Helm
+- Organization-level runner deployment
+- Configurable runner resources and labels
+- Automatic runner registration with GitHub
+- Runs on controller node only
+
+**Usage:**
+```yaml
+# In GitHub Actions workflow
+uses: SkiesGames/SkiesDota-CI-CD-Templates/.github/workflows/reusable-ansible.yml@main
+with:
+  playbook: playbooks/deploy-github-runner.yml
+  use_template_playbook: true
+  ansible_extra_env_json: |
+    {
+      "GITHUB_ORGANIZATION": "SkiesGames",
+      "RUNNER_REPLICAS": "1",
+      "RUNNER_LABELS": "self-hosted,linux,k3s"
+    }
+secrets:
+  ANSIBLE_HOSTS: ${{ secrets.ANSIBLE_HOSTS }}
+  SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+  ANSIBLE_EXTRA_SECRETS_JSON: |
+    {
+      "GITHUB_APP_ID": "${{ secrets.GITHUB_APP_ID }}",
+      "GITHUB_APP_INSTALLATION_ID": "${{ secrets.GITHUB_APP_INSTALLATION_ID }}",
+      "GITHUB_APP_PRIVATE_KEY": "${{ secrets.GITHUB_APP_PRIVATE_KEY }}"
+    }
+```
+
+**Requirements:**
+- K3s cluster must be bootstrapped first
+- GitHub App with organization permissions must be created
+- kubectl and helm must be available
+
+**Required Environment Variables (via secrets):**
+- `GITHUB_APP_ID`: GitHub App ID
+- `GITHUB_APP_INSTALLATION_ID`: GitHub App Installation ID
+- `GITHUB_APP_PRIVATE_KEY`: GitHub App private key (full PEM content)
+- `GITHUB_ORGANIZATION`: Organization name (e.g., `SkiesGames`)
+
+**Runner Configuration (Fixed):**
+- **Replicas**: 1 (single runner pod)
+- **Labels**: `self-hosted`, `linux`, `k3s`
+- **Namespace**: `actions-runner-system`
+- **Resources**:
+  - CPU: 250m request / 1000m (1 core) limit
+  - Memory: 256Mi request / 768Mi limit
+
+**See Also:**
+- Detailed setup guide: `GITHUB_RUNNER_SETUP.md`
+- Example workflow: `.github/workflows/example-manual-deploy-github-runner.yml`
+
+**After Deployment:**
+- Update your workflows to use `runs-on: [self-hosted, k3s, linux]` (match your labels)
+- Runners will automatically scale and handle jobs from any repository in your organization
+
 ## Local Testing Mode
 
 The playbooks support a local testing mode for template development. This mode:
