@@ -94,6 +94,11 @@ runs:
           [ -n "$line" ] && DOCKER_ARGS+=(-e "$line")
         done < <(echo "$MERGED_JSON" | jq -r 'to_entries[] | "\(.key)=\(.value | @sh)"')
         
+        # Mount host network when running in same cluster (allows pod-to-node SSH)
+        if [ "${{ inputs.disable_host_key_checking }}" = "true" ]; then
+          DOCKER_ARGS+=(--network host)
+        fi
+        
         docker run --rm "${DOCKER_ARGS[@]}" -w /workspace \
           ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest \
           bash -c "ansible-playbook templates/ansible/playbooks/generate_inventory.yml && ansible-playbook -i ansible/inventory.ini $PLAYBOOK_PATH"
