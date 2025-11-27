@@ -20,13 +20,18 @@ on:
         required: false
         type: string
         default: 'ci-cd.prod.yml'
+      runner:
+        description: 'Runner to use. Options: "ubuntu-latest" or "self-hosted"'
+        required: false
+        type: string
+        default: 'ubuntu-latest'
     secrets:
       token:
         required: true
 
 jobs:
   check-template-dependencies:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner }}
     outputs:
       template-ready: ${{ steps.check.outputs.template_ready }}
       template-commit: ${{ steps.check.outputs.template_commit }}
@@ -157,7 +162,7 @@ jobs:
   wait-for-template:
     needs: [check-template-dependencies]
     if: always() && needs.check-template-dependencies.result == 'success' && needs.check-template-dependencies.outputs.needs-wait == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner }}
     timeout-minutes: ${{ inputs.wait-timeout }}
     steps:
       - name: Wait for template repository
