@@ -22,6 +22,11 @@ on:
         required: false
         type: string
         default: 'ubuntu-latest'
+      disable_host_key_checking:
+        description: 'If true, disables SSH host key checking (useful for same-cluster runners)'
+        required: false
+        type: boolean
+        default: false
     secrets:
       ANSIBLE_HOSTS:
         required: true
@@ -61,3 +66,4 @@ jobs:
           use_template_playbook: ${{ inputs.use_template_playbook }}
           ansible_extra_env_json: ${{ inputs.ansible_extra_env_json }}
           ansible_extra_secrets_json: ${{ secrets.ANSIBLE_EXTRA_SECRETS_JSON || '{}' }}
+          disable_host_key_checking: ${{ inputs.disable_host_key_checking }}
