@@ -56,16 +56,51 @@ runs:
 
     - name: Run Ansible Playbooks in Docker
       run: |
-        # Merge extra env vars and secrets JSONs
-        MERGED_JSON=$(jq -s '.[0] * .[1]' \
-          <(echo '${{ inputs.ansible_extra_env_json }}') \
-          <(echo '${{ inputs.ansible_extra_secrets_json }}'))
+        # Helper function to escape control characters in JSON strings
+        # This fixes common issues like unescaped newlines in private keys
+        escape_json_string() {
+          local json_str="$1"
+          # Try to parse as-is first
+          if echo "$json_str" | jq empty 2>/dev/null; then
+            echo "$json_str"
+            return 0
+          fi
+          
+          # If parsing fails, use the helper script to fix control characters
+          echo "$json_str" | python3 "$GITHUB_ACTION_PATH/escape_json.py"
+        }
+        
+        # Validate and merge extra env vars and secrets JSONs
+        # First, validate each JSON input separately to provide clear error messages
+        ENV_JSON_RAW='${{ inputs.ansible_extra_env_json }}'
+        SECRETS_JSON_RAW='${{ inputs.ansible_extra_secrets_json }}'
+        
+        # Escape control characters if needed
+        ENV_JSON=$(echo "$ENV_JSON_RAW" | escape_json_string)
+        SECRETS_JSON=$(echo "$SECRETS_JSON_RAW" | escape_json_string)
+        
+        # Validate ansible_extra_env_json
+        if ! echo "$ENV_JSON" | jq empty 2>/dev/null; then
+          echo "Error: ansible_extra_env_json contains invalid JSON after auto-escaping"
+          echo "Please ensure your JSON is valid. Control characters should be escaped."
+          exit 1
+        fi
+        
+        # Validate ansible_extra_secrets_json
+        if ! echo "$SECRETS_JSON" | jq empty 2>/dev/null; then
+          echo "Error: ansible_extra_secrets_json contains invalid JSON after auto-escaping"
+          echo "Please ensure your JSON is valid. Control characters should be escaped."
+          exit 1
+        fi
+        
+        # Merge the validated JSONs
+        MERGED_JSON=$(jq -s '.[0] * .[1]' <(echo "$ENV_JSON") <(echo "$SECRETS_JSON"))
         
         # Parse merged JSON to Docker env flags
         EXTRA_ENV_FLAGS=""
         if [ "$MERGED_JSON" != "{}" ] && [ -n "$MERGED_JSON" ]; then
           echo "Parsing extra environment variables and secrets..."
-          EXTRA_ENV_FLAGS=$(echo "$MERGED_JSON" | jq -r 'to_entries[] | "-e \(.key)=\(.value)"' | tr '\n' ' ')
+          EXTRA_ENV_FLAGS=$(echo "$MERGED_JSON" | jq -r 'to_entries[] | "-e \(.key)=\(.value | @sh)"' | tr '\n' ' ')
           echo "Extra environment flags configured (count: $(echo "$MERGED_JSON" | jq 'length'))"
         fi
         
