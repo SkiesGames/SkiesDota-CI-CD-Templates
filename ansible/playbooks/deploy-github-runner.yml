@@ -49,7 +49,29 @@
             kubeconfig: "{{ kubeconfig_path }}"
             state: present
 
-        - name: Create GitHub App credentials secret
+        - name: Delete existing controller-manager secret if it exists
+          kubernetes.core.k8s:
+            api_version: v1
+            kind: Secret
+            name: controller-manager
+            namespace: actions-runner-system
+            kubeconfig: "{{ kubeconfig_path }}"
+            state: absent
+          ignore_errors: true
+
+        - name: Install Actions Runner Controller via Helm (without secret first)
+          kubernetes.core.helm:
+            name: actions-runner-controller
+            chart_ref: actions-runner-controller/actions-runner-controller
+            release_namespace: actions-runner-system
+            create_namespace: true
+            wait: false
+            kubeconfig: "{{ kubeconfig_path }}"
+            set_values:
+              - value: authSecret.create=false
+                value_type: string
+
+        - name: Create GitHub App credentials secret with Helm labels
           kubernetes.core.k8s:
             state: present
             kubeconfig: "{{ kubeconfig_path }}"
@@ -59,6 +81,11 @@
               metadata:
                 name: controller-manager
                 namespace: actions-runner-system
+                labels:
+                  app.kubernetes.io/managed-by: Helm
+                annotations:
+                  meta.helm.sh/release-name: actions-runner-controller
+                  meta.helm.sh/release-namespace: actions-runner-system
               type: Opaque
               stringData:
                 github_app_id: "{{ lookup('env', 'GITHUB_APP_ID') }}"
@@ -66,19 +93,16 @@
                 github_app_private_key: "{{ lookup('env', 'GITHUB_APP_PRIVATE_KEY') }}"
           no_log: true
 
-        - name: Install Actions Runner Controller via Helm
+        - name: Wait for ARC controller to be ready using Helm
           kubernetes.core.helm:
             name: actions-runner-controller
             chart_ref: actions-runner-controller/actions-runner-controller
             release_namespace: actions-runner-system
-            create_namespace: true
+            kubeconfig: "{{ kubeconfig_path }}"
             wait: true
             timeout: 5m
-            kubeconfig: "{{ kubeconfig_path }}"
             set_values:
               - value: authSecret.create=false
-                value_type: string
-              - value: authSecret.name=controller-manager
                 value_type: string
 
         # --- Organization Runner Deployment ---
@@ -113,22 +137,3 @@
                       requests:
                         cpu: "250m"
                         memory: "256Mi"
-
-        - name: Wait for runners to be ready
-          kubernetes.core.k8s_info:
-            api_version: actions.summerwind.dev/v1alpha1
-            kind: Runner
-            namespace: actions-runner-system
-            kubeconfig: "{{ kubeconfig_path }}"
-            label_selectors:
-              - runner-deployment=organization-runner
-          register: runners
-          until: runners.resources is defined and runners.resources | length >= 1
-          retries: 30
-          delay: 10
-          ignore_errors: true
-
-        - name: Display runner status
-          ansible.builtin.debug:
-            msg: "GitHub Actions runner deployment completed. {{ runners.resources | default([]) | length }} of 1 runner(s) deployed."
-
