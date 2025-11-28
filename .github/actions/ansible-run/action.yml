@@ -35,49 +35,35 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Setup SSH Agent
-      uses: webfactory/ssh-agent@v0.9.0
-      with:
-        ssh-private-key: ${{ inputs.ssh_private_key }}
-
     - name: Dynamically Scan and Add Known Hosts
+      if: inputs.disable_host_key_checking != 'true'
       run: |
         mkdir -p ~/.ssh
-        # Read newline-separated hosts
         while IFS= read -r host; do
-          # Skip empty lines
-          if [ -n "$host" ]; then
-            SCAN=$(ssh-keyscan -H "$host" 2>/dev/null)
-            if [ -n "$SCAN" ]; then
-              echo "$SCAN" >> ~/.ssh/known_hosts
-              echo "Added $host to known_hosts"
-            else
-              echo "Warning: Failed to scan $host"
-            fi
-          fi
+          [ -n "$host" ] && ssh-keyscan -H "$host" 2>/dev/null >> ~/.ssh/known_hosts || true
         done <<< "${{ inputs.ansible_hosts }}"
       shell: bash
 
     - name: Run Ansible Playbooks in Docker
       run: |
-        # Parse JSON inputs
+        # Parse and validate JSON inputs
         ENV_JSON_RAW='${{ inputs.ansible_extra_env_json }}'
         SECRETS_JSON_RAW='${{ inputs.ansible_extra_secrets_json }}'
         
         if ! ENV_JSON=$(echo "$ENV_JSON_RAW" | jq . 2>/dev/null); then
-          echo "Error: Invalid JSON in ansible_extra_env_json"
+          echo "Error: Invalid JSON in ansible_extra_env_json" >&2
           exit 1
         fi
         
         if ! SECRETS_JSON=$(echo "$SECRETS_JSON_RAW" | jq . 2>/dev/null); then
-          echo "Error: Invalid JSON in ansible_extra_secrets_json"
+          echo "Error: Invalid JSON in ansible_extra_secrets_json" >&2
           exit 1
         fi
         
         MERGED_JSON=$(jq -s '.[0] * .[1]' <(echo "$ENV_JSON") <(echo "$SECRETS_JSON"))
-        
         PLAYBOOK_PATH="$([ "${{ inputs.use_template_playbook }}" = "true" ] && echo "templates/ansible/${{ inputs.playbook }}" || echo "ansible/${{ inputs.playbook }}")"
         
+        # Build Docker arguments
         DOCKER_ARGS=(
           -v "$GITHUB_WORKSPACE:/workspace"
           -e "ANSIBLE_HOSTS=${{ inputs.ansible_hosts }}"
@@ -87,19 +73,18 @@ runs:
         )
         
         if [ "${{ inputs.disable_host_key_checking }}" = "true" ]; then
-          DOCKER_ARGS+=(-e "ANSIBLE_HOST_KEY_CHECKING=False" -e "ANSIBLE_SSH_ARGS=-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null")
+          DOCKER_ARGS+=(
+            -e "ANSIBLE_SSH_ARGS=-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+            --network host
+          )
         else
           DOCKER_ARGS+=(-v ~/.ssh/known_hosts:/root/.ssh/known_hosts:ro)
         fi
         
+        # Add merged environment variables
         [ "$MERGED_JSON" != "{}" ] && while IFS= read -r line; do
           [ -n "$line" ] && DOCKER_ARGS+=(-e "$line")
         done < <(echo "$MERGED_JSON" | jq -r 'to_entries[] | "\(.key)=\(.value)"')
-        
-        # Mount host network when running in same cluster (allows pod-to-node SSH)
-        if [ "${{ inputs.disable_host_key_checking }}" = "true" ]; then
-          DOCKER_ARGS+=(--network host)
-        fi
         
         docker run --rm "${DOCKER_ARGS[@]}" -w /workspace \
           ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest \
@@ -109,27 +94,12 @@ runs:
             echo \"\$SSH_PRIVATE_KEY\" > ~/.ssh/id_rsa
             chmod 600 ~/.ssh/id_rsa
             
-            # Verify key was written
-            if [ ! -f ~/.ssh/id_rsa ]; then
-              echo 'ERROR: Failed to create SSH key file at ~/.ssh/id_rsa'
-              exit 1
-            fi
-            
-            # Verify key has content
             if [ ! -s ~/.ssh/id_rsa ]; then
-              echo 'ERROR: SSH key file is empty'
+              echo 'Error: Failed to create SSH key file' >&2
               exit 1
             fi
             
-            echo 'SSH key file created successfully'
-            
-            # Debug: Show inventory content
             ansible-playbook templates/ansible/playbooks/generate_inventory.yml
-            echo '=== Generated Inventory ==='
-            cat ansible/inventory.ini
-            echo '=== End Inventory ==='
-            
-            # Run the actual playbook
             ansible-playbook -i ansible/inventory.ini $PLAYBOOK_PATH
           "
       shell: bash
