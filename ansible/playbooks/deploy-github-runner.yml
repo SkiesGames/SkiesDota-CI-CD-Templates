@@ -49,6 +49,23 @@
             timeout: 5m
             kubeconfig: "{{ kubeconfig_path }}"
 
+        - name: Create Helm values file
+          ansible.builtin.copy:
+            content: |
+              githubConfigUrl: https://github.com/{{ runner_organization }}
+              githubConfigSecret:
+                github_app_id: {{ lookup('env', 'GITHUB_APP_ID') | int }}
+                github_app_installation_id: {{ lookup('env', 'GITHUB_APP_INSTALLATION_ID') | int }}
+                github_app_private_key: |
+              {{ lookup('env', 'GITHUB_APP_PRIVATE_KEY') | indent(14) }}
+              containerMode:
+                type: dind
+              minRunners: 1
+              maxRunners: 1
+            dest: /tmp/arc-runner-values.yaml
+            mode: '0600'
+          no_log: true
+
         - name: Install Runner Scale Set
           kubernetes.core.helm:
             name: arc-runner-set
@@ -58,12 +75,6 @@
             wait: true
             timeout: 5m
             kubeconfig: "{{ kubeconfig_path }}"
-            set_values:
-              - value: "githubConfigUrl=https://github.com/{{ runner_organization }}"
-              - value: "githubConfigSecret.github_app_id={{ lookup('env', 'GITHUB_APP_ID') }}"
-              - value: "githubConfigSecret.github_app_installation_id={{ lookup('env', 'GITHUB_APP_INSTALLATION_ID') }}"
-              - value: "githubConfigSecret.github_app_private_key={{ lookup('env', 'GITHUB_APP_PRIVATE_KEY') }}"
-              - value: "containerMode.type=dind"
-              - value: "minRunners=1"
-              - value: "maxRunners=1"
+            values_files:
+              - /tmp/arc-runner-values.yaml
           no_log: true
