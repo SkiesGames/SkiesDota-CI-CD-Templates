@@ -60,33 +60,18 @@ runs:
 
     - name: Run Ansible Playbooks in Docker
       run: |
-        # Base64 encode raw JSON inputs to safely handle multiline strings and special characters
-        # Then decode, fix literal newlines in string values, and parse as JSON
+        # Parse JSON inputs
         ENV_JSON_RAW='${{ inputs.ansible_extra_env_json }}'
         SECRETS_JSON_RAW='${{ inputs.ansible_extra_secrets_json }}'
         
-        if [ -z "$ENV_JSON_RAW" ] || [ "$ENV_JSON_RAW" = "{}" ]; then
-          ENV_JSON="{}"
-        else
-          # Encode to base64, decode, then use Python to properly escape newlines in JSON string values
-          ENV_JSON_DECODED=$(printf '%s' "$ENV_JSON_RAW" | base64 | tr -d '\n' | base64 -d)
-          ENV_JSON_FIXED=$(python3 -c "import sys, re; json_str = sys.stdin.read(); fixed = re.sub(r'(?<!\\)\n(?=[^\"])', r'\\\\n', json_str); print(fixed)" <<< "$ENV_JSON_DECODED")
-          if ! ENV_JSON=$(echo "$ENV_JSON_FIXED" | jq . 2>/dev/null); then
-            echo "Error: Invalid JSON in ansible_extra_env_json"
-            exit 1
-          fi
+        if ! ENV_JSON=$(echo "$ENV_JSON_RAW" | jq . 2>/dev/null); then
+          echo "Error: Invalid JSON in ansible_extra_env_json"
+          exit 1
         fi
         
-        if [ -z "$SECRETS_JSON_RAW" ] || [ "$SECRETS_JSON_RAW" = "{}" ]; then
-          SECRETS_JSON="{}"
-        else
-          # Encode to base64, decode, then use Python to properly escape newlines in JSON string values
-          SECRETS_JSON_DECODED=$(printf '%s' "$SECRETS_JSON_RAW" | base64 | tr -d '\n' | base64 -d)
-          SECRETS_JSON_FIXED=$(python3 -c "import sys, re; json_str = sys.stdin.read(); fixed = re.sub(r'(?<!\\)\n(?=[^\"])', r'\\\\n', json_str); print(fixed)" <<< "$SECRETS_JSON_DECODED")
-          if ! SECRETS_JSON=$(echo "$SECRETS_JSON_FIXED" | jq . 2>/dev/null); then
-            echo "Error: Invalid JSON in ansible_extra_secrets_json"
-            exit 1
-          fi
+        if ! SECRETS_JSON=$(echo "$SECRETS_JSON_RAW" | jq . 2>/dev/null); then
+          echo "Error: Invalid JSON in ansible_extra_secrets_json"
+          exit 1
         fi
         
         MERGED_JSON=$(jq -s '.[0] * .[1]' <(echo "$ENV_JSON") <(echo "$SECRETS_JSON"))
