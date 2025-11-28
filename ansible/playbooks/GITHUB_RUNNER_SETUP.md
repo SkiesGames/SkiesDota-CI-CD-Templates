@@ -104,7 +104,9 @@ In your `SkiesDotaInfra` repository (or wherever you'll run the workflow), add t
 1. **`GITHUB_APP_ID`**: The App ID from GitHub App settings
 2. **`GITHUB_APP_INSTALLATION_ID`**: The Installation ID from the installation URL
 3. **`GITHUB_APP_PRIVATE_KEY`**: The entire contents of the `.pem` file, **base64 encoded**. To encode it, run: `cat your-key.pem | base64 -w 0` (or `base64 < your-key.pem | tr -d '\n'` on macOS). The decoded key will be automatically handled by the playbook.
-4. **`GITHUB_ORGANIZATION`**: Your organization name (e.g., `SkiesGames`)
+
+### Requested Varibales
+1. **`GITHUB_ORGANIZATION`**: Your organization name (e.g., `SkiesGames`)
 
 ### Runner Configuration
 
