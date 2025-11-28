@@ -35,14 +35,6 @@
             kubeconfig_path: /tmp/k3s-config.yaml
 
         # --- Runner Scale Set Deployment ---
-        - name: Debug raw environment variables
-          ansible.builtin.debug:
-            msg: |
-              Raw GITHUB_APP_ID env: '{{ lookup("env", "GITHUB_APP_ID") }}'
-              Raw GITHUB_APP_INSTALLATION_ID env: '{{ lookup("env", "GITHUB_APP_INSTALLATION_ID") }}'
-              Raw GITHUB_ORGANIZATION env: '{{ lookup("env", "GITHUB_ORGANIZATION") }}'
-              Raw GITHUB_APP_PRIVATE_KEY env length: {{ lookup("env", "GITHUB_APP_PRIVATE_KEY") | length }}
-
         - name: Get organization name and GitHub App credentials from environment
           ansible.builtin.set_fact:
             runner_organization: "{{ lookup('env', 'GITHUB_ORGANIZATION') }}"
@@ -50,15 +42,6 @@
             github_app_installation_id: "{{ lookup('env', 'GITHUB_APP_INSTALLATION_ID') | int }}"
             github_app_private_key: "{{ lookup('env', 'GITHUB_APP_PRIVATE_KEY') | b64decode }}"
           no_log: true
-
-        - name: Verify GitHub App credentials are set
-          ansible.builtin.debug:
-            msg: |
-              runner_organization: {{ runner_organization }}
-              github_app_id: {{ github_app_id }} (type: {{ github_app_id | type_debug }})
-              github_app_installation_id: {{ github_app_installation_id }} (type: {{ github_app_installation_id | type_debug }})
-              github_app_private_key length: {{ github_app_private_key | length }} chars
-              github_app_private_key starts with: {{ github_app_private_key[:30] }}
 
         - name: Install Actions Runner Controller
           kubernetes.core.helm:
