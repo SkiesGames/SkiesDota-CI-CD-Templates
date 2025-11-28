@@ -70,6 +70,4 @@
                 github_app_id: "{{ github_app_id }}"
                 github_app_installation_id: "{{ github_app_installation_id }}"
                 github_app_private_key: "{{ github_app_private_key }}"
-              minRunners: 1
-              maxRunners: 1
           no_log: true

@@ -7,6 +7,10 @@
     ansible_hosts: "{{ lookup('env', 'ANSIBLE_HOSTS') }}"
     ansible_user: "{{ lookup('env', 'ANSIBLE_USER') }}"
   tasks:
+    - name: Set absolute template path
+      ansible.builtin.set_fact:
+        template_path: "{{ playbook_dir }}/../templates/inventory.j2"
+
     - name: Ensure /workspace/ansible directory exists
       ansible.builtin.file:
         path: /workspace/ansible
@@ -15,6 +19,6 @@
 
     - name: Generate inventory file
       ansible.builtin.template:
-        src: "{{ playbook_dir }}/../templates/inventory.j2"
+        src: "{{ template_path }}"
         dest: "/workspace/ansible/inventory.ini"
         mode: "0644"
