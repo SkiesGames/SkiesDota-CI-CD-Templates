@@ -51,7 +51,6 @@
               github_app_installation_id: {{ github_app_installation_id }} (type: {{ github_app_installation_id | type_debug }})
               github_app_private_key length: {{ github_app_private_key | length }} chars
               github_app_private_key starts with: {{ github_app_private_key[:30] }}
-          no_log: true
 
         - name: Install Actions Runner Controller
           kubernetes.core.helm:
