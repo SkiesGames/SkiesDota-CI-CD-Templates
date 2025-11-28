@@ -15,6 +15,6 @@
 
     - name: Generate inventory file
       ansible.builtin.copy:
-        content: "{{ lookup('template', playbook_dir + '/../templates/inventory.j2') }}"
+        content: "{{ playbook_dir }}/../templates/inventory.j2"
         dest: "/workspace/ansible/inventory.ini"
         mode: "0644"
