@@ -60,32 +60,42 @@ runs:
 
     - name: Run Ansible Playbooks in Docker
       run: |
-        # Base64 encode the entire JSON strings to handle all special characters (newlines, quotes, etc.)
-        # This avoids shell escaping issues when passing multiline JSON through GitHub Actions
+        # Try to parse JSON directly first, if that fails, try base64 decode then parse
+        # This handles both raw JSON and base64-encoded JSON inputs
         ENV_JSON_RAW='${{ inputs.ansible_extra_env_json }}'
         SECRETS_JSON_RAW='${{ inputs.ansible_extra_secrets_json }}'
         
         if [ -z "$ENV_JSON_RAW" ] || [ "$ENV_JSON_RAW" = "{}" ]; then
           ENV_JSON="{}"
         else
-          ENV_JSON_B64=$(printf '%s' "$ENV_JSON_RAW" | base64 | tr -d '\n')
-          ENV_JSON_DECODED=$(printf '%s' "$ENV_JSON_B64" | base64 -d)
-          # Parse and validate JSON, fail loudly if invalid
-          if ! ENV_JSON=$(echo "$ENV_JSON_DECODED" | jq . 2>/dev/null); then
-            echo "Error: Invalid JSON in ansible_extra_env_json"
-            exit 1
+          # Try parsing directly first
+          if ENV_JSON=$(echo "$ENV_JSON_RAW" | jq . 2>/dev/null); then
+            : # Success, use it as-is
+          else
+            # If direct parse fails, try base64 decode then parse
+            if ENV_JSON=$(printf '%s' "$ENV_JSON_RAW" | base64 -d 2>/dev/null | jq . 2>/dev/null); then
+              : # Success after base64 decode
+            else
+              echo "Error: Invalid JSON in ansible_extra_env_json (tried both raw and base64-decoded)"
+              exit 1
+            fi
           fi
         fi
         
         if [ -z "$SECRETS_JSON_RAW" ] || [ "$SECRETS_JSON_RAW" = "{}" ]; then
           SECRETS_JSON="{}"
         else
-          SECRETS_JSON_B64=$(printf '%s' "$SECRETS_JSON_RAW" | base64 | tr -d '\n')
-          SECRETS_JSON_DECODED=$(printf '%s' "$SECRETS_JSON_B64" | base64 -d)
-          # Parse and validate JSON, fail loudly if invalid
-          if ! SECRETS_JSON=$(echo "$SECRETS_JSON_DECODED" | jq . 2>/dev/null); then
-            echo "Error: Invalid JSON in ansible_extra_secrets_json"
-            exit 1
+          # Try parsing directly first
+          if SECRETS_JSON=$(echo "$SECRETS_JSON_RAW" | jq . 2>/dev/null); then
+            : # Success, use it as-is
+          else
+            # If direct parse fails, try base64 decode then parse
+            if SECRETS_JSON=$(printf '%s' "$SECRETS_JSON_RAW" | base64 -d 2>/dev/null | jq . 2>/dev/null); then
+              : # Success after base64 decode
+            else
+              echo "Error: Invalid JSON in ansible_extra_secrets_json (tried both raw and base64-decoded)"
+              exit 1
+            fi
           fi
         fi
         
