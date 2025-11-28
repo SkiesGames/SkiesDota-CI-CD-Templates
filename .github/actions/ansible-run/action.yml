@@ -64,10 +64,7 @@ runs:
           -e "ANSIBLE_SSH_ARGS=-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
         )
         
-        # Use host network mode when runners are in the same network (pod-to-node SSH in Kubernetes)
-        if [ "${{ inputs.runners_in_the_same_network }}" = "true" ]; then
-          DOCKER_ARGS+=(--network host)
-        fi
+        
         
         # Add merged environment variables
         [ "$MERGED_JSON" != "{}" ] && while IFS= read -r line; do
