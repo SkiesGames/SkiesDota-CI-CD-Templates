@@ -17,7 +17,9 @@
     
     - name: Set k3s_control_node fact based on NUMBER_OF_CONTROL_PLANE_NODES
       ansible.builtin.set_fact:
-        k3s_control_node: "{%- if num_control_nodes == '' or num_control_nodes is not defined -%}true{%- elif num_control_nodes | int > 0 and node_index < (num_control_nodes | int) -%}true{%- else -%}false{%- endif -%}"
+        k3s_control_node: >-
+          {{ (num_control_nodes == '' or num_control_nodes is not defined) or 
+             (num_control_nodes | int > 0 and node_index < (num_control_nodes | int)) }}
 
   roles:
     - role: xanmanning.k3s
