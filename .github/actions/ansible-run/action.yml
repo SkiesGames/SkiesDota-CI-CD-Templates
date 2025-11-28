@@ -94,7 +94,7 @@ runs:
         
         [ "$MERGED_JSON" != "{}" ] && while IFS= read -r line; do
           [ -n "$line" ] && DOCKER_ARGS+=(-e "$line")
-        done < <(echo "$MERGED_JSON" | jq -r 'to_entries[] | "\(.key)=\(.value | @sh)"')
+        done < <(echo "$MERGED_JSON" | jq -r 'to_entries[] | "\(.key)=\(.value)"')
         
         # Mount host network when running in same cluster (allows pod-to-node SSH)
         if [ "${{ inputs.disable_host_key_checking }}" = "true" ]; then
