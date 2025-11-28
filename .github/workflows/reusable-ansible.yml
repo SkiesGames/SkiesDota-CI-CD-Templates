@@ -22,8 +22,8 @@ on:
         required: false
         type: string
         default: 'ubuntu-latest'
-      disable_host_key_checking:
-        description: 'If true, disables SSH host key checking (useful for same-cluster runners)'
+      runners_in_the_same_network:
+        description: 'If true, uses host network mode and disables SSH host key checking (for pod-to-node SSH in Kubernetes)'
         required: false
         type: boolean
         default: false
@@ -66,4 +66,4 @@ jobs:
           use_template_playbook: ${{ inputs.use_template_playbook }}
           ansible_extra_env_json: ${{ inputs.ansible_extra_env_json }}
           ansible_extra_secrets_json: ${{ secrets.ANSIBLE_EXTRA_SECRETS_JSON || '{}' }}
-          disable_host_key_checking: ${{ inputs.disable_host_key_checking }}
+          runners_in_the_same_network: ${{ inputs.runners_in_the_same_network }}
