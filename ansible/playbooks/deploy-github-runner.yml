@@ -40,7 +40,7 @@
             runner_organization: "{{ lookup('env', 'GITHUB_ORGANIZATION') }}"
             github_app_id: "{{ lookup('env', 'GITHUB_APP_ID') | int }}"
             github_app_installation_id: "{{ lookup('env', 'GITHUB_APP_INSTALLATION_ID') | int }}"
-            github_app_private_key: "{{ lookup('env', 'GITHUB_APP_PRIVATE_KEY') }}"
+            github_app_private_key: "{{ lookup('env', 'GITHUB_APP_PRIVATE_KEY') | b64decode }}"
           no_log: true
 
         - name: Install Actions Runner Controller
