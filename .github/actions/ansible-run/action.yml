@@ -78,34 +78,12 @@ runs:
         
         PLAYBOOK_PATH="$([ "${{ inputs.use_template_playbook }}" = "true" ] && echo "templates/ansible/${{ inputs.playbook }}" || echo "ansible/${{ inputs.playbook }}")"
         
-        # Create temporary directory for SSH key
-        SSH_KEY_DIR=$(mktemp -d)
-        SSH_KEY_FILE="$SSH_KEY_DIR/id_rsa"
-        # Write SSH key preserving newlines
-        printf '%s\n' "${{ inputs.ssh_private_key }}" > "$SSH_KEY_FILE"
-        chmod 600 "$SSH_KEY_FILE"
-        
-        # Verify file was created
-        if [ ! -f "$SSH_KEY_FILE" ]; then
-          echo "ERROR: Failed to create SSH key file at $SSH_KEY_FILE"
-          exit 1
-        fi
-        
-        echo "SSH key file created at: $SSH_KEY_FILE"
-        echo "SSH key file size: $(stat -c%s "$SSH_KEY_FILE") bytes"
-        
-        # Cleanup function
-        cleanup() {
-          rm -rf "$SSH_KEY_DIR"
-        }
-        trap cleanup EXIT
-        
         DOCKER_ARGS=(
           -v "$GITHUB_WORKSPACE:/workspace"
-          -v "$SSH_KEY_DIR:/ssh-keys:ro"
           -e "ANSIBLE_HOSTS=${{ inputs.ansible_hosts }}"
           -e "ANSIBLE_USER=${{ inputs.ansible_user }}"
           -e "ANSIBLE_SSH_PRIVATE_KEY_FILE=/root/.ssh/id_rsa"
+          -e "SSH_PRIVATE_KEY=${{ inputs.ssh_private_key }}"
         )
         
         if [ "${{ inputs.disable_host_key_checking }}" = "true" ]; then
@@ -126,29 +104,24 @@ runs:
         docker run --rm "${DOCKER_ARGS[@]}" -w /workspace \
           ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest \
           bash -c "
-            # Debug: Check what's in /ssh-keys
-            echo '=== Checking /ssh-keys mount ==='
-            ls -la /ssh-keys/ || echo 'Directory /ssh-keys does not exist'
-            echo '=== End /ssh-keys check ==='
-            
-            # Copy SSH key to standard location and set permissions
+            # Write SSH key from environment variable to file
             mkdir -p ~/.ssh
-            if [ -f /ssh-keys/id_rsa ]; then
-              cp /ssh-keys/id_rsa ~/.ssh/id_rsa
-              chmod 600 ~/.ssh/id_rsa
-              echo 'SSH key copied successfully'
-            else
-              echo 'ERROR: SSH key file not found at /ssh-keys/id_rsa'
-              echo 'Contents of /ssh-keys:'
-              ls -la /ssh-keys/ || echo 'Directory does not exist'
+            echo \"\$SSH_PRIVATE_KEY\" > ~/.ssh/id_rsa
+            chmod 600 ~/.ssh/id_rsa
+            
+            # Verify key was written
+            if [ ! -f ~/.ssh/id_rsa ]; then
+              echo 'ERROR: Failed to create SSH key file at ~/.ssh/id_rsa'
               exit 1
             fi
             
-            # Verify key is accessible
-            if [ ! -f ~/.ssh/id_rsa ]; then
-              echo 'ERROR: SSH key file not found at ~/.ssh/id_rsa after copy'
+            # Verify key has content
+            if [ ! -s ~/.ssh/id_rsa ]; then
+              echo 'ERROR: SSH key file is empty'
               exit 1
             fi
+            
+            echo 'SSH key file created successfully'
             
             # Debug: Show inventory content
             ansible-playbook templates/ansible/playbooks/generate_inventory.yml
