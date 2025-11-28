@@ -39,27 +39,6 @@
           ansible.builtin.set_fact:
             runner_organization: "{{ lookup('env', 'GITHUB_ORGANIZATION') }}"
 
-        - name: Create Helm values dict
-          ansible.builtin.set_fact:
-            helm_values:
-              githubConfigUrl: "https://github.com/{{ runner_organization }}"
-              githubConfigSecret:
-                github_app_id: "{{ lookup('env', 'GITHUB_APP_ID') }}"
-                github_app_installation_id: "{{ lookup('env', 'GITHUB_APP_INSTALLATION_ID') }}"
-                github_app_private_key: "{{ lookup('env', 'GITHUB_APP_PRIVATE_KEY') }}"
-              containerMode:
-                type: dind
-              minRunners: 1
-              maxRunners: 1
-          no_log: true
-
-        - name: Create Helm values file for runner scale set
-          ansible.builtin.copy:
-            content: "{{ helm_values | to_nice_yaml }}"
-            dest: /tmp/arc-runner-values.yaml
-            mode: '0600'
-          no_log: true
-
         - name: Install Actions Runner Controller
           kubernetes.core.helm:
             name: arc
@@ -79,6 +58,12 @@
             wait: true
             timeout: 5m
             kubeconfig: "{{ kubeconfig_path }}"
-            values_files:
-              - /tmp/arc-runner-values.yaml
+            set_values:
+              - value: "githubConfigUrl=https://github.com/{{ runner_organization }}"
+              - value: "githubConfigSecret.github_app_id={{ lookup('env', 'GITHUB_APP_ID') }}"
+              - value: "githubConfigSecret.github_app_installation_id={{ lookup('env', 'GITHUB_APP_INSTALLATION_ID') }}"
+              - value: "githubConfigSecret.github_app_private_key={{ lookup('env', 'GITHUB_APP_PRIVATE_KEY') }}"
+              - value: "containerMode.type=dind"
+              - value: "minRunners=1"
+              - value: "maxRunners=1"
           no_log: true
