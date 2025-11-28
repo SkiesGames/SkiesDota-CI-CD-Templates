@@ -53,15 +53,6 @@
             timeout: 5m
             kubeconfig: "{{ kubeconfig_path }}"
 
-        - name: Uninstall existing Runner Scale Set if present (to clear bad values)
-          kubernetes.core.helm:
-            name: arc-runner-set
-            state: absent
-            release_namespace: "arc-runners"
-            kubeconfig: "{{ kubeconfig_path }}"
-          ignore_errors: true
-          no_log: true
-
         - name: Install Runner Scale Set
           kubernetes.core.helm:
             name: arc-runner-set
