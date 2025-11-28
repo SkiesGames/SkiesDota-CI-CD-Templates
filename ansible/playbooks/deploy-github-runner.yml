@@ -35,7 +35,32 @@
             kubeconfig_path: /tmp/k3s-config.yaml
 
         # --- Runner Scale Set Deployment ---
-        - name: Install Actions Runner Controller (New Official Format)
+        - name: Get organization name from environment
+          ansible.builtin.set_fact:
+            runner_organization: "{{ lookup('env', 'GITHUB_ORGANIZATION') }}"
+
+        - name: Create Helm values dict
+          ansible.builtin.set_fact:
+            helm_values:
+              githubConfigUrl: "https://github.com/{{ runner_organization }}"
+              githubConfigSecret:
+                github_app_id: "{{ lookup('env', 'GITHUB_APP_ID') }}"
+                github_app_installation_id: "{{ lookup('env', 'GITHUB_APP_INSTALLATION_ID') }}"
+                github_app_private_key: "{{ lookup('env', 'GITHUB_APP_PRIVATE_KEY') }}"
+              containerMode:
+                type: dind
+              minRunners: 1
+              maxRunners: 1
+          no_log: true
+
+        - name: Create Helm values file for runner scale set
+          ansible.builtin.copy:
+            content: "{{ helm_values | to_nice_yaml }}"
+            dest: /tmp/arc-runner-values.yaml
+            mode: '0600'
+          no_log: true
+
+        - name: Install Actions Runner Controller
           kubernetes.core.helm:
             name: arc
             chart_ref: oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set-controller
@@ -45,7 +70,7 @@
             timeout: 5m
             kubeconfig: "{{ kubeconfig_path }}"
 
-        - name: Install Runner Scale Set (New Official Format)
+        - name: Install Runner Scale Set
           kubernetes.core.helm:
             name: arc-runner-set
             chart_ref: oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set
@@ -54,19 +79,6 @@
             wait: true
             timeout: 5m
             kubeconfig: "{{ kubeconfig_path }}"
-            set_values:
-              - value: "githubConfigUrl=https://github.com/{{ lookup('env', 'GITHUB_ORGANIZATION') }}"
-                value_type: string
-              - value: "githubConfigSecret.github_app_id={{ lookup('env', 'GITHUB_APP_ID') }}"
-                value_type: string
-              - value: "githubConfigSecret.github_app_installation_id={{ lookup('env', 'GITHUB_APP_INSTALLATION_ID') }}"
-                value_type: string
-              - value: "githubConfigSecret.github_app_private_key={{ lookup('env', 'GITHUB_APP_PRIVATE_KEY') }}"
-                value_type: string
-              - value: "containerMode.type=dind"
-                value_type: string
-              - value: "minRunners=1"
-                value_type: string
-              - value: "maxRunners=1"
-                value_type: string
+            values_files:
+              - /tmp/arc-runner-values.yaml
           no_log: true
