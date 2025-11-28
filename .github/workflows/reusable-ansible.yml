@@ -22,11 +22,6 @@ on:
         required: false
         type: string
         default: 'ubuntu-latest'
-      runners_in_the_same_network:
-        description: 'If true, uses host network mode and disables SSH host key checking (for pod-to-node SSH in Kubernetes)'
-        required: false
-        type: boolean
-        default: false
     secrets:
       ANSIBLE_HOSTS:
         required: true
@@ -66,4 +61,3 @@ jobs:
           use_template_playbook: ${{ inputs.use_template_playbook }}
           ansible_extra_env_json: ${{ inputs.ansible_extra_env_json }}
           ansible_extra_secrets_json: ${{ secrets.ANSIBLE_EXTRA_SECRETS_JSON || '{}' }}
-          runners_in_the_same_network: ${{ inputs.runners_in_the_same_network }}

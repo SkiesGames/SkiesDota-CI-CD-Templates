@@ -27,10 +27,6 @@ inputs:
     description: 'Additional secrets as JSON object (sensitive)'
     required: false
     default: '{}'
-  runners_in_the_same_network:
-    description: 'If true, uses host network mode and disables SSH host key checking (for pod-to-node SSH in Kubernetes)'
-    required: false
-    default: 'false'
 
 runs:
   using: composite
@@ -61,10 +57,8 @@ runs:
           -e "ANSIBLE_USER=${{ inputs.ansible_user }}"
           -e "ANSIBLE_SSH_PRIVATE_KEY_FILE=/root/.ssh/id_rsa"
           -e "SSH_PRIVATE_KEY=${{ inputs.ssh_private_key }}"
-          -e "ANSIBLE_SSH_ARGS=-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+          -e "ANSIBLE_SSH_ARGS=-o StrictHostKeyChecking=no"
         )
-        
-        
         
         # Add merged environment variables
         [ "$MERGED_JSON" != "{}" ] && while IFS= read -r line; do
