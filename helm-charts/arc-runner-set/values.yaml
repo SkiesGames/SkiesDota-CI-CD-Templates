@@ -1,0 +1,13 @@
+# Default values for arc-runner-set
+# These are base values - the playbook will override githubConfigSecret values
+
+githubConfigUrl: https://github.com/REPLACE_WITH_ORG
+githubConfigSecret:
+  github_app_id: 0
+  github_app_installation_id: 0
+  github_app_private_key: ""
+containerMode:
+  type: dind
+minRunners: 0
+maxRunners: 0
+
