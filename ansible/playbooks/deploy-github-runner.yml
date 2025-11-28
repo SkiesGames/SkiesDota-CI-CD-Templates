@@ -35,6 +35,14 @@
             kubeconfig_path: /tmp/k3s-config.yaml
 
         # --- Runner Scale Set Deployment ---
+        - name: Debug raw environment variables
+          ansible.builtin.debug:
+            msg: |
+              Raw GITHUB_APP_ID env: '{{ lookup("env", "GITHUB_APP_ID") }}'
+              Raw GITHUB_APP_INSTALLATION_ID env: '{{ lookup("env", "GITHUB_APP_INSTALLATION_ID") }}'
+              Raw GITHUB_ORGANIZATION env: '{{ lookup("env", "GITHUB_ORGANIZATION") }}'
+              Raw GITHUB_APP_PRIVATE_KEY env length: {{ lookup("env", "GITHUB_APP_PRIVATE_KEY") | length }}
+
         - name: Get organization name and GitHub App credentials from environment
           ansible.builtin.set_fact:
             runner_organization: "{{ lookup('env', 'GITHUB_ORGANIZATION') }}"
