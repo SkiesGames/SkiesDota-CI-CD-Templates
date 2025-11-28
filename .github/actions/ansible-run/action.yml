@@ -60,13 +60,35 @@ runs:
 
     - name: Run Ansible Playbooks in Docker
       run: |
-        fix_json() {
-          [ -z "$1" ] && echo "{}" && return
-          echo "$1" | jq empty 2>/dev/null && echo "$1" || echo "$1" | python3 "$GITHUB_ACTION_PATH/escape_json.py" || echo "{}"
-        }
+        # Base64 encode the entire JSON strings to handle all special characters (newlines, quotes, etc.)
+        # This avoids shell escaping issues when passing multiline JSON through GitHub Actions
+        ENV_JSON_RAW='${{ inputs.ansible_extra_env_json }}'
+        SECRETS_JSON_RAW='${{ inputs.ansible_extra_secrets_json }}'
         
-        ENV_JSON=$(fix_json '${{ inputs.ansible_extra_env_json }}')
-        SECRETS_JSON=$(fix_json '${{ inputs.ansible_extra_secrets_json }}')
+        if [ -z "$ENV_JSON_RAW" ] || [ "$ENV_JSON_RAW" = "{}" ]; then
+          ENV_JSON="{}"
+        else
+          ENV_JSON_B64=$(printf '%s' "$ENV_JSON_RAW" | base64 | tr -d '\n')
+          ENV_JSON_DECODED=$(printf '%s' "$ENV_JSON_B64" | base64 -d)
+          # Parse and validate JSON, fail loudly if invalid
+          if ! ENV_JSON=$(echo "$ENV_JSON_DECODED" | jq . 2>/dev/null); then
+            echo "Error: Invalid JSON in ansible_extra_env_json"
+            exit 1
+          fi
+        fi
+        
+        if [ -z "$SECRETS_JSON_RAW" ] || [ "$SECRETS_JSON_RAW" = "{}" ]; then
+          SECRETS_JSON="{}"
+        else
+          SECRETS_JSON_B64=$(printf '%s' "$SECRETS_JSON_RAW" | base64 | tr -d '\n')
+          SECRETS_JSON_DECODED=$(printf '%s' "$SECRETS_JSON_B64" | base64 -d)
+          # Parse and validate JSON, fail loudly if invalid
+          if ! SECRETS_JSON=$(echo "$SECRETS_JSON_DECODED" | jq . 2>/dev/null); then
+            echo "Error: Invalid JSON in ansible_extra_secrets_json"
+            exit 1
+          fi
+        fi
+        
         MERGED_JSON=$(jq -s '.[0] * .[1]' <(echo "$ENV_JSON") <(echo "$SECRETS_JSON"))
         
         PLAYBOOK_PATH="$([ "${{ inputs.use_template_playbook }}" = "true" ] && echo "templates/ansible/${{ inputs.playbook }}" || echo "ansible/${{ inputs.playbook }}")"
