@@ -53,11 +53,16 @@
             timeout: 5m
             kubeconfig: "{{ kubeconfig_path }}"
 
-        - name: Create Helm values file
-          ansible.builtin.copy:
-            content: "{{ lookup('template', playbook_dir + '/../templates/arc-runner-values.yaml.j2') }}"
+        - name: Create Helm values file from template
+          ansible.builtin.template:
+            src: "{{ playbook_dir }}/../templates/arc-runner-values.yaml.j2"
             dest: /tmp/arc-runner-values.yaml
             mode: '0600'
+          vars:
+            runner_organization: "{{ runner_organization }}"
+            github_app_id: "{{ github_app_id }}"
+            github_app_installation_id: "{{ github_app_installation_id }}"
+            github_app_private_key: "{{ github_app_private_key }}"
           no_log: true
 
         - name: Install Runner Scale Set
