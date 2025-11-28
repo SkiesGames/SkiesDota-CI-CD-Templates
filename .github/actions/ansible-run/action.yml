@@ -81,7 +81,8 @@ runs:
         # Create temporary directory for SSH key
         SSH_KEY_DIR=$(mktemp -d)
         SSH_KEY_FILE="$SSH_KEY_DIR/id_rsa"
-        echo "${{ inputs.ssh_private_key }}" > "$SSH_KEY_FILE"
+        # Write SSH key preserving newlines
+        printf '%s\n' "${{ inputs.ssh_private_key }}" > "$SSH_KEY_FILE"
         chmod 600 "$SSH_KEY_FILE"
         
         # Cleanup function
@@ -95,7 +96,7 @@ runs:
           -v "$SSH_KEY_DIR:/ssh-keys:ro"
           -e "ANSIBLE_HOSTS=${{ inputs.ansible_hosts }}"
           -e "ANSIBLE_USER=${{ inputs.ansible_user }}"
-          -e "ANSIBLE_SSH_PRIVATE_KEY_FILE=/ssh-keys/id_rsa"
+          -e "ANSIBLE_SSH_PRIVATE_KEY_FILE=/root/.ssh/id_rsa"
         )
         
         if [ "${{ inputs.disable_host_key_checking }}" = "true" ]; then
@@ -115,5 +116,25 @@ runs:
         
         docker run --rm "${DOCKER_ARGS[@]}" -w /workspace \
           ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest \
-          bash -c "ansible-playbook templates/ansible/playbooks/generate_inventory.yml && ansible-playbook -i ansible/inventory.ini $PLAYBOOK_PATH"
+          bash -c "
+            # Copy SSH key to standard location and set permissions
+            mkdir -p ~/.ssh
+            cp /ssh-keys/id_rsa ~/.ssh/id_rsa
+            chmod 600 ~/.ssh/id_rsa
+            
+            # Verify key is accessible
+            if [ ! -f ~/.ssh/id_rsa ]; then
+              echo 'ERROR: SSH key file not found at ~/.ssh/id_rsa'
+              exit 1
+            fi
+            
+            # Debug: Show inventory content
+            ansible-playbook templates/ansible/playbooks/generate_inventory.yml
+            echo '=== Generated Inventory ==='
+            cat ansible/inventory.ini
+            echo '=== End Inventory ==='
+            
+            # Run the actual playbook
+            ansible-playbook -i ansible/inventory.ini $PLAYBOOK_PATH
+          "
       shell: bash
