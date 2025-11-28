@@ -35,9 +35,13 @@
             kubeconfig_path: /tmp/k3s-config.yaml
 
         # --- Runner Scale Set Deployment ---
-        - name: Get organization name from environment
+        - name: Get organization name and GitHub App credentials from environment
           ansible.builtin.set_fact:
             runner_organization: "{{ lookup('env', 'GITHUB_ORGANIZATION') }}"
+            github_app_id: "{{ lookup('env', 'GITHUB_APP_ID') | int }}"
+            github_app_installation_id: "{{ lookup('env', 'GITHUB_APP_INSTALLATION_ID') | int }}"
+            github_app_private_key: "{{ lookup('env', 'GITHUB_APP_PRIVATE_KEY') }}"
+          no_log: true
 
         - name: Install Actions Runner Controller
           kubernetes.core.helm:
@@ -54,11 +58,6 @@
             content: "{{ lookup('template', playbook_dir + '/../templates/arc-runner-values.yaml.j2') }}"
             dest: /tmp/arc-runner-values.yaml
             mode: '0600'
-          vars:
-            runner_organization: "{{ runner_organization }}"
-            github_app_id: "{{ lookup('env', 'GITHUB_APP_ID') | int }}"
-            github_app_installation_id: "{{ lookup('env', 'GITHUB_APP_INSTALLATION_ID') | int }}"
-            github_app_private_key: "{{ lookup('env', 'GITHUB_APP_PRIVATE_KEY') }}"
           no_log: true
 
         - name: Install Runner Scale Set
