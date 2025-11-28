@@ -78,12 +78,24 @@ runs:
         
         PLAYBOOK_PATH="$([ "${{ inputs.use_template_playbook }}" = "true" ] && echo "templates/ansible/${{ inputs.playbook }}" || echo "ansible/${{ inputs.playbook }}")"
         
+        # Create temporary directory for SSH key
+        SSH_KEY_DIR=$(mktemp -d)
+        SSH_KEY_FILE="$SSH_KEY_DIR/id_rsa"
+        echo "${{ inputs.ssh_private_key }}" > "$SSH_KEY_FILE"
+        chmod 600 "$SSH_KEY_FILE"
+        
+        # Cleanup function
+        cleanup() {
+          rm -rf "$SSH_KEY_DIR"
+        }
+        trap cleanup EXIT
+        
         DOCKER_ARGS=(
           -v "$GITHUB_WORKSPACE:/workspace"
-          -v "$SSH_AUTH_SOCK:/ssh-agent"
-          -e "SSH_AUTH_SOCK=/ssh-agent"
+          -v "$SSH_KEY_DIR:/ssh-keys:ro"
           -e "ANSIBLE_HOSTS=${{ inputs.ansible_hosts }}"
           -e "ANSIBLE_USER=${{ inputs.ansible_user }}"
+          -e "ANSIBLE_SSH_PRIVATE_KEY_FILE=/ssh-keys/id_rsa"
         )
         
         if [ "${{ inputs.disable_host_key_checking }}" = "true" ]; then
