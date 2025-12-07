@@ -36,7 +36,7 @@
 
         - name: Install CloudNativePG CRDs (required for PostgreSQL)
           ansible.builtin.command: >
-            kubectl apply --server-side --force-conflicts -f https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/release-1.24/releases/cnpg-1.24.1.yaml
+            kubectl apply --server-side --force-conflicts -f https://github.com/cloudnative-pg/cloudnative-pg/releases/download/v1.27.1/cnpg-1.27.1.yaml
           environment:
             KUBECONFIG: "{{ kubeconfig_path }}"
           register: cnpg_apply_result
@@ -83,21 +83,17 @@
           retries: 30
           delay: 10
 
-        - name: Add MinIO Operator Helm repository
-          kubernetes.core.helm_repository:
-            name: minio-operator
-            repo_url: https://operator.min.io/
-          run_once: true
-
-        - name: Install MinIO Operator via Helm
-          kubernetes.core.helm:
-            name: minio-operator
-            chart_ref: minio-operator/minio-operator
-            release_namespace: minio-operator
-            create_namespace: true
-            wait: true
-            timeout: 5m
-            kubeconfig: "{{ kubeconfig_path }}"
+        - name: Install MinIO Operator via Kustomization
+          ansible.builtin.command: >
+            kubectl kustomize github.com/minio/operator?ref=v7.1.1 | kubectl apply -f -
+          environment:
+            KUBECONFIG: "{{ kubeconfig_path }}"
+          register: minio_operator_result
+          retries: 3
+          delay: 5
+          until: minio_operator_result.rc == 0
+          failed_when: false
+          changed_when: minio_operator_result.rc == 0
 
         - name: Wait for MinIO Operator to be ready
           kubernetes.core.k8s_info:
