@@ -84,25 +84,28 @@
           delay: 10
 
         - name: Install MinIO Operator
-          kubernetes.core.helm:
-            name: minio-operator
-            chart_ref: oci://registry-1.docker.io/miniooperator/operator
-            release_namespace: minio-operator
-            create_namespace: true
-            wait: true
-            timeout: 5m
-            kubeconfig: "{{ kubeconfig_path }}"
-            set_values:
-              - value: operatorImage=quay.io/minio/operator:v5.0.15
-                value_type: string
+          ansible.builtin.command: >
+            kubectl apply -f https://github.com/minio/operator/releases/latest/download/minio-operator.yaml
+          environment:
+            KUBECONFIG: "{{ kubeconfig_path }}"
+          register: minio_operator_result
+          retries: 3
+          delay: 5
+          until: minio_operator_result.rc == 0
+          failed_when: false
+          changed_when: minio_operator_result.rc == 0
 
-        - name: Wait for MinIO Operator to be ready
+        - name: Wait for MinIO Operator deployment to be ready
           kubernetes.core.k8s_info:
             kind: Deployment
             namespace: minio-operator
-            name: minio-operator
             kubeconfig: "{{ kubeconfig_path }}"
-          register: operator_deployment
-          until: operator_deployment.resources[0].status.readyReplicas | default(0) >= 1
+          register: operator_deployments
+          until: >
+            operator_deployments.resources |
+            selectattr('metadata.name', 'match', '.*minio-operator.*') |
+            selectattr('status.readyReplicas', 'defined') |
+            selectattr('status.readyReplicas', 'greaterthan', 0) |
+            list | length > 0
           retries: 30
           delay: 10
