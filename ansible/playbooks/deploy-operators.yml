@@ -83,10 +83,16 @@
           retries: 30
           delay: 10
 
+        - name: Add MinIO Operator Helm repository
+          kubernetes.core.helm_repository:
+            name: minio-operator
+            repo_url: https://operator.min.io/
+          run_once: true
+
         - name: Install MinIO Operator via Helm
           kubernetes.core.helm:
             name: minio-operator
-            chart_ref: https://operator.min.io/operator
+            chart_ref: minio-operator/minio-operator
             release_namespace: minio-operator
             create_namespace: true
             wait: true
