@@ -85,7 +85,7 @@
         
         - name: Install MinIO Operator
           ansible.builtin.command: >
-            kubectl kustomize https://github.com/minio/operator.git/resources?ref=v7.1.1 | kubectl apply -f -
+            kubectl apply --kustomize https://github.com/minio/operator.git/resources?ref=v7.1.1
           environment:
             KUBECONFIG: "{{ kubeconfig_path }}"
           register: minio_operator_install
@@ -94,6 +94,11 @@
           until: minio_operator_install.rc == 0
           failed_when: false
           changed_when: minio_operator_install.rc == 0
+        
+        - name: Debug MinIO Operator install failure
+          ansible.builtin.debug:
+            var: minio_operator_install.stderr
+          when: minio_operator_install is defined and minio_operator_install.rc != 0
 
         - name: Wait for MinIO Operator deployment to be ready
           kubernetes.core.k8s_info:
