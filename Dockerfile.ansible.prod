@@ -42,8 +42,6 @@ ENV DEBIAN_FRONTEND=noninteractive \
     ANSIBLE_FORCE_COLOR=1
 
 # Only runtime dependencies (non-Python)
-# Removed 'curl' and 'jq' from here since they are in the base image's cache, but keep others.
-# If you don't need 'rsync', remove it.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         openssh-client \
