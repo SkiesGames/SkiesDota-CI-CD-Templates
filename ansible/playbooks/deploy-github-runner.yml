@@ -71,5 +71,5 @@
               containerMode:
                 type: dind
               minRunners: 1
-              maxRunners: 2
+              maxRunners: 3
           no_log: true
