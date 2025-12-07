@@ -82,22 +82,26 @@
             list | length > 0
           retries: 30
           delay: 10
-
-        - name: Install MinIO Operator via Kustomization
+        
+        - name: Install MinIO Operator
           ansible.builtin.command: >
-            kubectl kustomize github.com/minio/operator\?ref\=v7.1.1 | kubectl apply -f -
+            kubectl kustomize https://github.com/minio/operator.git/resources?ref=v7.1.1 | kubectl apply -f -
           environment:
             KUBECONFIG: "{{ kubeconfig_path }}"
-          register: minio_operator_result
+          register: minio_operator_install
+          retries: 3
+          delay: 5
+          until: minio_operator_install.rc == 0
           failed_when: false
+          changed_when: minio_operator_install.rc == 0
 
-        - name: Wait for MinIO Operator to be ready
-          kubernetes.core.k8s_info:           
+        - name: Wait for MinIO Operator deployment to be ready
+          kubernetes.core.k8s_info:
             kind: Deployment
             namespace: minio-operator
             name: minio-operator
             kubeconfig: "{{ kubeconfig_path }}"
-          register: operator_deployment
-          until: operator_deployment.resources[0].status.readyReplicas | default(0) >= 1
+          register: minio_deployment
+          until: minio_deployment.resources[0].status.readyReplicas | default(0) >= 1
           retries: 30
           delay: 10
