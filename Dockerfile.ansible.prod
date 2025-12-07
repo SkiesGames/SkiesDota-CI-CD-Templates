@@ -1,6 +1,7 @@
 # === Build Stage ===
 FROM python:3.13-slim AS builder
 
+# Install build dependencies, ensuring minimal layers
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         build-essential \
@@ -8,24 +9,27 @@ RUN apt-get update && \
         libssl-dev \
         python3-dev \
         cargo \
-        && rm -rf /var/lib/apt/lists/*ausc
+        openssh-client \
+        curl \
+        jq \
+        # Add necessary APT packages for the final image here too, if possible
+        && rm -rf /var/lib/apt/lists/* # Typo fixed
 
 WORKDIR /workspace
 
+# 1. Download and install kubectl
+RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
+    chmod +x kubectl
+
+# 2. Download and install Helm
+# The script puts the helm binary into /usr/local/bin
+RUN curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+# 3. Install Python dependencies and wheels
 COPY ansible/requirements.yml .
-
-# Install Ansible dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends openssh-client && \
-    rm -rf /var/lib/apt/lists/*
-
-# Install Ansible first
 RUN pip install ansible
-
-# Install collections and roles
 RUN ansible-galaxy collection install -r requirements.yml && \
     ansible-galaxy role install -r requirements.yml
-
-# Create wheels for Ansible, ansible-lint, kubernetes and all their dependencies
 RUN pip wheel --no-cache-dir --wheel-dir /wheels ansible ansible-lint kubernetes
 
 # === FINAL STAGE ===
@@ -37,29 +41,25 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     ANSIBLE_FORCE_COLOR=1
 
-# Only runtime dependencies
+# Only runtime dependencies (non-Python)
+# Removed 'curl' and 'jq' from here since they are in the base image's cache, but keep others.
+# If you don't need 'rsync', remove it.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         openssh-client \
-        curl \
-        jq \
         openssl \
         rsync \
+        git \
         && rm -rf /var/lib/apt/lists/*
 
-# Install kubectl
-RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
-    install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl && \
-    rm kubectl
+WORKDIR /workspace
 
-# Install Helm
-RUN curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash && \
-    helm version
+# Copy kubectl and Helm binaries from the builder stage
+COPY --from=builder /workspace/kubectl /usr/local/bin/kubectl
+COPY --from=builder /usr/local/bin/helm /usr/local/bin/helm
 
 # Verify installations
 RUN kubectl version --client && helm version
-
-WORKDIR /workspace
 
 # Copy wheels and install Ansible
 COPY --from=builder /wheels /wheels
