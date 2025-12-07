@@ -1,0 +1,108 @@
+---
+- name: Deploy Kubernetes Operators to K3s Cluster
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Run Operator Deployment on Controller
+      run_once: true
+      delegate_to: localhost
+      block:
+        - name: Fetch kubeconfig from primary K3s server using cat
+          ansible.builtin.command: cat /etc/rancher/k3s/k3s.yaml
+          register: kubeconfig_raw
+          delegate_to: "{{ groups['all'][0] }}"
+          become: true
+          changed_when: false
+          vars:
+            ansible_python_interpreter: auto_silent
+
+        - name: Get primary server IP
+          ansible.builtin.set_fact:
+            primary_server_ip: "{{ groups['all'][0] }}"
+
+        - name: Fix kubeconfig (replace 127.0.0.1 with server IP)
+          ansible.builtin.set_fact:
+            kubeconfig_content: "{{ kubeconfig_raw.stdout | regex_replace('127.0.0.1', primary_server_ip) }}"
+
+        - name: Save corrected kubeconfig to local file
+          ansible.builtin.copy:
+            content: "{{ kubeconfig_content }}"
+            dest: /tmp/k3s-config.yaml
+            mode: '0600'
+
+        - name: Set KUBECONFIG_PATH fact
+          ansible.builtin.set_fact:
+            kubeconfig_path: /tmp/k3s-config.yaml
+
+        - name: Install CloudNativePG CRDs (required for PostgreSQL)
+          ansible.builtin.command: >
+            kubectl apply --server-side --force-conflicts -f https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/release-1.24/releases/cnpg-1.24.1.yaml
+          environment:
+            KUBECONFIG: "{{ kubeconfig_path }}"
+          register: cnpg_apply_result
+          retries: 3
+          delay: 5
+          until: cnpg_apply_result.rc == 0
+          failed_when: false
+          changed_when: cnpg_apply_result.rc == 0
+
+        - name: Wait for CloudNativePG operator to be ready
+          kubernetes.core.k8s_info:
+            kind: Deployment
+            namespace: cnpg-system
+            name: cnpg-controller-manager
+            kubeconfig: "{{ kubeconfig_path }}"
+          register: cnpg_deployment
+          until: cnpg_deployment.resources[0].status.readyReplicas | default(0) >= 1
+          retries: 30
+          delay: 10
+
+        - name: Install RabbitMQ Cluster Operator
+          ansible.builtin.command: >
+            kubectl apply -f https://github.com/rabbitmq/cluster-operator/releases/latest/download/cluster-operator.yml
+          environment:
+            KUBECONFIG: "{{ kubeconfig_path }}"
+          register: rabbitmq_operator_result
+          retries: 3
+          delay: 5
+          until: rabbitmq_operator_result.rc == 0
+          failed_when: false
+          changed_when: rabbitmq_operator_result.rc == 0
+
+        - name: Wait for RabbitMQ Operator pod to be ready
+          kubernetes.core.k8s_info:
+            kind: Pod
+            namespace: rabbitmq-system
+            kubeconfig: "{{ kubeconfig_path }}"
+          register: rabbitmq_operator_pods
+          until: >
+            rabbitmq_operator_pods.resources |
+            selectattr('metadata.name', 'match', '.*rabbitmq.*operator.*') |
+            selectattr('status.phase', 'equalto', 'Running') |
+            list | length > 0
+          retries: 30
+          delay: 10
+
+        - name: Install MinIO Operator
+          kubernetes.core.helm:
+            name: minio-operator
+            chart_ref: oci://registry-1.docker.io/miniooperator/operator
+            release_namespace: minio-operator
+            create_namespace: true
+            wait: true
+            timeout: 5m
+            kubeconfig: "{{ kubeconfig_path }}"
+            set_values:
+              - value: operatorImage=quay.io/minio/operator:v5.0.15
+                value_type: string
+
+        - name: Wait for MinIO Operator to be ready
+          kubernetes.core.k8s_info:
+            kind: Deployment
+            namespace: minio-operator
+            name: minio-operator
+            kubeconfig: "{{ kubeconfig_path }}"
+          register: operator_deployment
+          until: operator_deployment.resources[0].status.readyReplicas | default(0) >= 1
+          retries: 30
+          delay: 10
