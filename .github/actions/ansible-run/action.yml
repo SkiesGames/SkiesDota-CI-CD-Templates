@@ -27,6 +27,10 @@ inputs:
     description: 'Additional secrets as JSON object (sensitive)'
     required: false
     default: '{}'
+  base_image_registry:
+    description: 'Base registry URL for the ansible-prod image (optional, uses LOCAL_REGISTRY_ENDPOINT if set)'
+    required: false
+    default: 'ghcr.io/skiesgames/skiesdota-ci-cd-templates'
 
 runs:
   using: composite
@@ -64,9 +68,26 @@ runs:
         [ "$MERGED_JSON" != "{}" ] && while IFS= read -r line; do
           [ -n "$line" ] && DOCKER_ARGS+=(-e "$line")
         done < <(echo "$MERGED_JSON" | jq -r 'to_entries[] | "\(.key)=\(.value)"')
-        
+
+        # Determine image to use - prefer local registry if LOCAL_REGISTRY_ENDPOINT is set
+        if [ -n "$LOCAL_REGISTRY_ENDPOINT" ]; then
+          LOCAL_IMAGE="$LOCAL_REGISTRY_ENDPOINT/ansible-prod:latest"
+          PUBLIC_IMAGE="${{ inputs.base_image_registry }}/ansible-prod:latest"
+
+          # Try local registry first, fall back to public if not available
+          if docker pull "$LOCAL_IMAGE" 2>/dev/null; then
+            IMAGE="$LOCAL_IMAGE"
+            echo "Using cached image from local registry"
+          else
+            IMAGE="$PUBLIC_IMAGE"
+            echo "Local registry image not available, falling back to public registry"
+          fi
+        else
+          IMAGE="${{ inputs.base_image_registry }}/ansible-prod:latest"
+        fi
+
         docker run --rm "${DOCKER_ARGS[@]}" -w /workspace \
-          ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest \
+          "$IMAGE" \
           bash -c "
             # Write SSH key from environment variable to file
             mkdir -p ~/.ssh

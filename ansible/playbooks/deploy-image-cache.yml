@@ -1,5 +1,5 @@
 ---
-- name: Deploy Local Docker Registry for ARC Runner Image Caching
+- name: Deploy Image Cache Infrastructure
   hosts: all
   gather_facts: false
   tasks:
@@ -34,10 +34,9 @@
           ansible.builtin.set_fact:
             kubeconfig_path: /tmp/k3s-config.yaml
 
-        # --- Local Registry Deployment ---
+        # --- Docker Registry Infrastructure ---
         - name: Create image-cache namespace
           kubernetes.core.k8s:
-            state: present
             kubeconfig: "{{ kubeconfig_path }}"
             definition:
               apiVersion: v1
@@ -45,187 +44,153 @@
               metadata:
                 name: image-cache
 
-        - name: Deploy local Docker registry
+        - name: Create PVC for Docker Registry
           kubernetes.core.k8s:
-            state: present
+            kubeconfig: "{{ kubeconfig_path }}"
+            definition:
+              apiVersion: v1
+              kind: PersistentVolumeClaim
+              metadata:
+                name: registry-storage
+                namespace: image-cache
+              spec:
+                accessModes:
+                  - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: 10Gi
+                storageClassName: local-path
+
+        - name: Deploy Docker Registry
+          kubernetes.core.k8s:
             kubeconfig: "{{ kubeconfig_path }}"
             definition:
               apiVersion: apps/v1
               kind: Deployment
               metadata:
-                name: docker-registry
+                name: registry
                 namespace: image-cache
               spec:
                 replicas: 1
                 selector:
                   matchLabels:
-                    app: docker-registry
+                    app: registry
                 template:
                   metadata:
                     labels:
-                      app: docker-registry
+                      app: registry
                   spec:
                     containers:
                     - name: registry
-                      image: registry:2.8
+                      image: registry:2
                       ports:
                       - containerPort: 5000
                       env:
                       - name: REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY
-                        value: /var/lib/registry
-                      - name: REGISTRY_HTTP_ADDR
-                        value: 0.0.0.0:5000
+                        value: "/var/lib/registry"
                       volumeMounts:
                       - name: registry-storage
                         mountPath: /var/lib/registry
+                      resources:
+                        requests:
+                          memory: "256Mi"
+                          cpu: "100m"
+                        limits:
+                          memory: "512Mi"
+                          cpu: "500m"
                     volumes:
-                      - name: registry-storage
-                        hostPath:
-                          path: /opt/registry-storage
-                          type: DirectoryOrCreate
+                    - name: registry-storage
+                      persistentVolumeClaim:
+                        claimName: registry-storage
 
-        - name: Create registry service
+        - name: Create ClusterIP Service for Registry
           kubernetes.core.k8s:
-            state: present
             kubeconfig: "{{ kubeconfig_path }}"
             definition:
               apiVersion: v1
               kind: Service
               metadata:
-                name: docker-registry
+                name: registry
                 namespace: image-cache
               spec:
                 selector:
-                  app: docker-registry
+                  app: registry
                 ports:
                 - port: 5000
                   targetPort: 5000
                 type: ClusterIP
 
-        - name: Wait for registry to be ready
-          kubernetes.core.k8s_info:
-            kind: Pod
-            namespace: image-cache
-            kubeconfig: "{{ kubeconfig_path }}"
-          register: registry_pods
-          until: >
-            registry_pods.resources |
-            selectattr('status.phase', 'equalto', 'Running') |
-            list | length > 0
-          retries: 30
-          delay: 5
+        # --- Docker Config Secret for GHCR Authentication ---
+        - name: Get GitHub credentials from environment
+          ansible.builtin.set_fact:
+            github_username: "{{ lookup('env', 'GITHUB_USERNAME') }}"
+            github_token: "{{ lookup('env', 'GITHUB_TOKEN') }}"
+          no_log: true
 
-        # --- Image Mirroring Job ---
-        - name: Delete existing mirror job if it exists
+        - name: Create Docker config secret for GHCR authentication
           kubernetes.core.k8s:
-            state: absent
             kubeconfig: "{{ kubeconfig_path }}"
             definition:
-              apiVersion: batch/v1
-              kind: Job
+              apiVersion: v1
+              kind: Secret
               metadata:
-                name: mirror-images
+                name: docker-config
                 namespace: image-cache
-          ignore_errors: true
+              type: kubernetes.io/dockerconfigjson
+              data:
+                .dockerconfigjson: "{{ ({'auths': {'ghcr.io': {'username': github_username, 'password': github_token}}}) | to_json | b64encode }}"
+          no_log: true
+          when: github_username is defined and github_token is defined
 
-        - name: Create image mirroring job
+        # --- Image Warmer CronJob ---
+        - name: Deploy Image Warmer CronJob
           kubernetes.core.k8s:
-            state: present
-            kubeconfig: "{{ kubeconfig_path }}"
-            definition:
-              apiVersion: batch/v1
-              kind: Job
-              metadata:
-                name: mirror-images
-                namespace: image-cache
-              spec:
-                template:
-                  spec:
-                    restartPolicy: OnFailure
-                    containers:
-                    - name: mirror
-                      image: alpine:latest
-                      command: ["/bin/sh", "-c"]
-                      args:
-                        - >-
-                          apk add --no-cache podman skopeo;
-                          IMAGES="ansible-prod:ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest";
-                          echo "$IMAGES" | tr ' ' '\n' | while IFS=':' read -r IMAGE_KEY IMAGE; do
-                            LOCAL_IMAGE="localhost:5000/${IMAGE_KEY}:latest";
-                            echo "🔄 Mirroring ${IMAGE} → ${LOCAL_IMAGE}";
-                            skopeo copy "docker://${IMAGE}" "docker://${LOCAL_IMAGE}";
-                            echo "✅ Successfully mirrored ${IMAGE_KEY}";
-                          done;
-                          echo "🎉 All images mirrored to local registry!"
-                backoffLimit: 3
-
-        - name: Wait for mirroring job to complete
-          kubernetes.core.k8s_info:
-            kind: Job
-            namespace: image-cache
-            name: mirror-images
-            kubeconfig: "{{ kubeconfig_path }}"
-          register: mirror_job
-          until: >
-            mirror_job.resources[0].status.succeeded | default(0) >= 1 or
-            mirror_job.resources[0].status.failed | default(0) >= 1
-          retries: 60
-          delay: 10
-
-        # --- Automated Update CronJob ---
-        - name: Create CronJob for automated image updates
-          kubernetes.core.k8s:
-            state: present
             kubeconfig: "{{ kubeconfig_path }}"
             definition:
               apiVersion: batch/v1
               kind: CronJob
               metadata:
-                name: registry-updater
+                name: image-warmer
                 namespace: image-cache
               spec:
-                schedule: "*/1 * * * *"  # Every minute
+                schedule: "*/1 * * * *"  # Every 1 minute
                 jobTemplate:
                   spec:
                     template:
                       spec:
-                        restartPolicy: OnFailure
                         containers:
-                        - name: update-registry
-                          image: alpine:latest
-                          command: ["/bin/sh", "-c"]
-                          args:
-                            - >-
-                              set -e;
-                              apk add --no-cache podman skopeo;
-                              IMAGES="ansible-prod:ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest";
-                              echo "$IMAGES" | tr ' ' '\n' | while IFS=':' read -r IMAGE_KEY IMAGE; do
-                                LOCAL_IMAGE="localhost:5000/${IMAGE_KEY}:latest";
-                                REMOTE_DIGEST=$(skopeo inspect "docker://${IMAGE}" --format "{{.Digest}}" 2>/dev/null || echo "");
-                                LOCAL_DIGEST=$(skopeo inspect "docker://${LOCAL_IMAGE}" --format "{{.Digest}}" 2>/dev/null || echo "");
-                                if [ "$REMOTE_DIGEST" != "$LOCAL_DIGEST" ]; then
-                                  echo "🔄 [$IMAGE_KEY] Image updated, copying to registry...";
-                                  skopeo copy "docker://${IMAGE}" "docker://${LOCAL_IMAGE}";
-                                  echo "✅ Updated ${IMAGE_KEY} in local registry";
-                                else
-                                  echo "✅ [$IMAGE_KEY] Already up to date";
-                                fi;
-                              done
-                successfulJobsHistoryLimit: 3
-                failedJobsHistoryLimit: 1
+                        - name: warmer
+                          image: quay.io/skopeo/stable:latest
+                          command:
+                          - /bin/sh
+                          - -c
+                          - |
+                            set -e
+                            # Sync the ansible-prod image from GHCR to local registry
+                            skopeo copy --dest-tls-verify=false \
+                              docker://ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest \
+                              docker://registry.image-cache.svc.cluster.local:5000/ansible-prod:latest
 
-
-        - name: Display registry information
-          ansible.builtin.debug:
-            msg: |
-              🚀 Local registry deployed successfully!
-
-              📡 Your images are now available at:
-              - ansible-prod: localhost:5000/ansible-prod:latest
-
-              💡 ARC runners with dind mode will automatically use this fast local registry!
-
-              🆕 To add more images:
-              1. Add them to the IMAGES array in this playbook
-              2. Redeploy: ansible-playbook -i inventory.ini deploy-image-cache.yml
-              3. They'll be available as localhost:5000/your-image-key:latest
+                            # Also sync the :latest tag
+                            skopeo copy --dest-tls-verify=false \
+                              docker://ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest \
+                              docker://registry.image-cache.svc.cluster.local:5000/ansible-prod:latest
+                          volumeMounts:
+                          - name: docker-config
+                            mountPath: /root/.docker/
+                            readOnly: true
+                          resources:
+                            requests:
+                              memory: "256Mi"
+                              cpu: "100m"
+                            limits:
+                              memory: "512Mi"
+                              cpu: "500m"
+                        volumes:
+                        - name: docker-config
+                          secret:
+                            secretName: docker-config
+                            items:
+                            - key: .dockerconfigjson
+                              path: config.json
+                        restartPolicy: OnFailure

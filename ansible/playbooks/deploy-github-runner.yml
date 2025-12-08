@@ -34,6 +34,22 @@
           ansible.builtin.set_fact:
             kubeconfig_path: /tmp/k3s-config.yaml
 
+        # --- Docker Daemon Configuration ---
+        - name: Create ConfigMap for Docker daemon configuration
+          kubernetes.core.k8s:
+            kubeconfig: "{{ kubeconfig_path }}"
+            definition:
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: docker-daemon-config
+                namespace: arc-runners
+              data:
+                daemon.json: |
+                  {
+                    "insecure-registries": ["registry.image-cache.svc.cluster.local:5000"]
+                  }
+
         # --- Runner Scale Set Deployment ---
         - name: Get organization name and GitHub App credentials from environment
           ansible.builtin.set_fact:
@@ -78,7 +94,20 @@
                   containers:
                   - name: runner
                     imagePullPolicy: IfNotPresent
+                    env:
+                    - name: LOCAL_REGISTRY_ENDPOINT
+                      value: "registry.image-cache.svc.cluster.local:5000"
+                  - name: dind
+                    imagePullPolicy: IfNotPresent
+                    volumeMounts:
+                    - name: daemon-config
+                      mountPath: /etc/docker/daemon.json
+                      subPath: daemon.json
                   initContainers:
                   - name: init-runner
                     imagePullPolicy: IfNotPresent
+                  volumes:
+                  - name: daemon-config
+                    configMap:
+                      name: docker-daemon-config
           no_log: true
