@@ -185,12 +185,8 @@ kubectl delete namespace image-cache
 To cache more images, edit the `deploy-image-cache.yml` playbook:
 
 ```yaml
-# Add more images to the IMAGES array in both the mirroring job and update CronJob:
-declare -A IMAGES=(
-  ["ansible-prod"]="ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest"
-  ["my-other-image"]="ghcr.io/myorg/myrepo:latest"
-  ["ubuntu-base"]="ubuntu:20.04"
-)
+# Add more images to the IMAGES variable (space-separated, colon-delimited):
+IMAGES="ansible-prod:ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest my-other-image:ghcr.io/myorg/myrepo:latest ubuntu-base:ubuntu:20.04"
 ```
 
 Then redeploy:

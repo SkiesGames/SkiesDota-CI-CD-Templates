@@ -144,22 +144,19 @@
                     restartPolicy: OnFailure
                     containers:
                     - name: mirror
-                      image: docker:24-dind
+                      image: alpine:latest
                       command:
-                      - /bin/bash
+                      - /bin/sh
                       - -c
                       - |
-                        # Define images to mirror to local registry
-                        declare -A IMAGES=(
-                          ["ansible-prod"]="ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest"
-                          # Add more images here - they will be available as:
-                          # localhost:5000/image-key:latest
-                          # ["my-other-image"]="ghcr.io/myorg/myrepo:latest"
-                          # ["ubuntu-base"]="ubuntu:20.04"
-                        )
+                        # Install docker CLI in Alpine
+                        apk add --no-cache docker-cli
 
-                        for IMAGE_KEY in "${!IMAGES[@]}"; do
-                          IMAGE="${IMAGES[$IMAGE_KEY]}"
+                        # Define images to mirror to local registry (sh-compatible)
+                        IMAGES="ansible-prod:ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest"
+                        # Add more: "key1:value1 key2:value2"
+
+                        echo "$IMAGES" | tr ' ' '\n' | while IFS=':' read -r IMAGE_KEY IMAGE; do
                           LOCAL_IMAGE="localhost:5000/${IMAGE_KEY}:latest"
 
                           echo "🔄 Mirroring ${IMAGE} → ${LOCAL_IMAGE}"
@@ -212,21 +209,20 @@
                         restartPolicy: OnFailure
                         containers:
                         - name: update-registry
-                          image: docker:24-dind
+                          image: alpine:latest
                           command:
-                          - /bin/bash
+                          - /bin/sh
                           - -c
                           - |
                             set -e
-                            # Define images to keep updated in local registry
-                            declare -A IMAGES=(
-                              ["ansible-prod"]="ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest"
-                              # Add more images here:
-                              # ["my-other-image"]="ghcr.io/myorg/myrepo:latest"
-                            )
+                            # Install docker CLI in Alpine
+                            apk add --no-cache docker-cli
 
-                            for IMAGE_KEY in "${!IMAGES[@]}"; do
-                              IMAGE="${IMAGES[$IMAGE_KEY]}"
+                            # Define images to keep updated in local registry (sh-compatible)
+                            IMAGES="ansible-prod:ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest"
+                            # Add more: "key1:value1 key2:value2"
+
+                            echo "$IMAGES" | tr ' ' '\n' | while IFS=':' read -r IMAGE_KEY IMAGE; do
                               LOCAL_IMAGE="localhost:5000/${IMAGE_KEY}:latest"
 
                               # Get remote digest (this pulls the image)
