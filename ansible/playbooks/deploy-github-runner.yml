@@ -34,22 +34,6 @@
           ansible.builtin.set_fact:
             kubeconfig_path: /tmp/k3s-config.yaml
 
-        # --- Docker Daemon Configuration ---
-        - name: Create ConfigMap for Docker daemon configuration
-          kubernetes.core.k8s:
-            kubeconfig: "{{ kubeconfig_path }}"
-            definition:
-              apiVersion: v1
-              kind: ConfigMap
-              metadata:
-                name: docker-daemon-config
-                namespace: arc-runners
-              data:
-                daemon.json: |
-                  {
-                    "insecure-registries": ["registry.image-cache.svc.cluster.local:5000"]
-                  }
-
         # --- Runner Scale Set Deployment ---
         - name: Get organization name and GitHub App credentials from environment
           ansible.builtin.set_fact:
@@ -85,19 +69,11 @@
                 github_app_installation_id: "{{ github_app_installation_id }}"
                 github_app_private_key: "{{ github_app_private_key }}"
               containerMode:
-                type: kubernetes
+                type: dind
               minRunners: 1
               maxRunners: 3
               template:
                 spec:
-                  volumes:
-                    - name: docker-socket
-                      emptyDir: {}
-                    - name: work
-                      emptyDir: {}
-                    - name: daemon-config
-                      configMap:
-                        name: docker-daemon-config
                   containers:
                     - name: runner
                       env:
@@ -105,24 +81,8 @@
                           value: unix:///var/run/docker.sock
                         - name: LOCAL_REGISTRY_ENDPOINT
                           value: "registry.image-cache.svc.cluster.local:5000"
-                      volumeMounts:
-                        - name: docker-socket
-                          mountPath: /var/run
-                        - name: work
-                          mountPath: /home/runner/_work
                     - name: dind
-                      image: docker:dind
-                      imagePullPolicy: IfNotPresent
+                      image: ghcr.io/skiesgames/custom-arc-dind:latest
                       securityContext:
                         privileged: true
-                      command: ["dockerd", "--host=unix:///var/run/docker.sock", "--group=1001"]
-                      volumeMounts:
-                        - name: docker-socket
-                          mountPath: /var/run
-                        - name: daemon-config
-                          mountPath: /etc/docker/daemon.json
-                          subPath: daemon.json
-                  initContainers:
-                    - name: init-runner
-                      imagePullPolicy: IfNotPresent
           no_log: true
