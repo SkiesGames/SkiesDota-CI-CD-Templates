@@ -92,22 +92,22 @@
               template:
                 spec:
                   containers:
-                  - name: runner
-                    imagePullPolicy: IfNotPresent
-                    env:
-                    - name: LOCAL_REGISTRY_ENDPOINT
-                      value: "registry.image-cache.svc.cluster.local:5000"
-                  - name: dind
-                    imagePullPolicy: IfNotPresent
-                    volumeMounts:
-                    - name: daemon-config
-                      mountPath: /etc/docker/daemon.json
-                      subPath: daemon.json
+                    - name: runner
+                      imagePullPolicy: IfNotPresent
+                      env:
+                        - name: LOCAL_REGISTRY_ENDPOINT
+                          value: "registry.image-cache.svc.cluster.local:5000"
+                    - name: dind
+                      imagePullPolicy: IfNotPresent
+                      volumeMounts:
+                        - name: daemon-config
+                          mountPath: /etc/docker/daemon.json
+                          subPath: daemon.json
                   initContainers:
-                  - name: init-runner
-                    imagePullPolicy: IfNotPresent
+                    - name: init-runner
+                      imagePullPolicy: IfNotPresent
                   volumes:
-                  - name: daemon-config
-                    configMap:
-                      name: docker-daemon-config
+                    - name: daemon-config
+                      configMap:
+                        name: docker-daemon-config
           no_log: true
