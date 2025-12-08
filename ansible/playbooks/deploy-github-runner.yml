@@ -72,4 +72,13 @@
                 type: dind
               minRunners: 1
               maxRunners: 3
+              # Add image pull policy for better caching
+              template:
+                spec:
+                  containers:
+                  - name: runner
+                    imagePullPolicy: IfNotPresent
+                  initContainers:
+                  - name: init-runner
+                    imagePullPolicy: IfNotPresent
           no_log: true

@@ -1,0 +1,259 @@
+---
+- name: Deploy Local Docker Registry for ARC Runner Image Caching
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Run Deployment on Controller
+      run_once: true
+      delegate_to: localhost
+      block:
+        - name: Fetch kubeconfig from primary K3s server using cat
+          ansible.builtin.command: cat /etc/rancher/k3s/k3s.yaml
+          register: kubeconfig_raw
+          delegate_to: "{{ groups['all'][0] }}"
+          become: true
+          changed_when: false
+          vars:
+            ansible_python_interpreter: auto_silent
+
+        - name: Get primary server IP
+          ansible.builtin.set_fact:
+            primary_server_ip: "{{ groups['all'][0] }}"
+
+        - name: Fix kubeconfig (replace 127.0.0.1 with server IP)
+          ansible.builtin.set_fact:
+            kubeconfig_content: "{{ kubeconfig_raw.stdout | regex_replace('127.0.0.1', primary_server_ip) }}"
+
+        - name: Save corrected kubeconfig to local file
+          ansible.builtin.copy:
+            content: "{{ kubeconfig_content }}"
+            dest: /tmp/k3s-config.yaml
+            mode: '0600'
+
+        - name: Set KUBECONFIG_PATH fact
+          ansible.builtin.set_fact:
+            kubeconfig_path: /tmp/k3s-config.yaml
+
+        # --- Local Registry Deployment ---
+        - name: Create image-cache namespace
+          kubernetes.core.k8s:
+            state: present
+            kubeconfig: "{{ kubeconfig_path }}"
+            definition:
+              apiVersion: v1
+              kind: Namespace
+              metadata:
+                name: image-cache
+
+        - name: Deploy local Docker registry
+          kubernetes.core.k8s:
+            state: present
+            kubeconfig: "{{ kubeconfig_path }}"
+            definition:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: docker-registry
+                namespace: image-cache
+              spec:
+                replicas: 1
+                selector:
+                  matchLabels:
+                    app: docker-registry
+                template:
+                  metadata:
+                    labels:
+                      app: docker-registry
+                  spec:
+                    containers:
+                    - name: registry
+                      image: registry:2.8
+                      ports:
+                      - containerPort: 5000
+                      env:
+                      - name: REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY
+                        value: /var/lib/registry
+                      - name: REGISTRY_HTTP_ADDR
+                        value: 0.0.0.0:5000
+                      volumeMounts:
+                      - name: registry-storage
+                        mountPath: /var/lib/registry
+                    volumes:
+                    - name: registry-storage
+                      hostPath:
+                        path: /opt/registry-storage
+                        type: DirectoryOrCreate
+
+        - name: Create registry service
+          kubernetes.core.k8s:
+            state: present
+            kubeconfig: "{{ kubeconfig_path }}"
+            definition:
+              apiVersion: v1
+              kind: Service
+              metadata:
+                name: docker-registry
+                namespace: image-cache
+              spec:
+                selector:
+                  app: docker-registry
+                ports:
+                - port: 5000
+                  targetPort: 5000
+                type: ClusterIP
+
+        - name: Wait for registry to be ready
+          kubernetes.core.k8s_info:
+            kind: Pod
+            namespace: image-cache
+            kubeconfig: "{{ kubeconfig_path }}"
+          register: registry_pods
+          until: >
+            registry_pods.resources |
+            selectattr('status.phase', 'equalto', 'Running') |
+            list | length > 0
+          retries: 30
+          delay: 5
+
+        # --- Image Mirroring Job ---
+        - name: Create image mirroring job
+          kubernetes.core.k8s:
+            state: present
+            kubeconfig: "{{ kubeconfig_path }}"
+            definition:
+              apiVersion: batch/v1
+              kind: Job
+              metadata:
+                name: mirror-images
+                namespace: image-cache
+              spec:
+                template:
+                  spec:
+                    restartPolicy: OnFailure
+                    containers:
+                    - name: mirror
+                      image: docker:24-cli
+                      command:
+                      - /bin/sh
+                      - -c
+                      - |
+                        # Define images to mirror to local registry
+                        declare -A IMAGES=(
+                          ["ansible-prod"]="ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest"
+                          # Add more images here - they will be available as:
+                          # localhost:5000/image-key:latest
+                          # ["my-other-image"]="ghcr.io/myorg/myrepo:latest"
+                          # ["ubuntu-base"]="ubuntu:20.04"
+                        )
+
+                        for IMAGE_KEY in "${!IMAGES[@]}"; do
+                          IMAGE="${IMAGES[$IMAGE_KEY]}"
+                          LOCAL_IMAGE="localhost:5000/${IMAGE_KEY}:latest"
+
+                          echo "🔄 Mirroring ${IMAGE} → ${LOCAL_IMAGE}"
+                          docker pull "$IMAGE"
+                          docker tag "$IMAGE" "$LOCAL_IMAGE"
+                          docker push "$LOCAL_IMAGE"
+                          echo "✅ Successfully mirrored ${IMAGE_KEY}"
+                        done
+
+                        echo "🎉 All images mirrored to local registry!"
+                      volumeMounts:
+                      - name: docker-socket
+                        mountPath: /var/run/docker.sock
+                    volumes:
+                    - name: docker-socket
+                      hostPath:
+                        path: /var/run/docker.sock
+                backoffLimit: 3
+
+        - name: Wait for mirroring job to complete
+          kubernetes.core.k8s_info:
+            kind: Job
+            namespace: image-cache
+            name: mirror-images
+            kubeconfig: "{{ kubeconfig_path }}"
+          register: mirror_job
+          until: >
+            mirror_job.resources[0].status.succeeded | default(0) >= 1 or
+            mirror_job.resources[0].status.failed | default(0) >= 1
+          retries: 60
+          delay: 10
+
+        # --- Automated Update CronJob ---
+        - name: Create CronJob for automated image updates
+          kubernetes.core.k8s:
+            state: present
+            kubeconfig: "{{ kubeconfig_path }}"
+            definition:
+              apiVersion: batch/v1
+              kind: CronJob
+              metadata:
+                name: registry-updater
+                namespace: image-cache
+              spec:
+                schedule: "*/1 * * * *"  # Every minute
+                jobTemplate:
+                  spec:
+                    template:
+                      spec:
+                        restartPolicy: OnFailure
+                        containers:
+                        - name: update-registry
+                          image: docker:24-cli
+                          command:
+                          - /bin/sh
+                          - -c
+                          - |
+                            set -e
+                            # Define images to keep updated in local registry
+                            declare -A IMAGES=(
+                              ["ansible-prod"]="ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest"
+                              # Add more images here:
+                              # ["my-other-image"]="ghcr.io/myorg/myrepo:latest"
+                            )
+
+                            for IMAGE_KEY in "${!IMAGES[@]}"; do
+                              IMAGE="${IMAGES[$IMAGE_KEY]}"
+                              LOCAL_IMAGE="localhost:5000/${IMAGE_KEY}:latest"
+
+                              # Get remote digest (this pulls the image)
+                              REMOTE_DIGEST=$(docker pull "$IMAGE" --quiet | grep -o 'Digest: sha256:[a-f0-9]*' | cut -d: -f2- || echo "")
+
+                              # Get local digest (if exists)
+                              LOCAL_DIGEST=$(docker pull "$LOCAL_IMAGE" --quiet 2>/dev/null | grep -o 'Digest: sha256:[a-f0-9]*' | cut -d: -f2- || echo "")
+
+                              if [ "$REMOTE_DIGEST" != "$LOCAL_DIGEST" ]; then
+                                echo "🔄 [$IMAGE_KEY] Image updated, pushing to registry..."
+                                docker tag "$IMAGE" "$LOCAL_IMAGE"
+                                docker push "$LOCAL_IMAGE"
+                                echo "✅ Updated ${IMAGE_KEY} in local registry"
+                              else
+                                echo "✅ [$IMAGE_KEY] Already up to date"
+                              fi
+                            done
+                          volumeMounts:
+                          - name: docker-socket
+                            mountPath: /var/run/docker.sock
+                        volumes:
+                        - name: docker-socket
+                          hostPath:
+                            path: /var/run/docker.sock
+                successfulJobsHistoryLimit: 3
+                failedJobsHistoryLimit: 1
+
+
+        - name: Display registry information
+          ansible.builtin.debug:
+            msg: |
+              🚀 Local registry deployed successfully!
+
+              📡 Your images are now available at:
+              - ansible-prod: localhost:5000/ansible-prod:latest
+
+              💡 ARC runners with dind mode will automatically use this fast local registry!
+
+              🆕 To add more images:
+              1. Add them to the IMAGES array in this playbook
+              2. Redeploy: ansible-playbook -i inventory.ini deploy-image-cache.yml
+              3. They'll be available as localhost:5000/your-image-key:latest
