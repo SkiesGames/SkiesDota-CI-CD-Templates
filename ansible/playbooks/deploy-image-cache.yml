@@ -79,10 +79,10 @@
                       - name: registry-storage
                         mountPath: /var/lib/registry
                     volumes:
-                    - name: registry-storage
-                      hostPath:
-                        path: /opt/registry-storage
-                        type: DirectoryOrCreate
+                      - name: registry-storage
+                        hostPath:
+                          path: /opt/registry-storage
+                          type: DirectoryOrCreate
 
         - name: Create registry service
           kubernetes.core.k8s:
