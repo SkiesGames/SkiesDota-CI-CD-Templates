@@ -116,6 +116,18 @@
           delay: 5
 
         # --- Image Mirroring Job ---
+        - name: Delete existing mirror job if it exists
+          kubernetes.core.k8s:
+            state: absent
+            kubeconfig: "{{ kubeconfig_path }}"
+            definition:
+              apiVersion: batch/v1
+              kind: Job
+              metadata:
+                name: mirror-images
+                namespace: image-cache
+          ignore_errors: true
+
         - name: Create image mirroring job
           kubernetes.core.k8s:
             state: present
