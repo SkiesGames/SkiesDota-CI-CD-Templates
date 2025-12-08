@@ -86,7 +86,7 @@
                 github_app_private_key: "{{ github_app_private_key }}"
               containerMode:
                 type: dind
-              minRunners: 1
+              minRunners: 2
               maxRunners: 3
               # Add image pull policy for better caching
               template:
