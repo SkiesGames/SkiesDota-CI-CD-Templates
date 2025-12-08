@@ -134,7 +134,7 @@
                     - name: mirror
                       image: docker:24-cli
                       command:
-                      - /bin/sh
+                      - /bin/bash
                       - -c
                       - |
                         # Define images to mirror to local registry
@@ -202,7 +202,7 @@
                         - name: update-registry
                           image: docker:24-cli
                           command:
-                          - /bin/sh
+                          - /bin/bash
                           - -c
                           - |
                             set -e
