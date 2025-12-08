@@ -149,8 +149,8 @@
                       - /bin/sh
                       - -c
                       - |
-                        # Install docker CLI in Alpine
-                        apk add --no-cache docker-cli
+                        # Install podman and skopeo for daemonless container operations
+                        apk add --no-cache podman skopeo
 
                         # Define images to mirror to local registry (sh-compatible)
                         IMAGES="ansible-prod:ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest"
@@ -160,20 +160,12 @@
                           LOCAL_IMAGE="localhost:5000/${IMAGE_KEY}:latest"
 
                           echo "🔄 Mirroring ${IMAGE} → ${LOCAL_IMAGE}"
-                          docker pull "$IMAGE"
-                          docker tag "$IMAGE" "$LOCAL_IMAGE"
-                          docker push "$LOCAL_IMAGE"
+                          # Use skopeo to copy images without daemon
+                          skopeo copy "docker://${IMAGE}" "docker://${LOCAL_IMAGE}"
                           echo "✅ Successfully mirrored ${IMAGE_KEY}"
                         done
 
                         echo "🎉 All images mirrored to local registry!"
-                      volumeMounts:
-                      - name: docker-socket
-                        mountPath: /var/run/docker.sock
-                    volumes:
-                    - name: docker-socket
-                      hostPath:
-                        path: /var/run/docker.sock
                 backoffLimit: 3
 
         - name: Wait for mirroring job to complete
@@ -215,8 +207,8 @@
                           - -c
                           - |
                             set -e
-                            # Install docker CLI in Alpine
-                            apk add --no-cache docker-cli
+                            # Install podman and skopeo for daemonless container operations
+                            apk add --no-cache podman skopeo
 
                             # Define images to keep updated in local registry (sh-compatible)
                             IMAGES="ansible-prod:ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest"
@@ -225,28 +217,20 @@
                             echo "$IMAGES" | tr ' ' '\n' | while IFS=':' read -r IMAGE_KEY IMAGE; do
                               LOCAL_IMAGE="localhost:5000/${IMAGE_KEY}:latest"
 
-                              # Get remote digest (this pulls the image)
-                              REMOTE_DIGEST=$(docker pull "$IMAGE" --quiet | grep -o 'Digest: sha256:[a-f0-9]*' | cut -d: -f2- || echo "")
+                              # Get remote digest using skopeo inspect
+                              REMOTE_DIGEST=$(skopeo inspect "docker://${IMAGE}" --format "{{.Digest}}" 2>/dev/null || echo "")
 
-                              # Get local digest (if exists)
-                              LOCAL_DIGEST=$(docker pull "$LOCAL_IMAGE" --quiet 2>/dev/null | grep -o 'Digest: sha256:[a-f0-9]*' | cut -d: -f2- || echo "")
+                              # Get local digest using skopeo inspect
+                              LOCAL_DIGEST=$(skopeo inspect "docker://${LOCAL_IMAGE}" --format "{{.Digest}}" 2>/dev/null || echo "")
 
                               if [ "$REMOTE_DIGEST" != "$LOCAL_DIGEST" ]; then
-                                echo "🔄 [$IMAGE_KEY] Image updated, pushing to registry..."
-                                docker tag "$IMAGE" "$LOCAL_IMAGE"
-                                docker push "$LOCAL_IMAGE"
+                                echo "🔄 [$IMAGE_KEY] Image updated, copying to registry..."
+                                skopeo copy "docker://${IMAGE}" "docker://${LOCAL_IMAGE}"
                                 echo "✅ Updated ${IMAGE_KEY} in local registry"
                               else
                                 echo "✅ [$IMAGE_KEY] Already up to date"
                               fi
                             done
-                          volumeMounts:
-                          - name: docker-socket
-                            mountPath: /var/run/docker.sock
-                        volumes:
-                        - name: docker-socket
-                          hostPath:
-                            path: /var/run/docker.sock
                 successfulJobsHistoryLimit: 3
                 failedJobsHistoryLimit: 1
 
