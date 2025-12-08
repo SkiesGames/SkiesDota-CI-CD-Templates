@@ -145,27 +145,26 @@
                     containers:
                     - name: mirror
                       image: alpine:latest
-                      command:
-                      - /bin/sh
-                      - -c
-                      - |
-                        # Install podman and skopeo for daemonless container operations
-                        apk add --no-cache podman skopeo
+                      command: ["/bin/sh", "-c"]
+                      args:
+                        - |
+                          # Install podman and skopeo for daemonless container operations
+                          apk add --no-cache podman skopeo
 
-                        # Define images to mirror to local registry (sh-compatible)
-                        IMAGES="ansible-prod:ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest"
-                        # Add more: "key1:value1 key2:value2"
+                          # Define images to mirror to local registry (sh-compatible)
+                          IMAGES="ansible-prod:ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest"
+                          # Add more: "key1:value1 key2:value2"
 
-                        echo "$IMAGES" | tr ' ' '\n' | while IFS=':' read -r IMAGE_KEY IMAGE; do
-                          LOCAL_IMAGE="localhost:5000/${IMAGE_KEY}:latest"
+                          echo "$IMAGES" | tr ' ' '\n' | while IFS=':' read -r IMAGE_KEY IMAGE; do
+                            LOCAL_IMAGE="localhost:5000/${IMAGE_KEY}:latest"
 
-                          echo "🔄 Mirroring ${IMAGE} → ${LOCAL_IMAGE}"
-                          # Use skopeo to copy images without daemon
-                          skopeo copy "docker://${IMAGE}" "docker://${LOCAL_IMAGE}"
-                          echo "✅ Successfully mirrored ${IMAGE_KEY}"
-                        done
+                            echo "🔄 Mirroring ${IMAGE} → ${LOCAL_IMAGE}"
+                            # Use skopeo to copy images without daemon
+                            skopeo copy "docker://${IMAGE}" "docker://${LOCAL_IMAGE}"
+                            echo "✅ Successfully mirrored ${IMAGE_KEY}"
+                          done
 
-                        echo "🎉 All images mirrored to local registry!"
+                          echo "🎉 All images mirrored to local registry!"
                 backoffLimit: 3
 
         - name: Wait for mirroring job to complete
@@ -202,35 +201,34 @@
                         containers:
                         - name: update-registry
                           image: alpine:latest
-                          command:
-                          - /bin/sh
-                          - -c
-                          - |
-                            set -e
-                            # Install podman and skopeo for daemonless container operations
-                            apk add --no-cache podman skopeo
+                          command: ["/bin/sh", "-c"]
+                          args:
+                            - |
+                              set -e
+                              # Install podman and skopeo for daemonless container operations
+                              apk add --no-cache podman skopeo
 
-                            # Define images to keep updated in local registry (sh-compatible)
-                            IMAGES="ansible-prod:ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest"
-                            # Add more: "key1:value1 key2:value2"
+                              # Define images to keep updated in local registry (sh-compatible)
+                              IMAGES="ansible-prod:ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod:latest"
+                              # Add more: "key1:value1 key2:value2"
 
-                            echo "$IMAGES" | tr ' ' '\n' | while IFS=':' read -r IMAGE_KEY IMAGE; do
-                              LOCAL_IMAGE="localhost:5000/${IMAGE_KEY}:latest"
+                              echo "$IMAGES" | tr ' ' '\n' | while IFS=':' read -r IMAGE_KEY IMAGE; do
+                                LOCAL_IMAGE="localhost:5000/${IMAGE_KEY}:latest"
 
-                              # Get remote digest using skopeo inspect
-                              REMOTE_DIGEST=$(skopeo inspect "docker://${IMAGE}" --format "{{.Digest}}" 2>/dev/null || echo "")
+                                # Get remote digest using skopeo inspect
+                                REMOTE_DIGEST=$(skopeo inspect "docker://${IMAGE}" --format "{{.Digest}}" 2>/dev/null || echo "")
 
-                              # Get local digest using skopeo inspect
-                              LOCAL_DIGEST=$(skopeo inspect "docker://${LOCAL_IMAGE}" --format "{{.Digest}}" 2>/dev/null || echo "")
+                                # Get local digest using skopeo inspect
+                                LOCAL_DIGEST=$(skopeo inspect "docker://${LOCAL_IMAGE}" --format "{{.Digest}}" 2>/dev/null || echo "")
 
-                              if [ "$REMOTE_DIGEST" != "$LOCAL_DIGEST" ]; then
-                                echo "🔄 [$IMAGE_KEY] Image updated, copying to registry..."
-                                skopeo copy "docker://${IMAGE}" "docker://${LOCAL_IMAGE}"
-                                echo "✅ Updated ${IMAGE_KEY} in local registry"
-                              else
-                                echo "✅ [$IMAGE_KEY] Already up to date"
-                              fi
-                            done
+                                if [ "$REMOTE_DIGEST" != "$LOCAL_DIGEST" ]; then
+                                  echo "🔄 [$IMAGE_KEY] Image updated, copying to registry..."
+                                  skopeo copy "docker://${IMAGE}" "docker://${LOCAL_IMAGE}"
+                                  echo "✅ Updated ${IMAGE_KEY} in local registry"
+                                else
+                                  echo "✅ [$IMAGE_KEY] Already up to date"
+                                fi
+                              done
                 successfulJobsHistoryLimit: 3
                 failedJobsHistoryLimit: 1
 
