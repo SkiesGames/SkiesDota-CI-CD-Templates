@@ -63,41 +63,37 @@
             timeout: 5m
             kubeconfig: "{{ kubeconfig_path }}"
             values:
-              githubConfigUrl: "https://github.com/{{ runner_organization }}"
-              githubConfigSecret:
-                github_app_id: "{{ github_app_id }}"
-                github_app_installation_id: "{{ github_app_installation_id }}"
-                github_app_private_key: "{{ github_app_private_key }}"
-              minRunners: 1
-              maxRunners: 3
-              containerMode:
-                type: kubernetes
-              template:
-                spec:
-                  volumes:
-                    - name: docker-sock
-                      emptyDir: {}
-                    - name: work-dir
-                      emptyDir: {}
-                  containers:
-                    - name: runner
-                      image: ghcr.io/actions/actions-runner:latest
-                      env:
-                        - name: DOCKER_HOST
-                          value: unix:///var/run/docker.sock
-                      volumeMounts:
-                        - name: docker-sock
-                          mountPath: /var/run
-                        - name: work-dir
-                          mountPath: /home/runner/_work               
-                    - name: docker-daemon
-                      image: ghcr.io/skiesgames/custom-arc-dind:latest
-                      securityContext:
-                        privileged: true
-                      command: ["dockerd", "--host=unix:///var/run/docker.sock", "--group=1001"]
-                      volumeMounts:
-                        - name: docker-sock
-                          mountPath: /var/run
-                        - name: work-dir
-                          mountPath: /home/runner/_work
+            githubConfigUrl: "https://github.com/{{ runner_organization }}"
+            githubConfigSecret:
+              github_app_id: "{{ github_app_id }}"
+              github_app_installation_id: "{{ github_app_installation_id }}"
+              github_app_private_key: "{{ github_app_private_key }}"
+            minRunners: 1
+            maxRunners: 3
+            containerMode:
+              type: kubernetes
+            template:
+              spec:
+                volumes:
+                  - name: docker-sock
+                    emptyDir: {}
+                containers:
+                  - name: runner
+                    image: ghcr.io/actions/actions-runner:latest
+                    env:
+                      - name: DOCKER_HOST
+                        value: unix:///var/run/docker.sock
+                    volumeMounts:
+                      - name: docker-sock
+                        mountPath: /var/run
+                  - name: docker-daemon
+                    image: ghcr.io/skiesgames/custom-arc-dind:latest
+                    securityContext:
+                      privileged: true
+                    command: ["dockerd", "--host=unix:///var/run/docker.sock", "--group=1001"]
+                    volumeMounts:
+                      - name: docker-sock
+                        mountPath: /var/run
+                      - name: work
+                        mountPath: /home/runner/_work
           no_log: true
