@@ -79,28 +79,32 @@
                       emptyDir: {}
                     - name: work
                       emptyDir: {}
+                    # 👇 THE MAGIC: Persist Docker cache on the Host Node
                     - name: dind-storage
-                      emptyDir: {}
+                      hostPath:
+                        path: /opt/arc-runner-cache
+                        type: DirectoryOrCreate
                   containers:
                     - name: runner
                       image: ghcr.io/actions/actions-runner:latest
                       command: ["/home/runner/run.sh"]
                       env:
                         - name: DOCKER_HOST
-                          value: unix:///var/run/docker.sock           
+                          value: unix:///var/run/docker.sock
                         - name: ACTIONS_RUNNER_REQUIRE_JOB_CONTAINER
-                          value: "false"            
+                          value: "false"
                         - name: ACTIONS_RUNNER_CONTAINER_HOOKS
-                          value: ""        
-                        - name: LOCAL_REGISTRY_ENDPOINT
-                          value: "registry.image-cache.svc.cluster.local:5000"
+                          value: ""
                       volumeMounts:
                         - name: docker-sock
                           mountPath: /var/run
+                        # Work dir is auto-mounted by ARC
                     - name: docker-daemon
+                      # Standard dind is fine now, or use your custom one if you still want it
                       image: ghcr.io/skiesgames/custom-arc-dind:latest
                       securityContext:
                         privileged: true
+                      # Optimized command: 1400 MTU + using the persistent storage
                       command: ["dockerd", "--host=unix:///var/run/docker.sock", "--group=1001", "--mtu=1400"]
                       volumeMounts:
                         - name: docker-sock
@@ -109,3 +113,4 @@
                           mountPath: /home/runner/_work
                         - name: dind-storage
                           mountPath: /var/lib/docker
+          no_log: true

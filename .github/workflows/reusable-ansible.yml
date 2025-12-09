@@ -34,38 +34,6 @@ on:
         required: false
 
 jobs:
-  speed-test:
-    runs-on: arc-runner-set
-    container:
-      image: alpine:latest  # Run directly in a lightweight container, no dind overhead
-    steps:
-      - name: Install Tools
-        run: apk add --no-cache curl jq
-
-      - name: 1. Resolve Registry IP
-        run: |
-          echo "Resolving registry.image-cache.svc.cluster.local..."
-          nslookup registry.image-cache.svc.cluster.local
-
-      - name: 2. Get Image Manifest
-        run: |
-          echo "Fetching Manifest..."
-          # Get the manifest to find a large layer (blob) digest
-          curl -v -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
-            http://registry.image-cache.svc.cluster.local:5000/v2/ansible-prod/manifests/latest > manifest.json
-          
-          # Extract the largest layer digest
-          LAYER_DIGEST=$(jq -r '.layers[-1].digest' manifest.json)
-          echo "Largest Layer: $LAYER_DIGEST"
-          echo "LAYER_DIGEST=$LAYER_DIGEST" >> $GITHUB_ENV
-
-      - name: 3. Network Speed Test (Raw Download)
-        run: |
-          echo "Downloading Blob: $LAYER_DIGEST"
-          # Time how long it takes to download the layer to /dev/null (pure network test)
-          time curl -L -o /dev/null \
-            http://registry.image-cache.svc.cluster.local:5000/v2/ansible-prod/blobs/$LAYER_DIGEST
-            
   ansible:
     runs-on: ${{ inputs.runner }}
     steps:
@@ -77,11 +45,6 @@ jobs:
         with:
           repository: SkiesGames/SkiesDota-CI-CD-Templates
           path: templates
-      
-      - name: Check Storage Driver
-        run: |
-          echo "Checking Docker Info..."
-          docker info | grep "Storage Driver"
 
       - name: Run Ansible Operation
         uses: ./templates/.github/actions/ansible-run

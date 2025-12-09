@@ -28,7 +28,7 @@ inputs:
     required: false
     default: '{}'
   base_image_registry:
-    description: 'Base registry URL for the ansible-prod image (optional, uses LOCAL_REGISTRY_ENDPOINT if set)'
+    description: 'Base registry URL for the ansible-prod image'
     required: false
     default: 'ghcr.io/skiesgames/skiesdota-ci-cd-templates'
 
@@ -37,7 +37,7 @@ runs:
   steps:
     - name: Run Ansible Playbooks in Docker
       run: |
-        # Parse and validate JSON inputs
+        # --- 1. Parse and validate JSON inputs ---
         ENV_JSON_RAW='${{ inputs.ansible_extra_env_json }}'
         SECRETS_JSON_RAW='${{ inputs.ansible_extra_secrets_json }}'
         
@@ -51,10 +51,11 @@ runs:
           exit 1
         fi
         
+        # --- 2. Prepare Docker Arguments ---
         MERGED_JSON=$(jq -s '.[0] * .[1]' <(echo "$ENV_JSON") <(echo "$SECRETS_JSON"))
         PLAYBOOK_PATH="$([ "${{ inputs.use_template_playbook }}" = "true" ] && echo "templates/ansible/${{ inputs.playbook }}" || echo "ansible/${{ inputs.playbook }}")"
-        
-        # Build Docker arguments
+        IMAGE="${{ inputs.base_image_registry }}/ansible-prod:latest"
+
         DOCKER_ARGS=(
           -v "$GITHUB_WORKSPACE:/workspace"
           -e "ANSIBLE_HOSTS=${{ inputs.ansible_hosts }}"
@@ -69,29 +70,11 @@ runs:
           [ -n "$line" ] && DOCKER_ARGS+=(-e "$line")
         done < <(echo "$MERGED_JSON" | jq -r 'to_entries[] | "\(.key)=\(.value)"')
 
-        echo "DEBUG: LOCAL_REGISTRY_ENDPOINT is: '$LOCAL_REGISTRY_ENDPOINT'"
-        # Determine image to use - prefer local registry if LOCAL_REGISTRY_ENDPOINT is set
-        if [ -n "$LOCAL_REGISTRY_ENDPOINT" ]; then
-          LOCAL_IMAGE="$LOCAL_REGISTRY_ENDPOINT/ansible-prod:latest"
-          PUBLIC_IMAGE="${{ inputs.base_image_registry }}/ansible-prod:latest"
-
-          echo "DEBUG: Trying to pull from: $LOCAL_IMAGE"
-          # Try local registry first, fall back to public if not available
-          if docker pull "$LOCAL_IMAGE"; then
-            IMAGE="$LOCAL_IMAGE"
-            echo "Using cached image from local registry"
-          else
-            IMAGE="$PUBLIC_IMAGE"
-            echo "Local registry image not available, falling back to public registry"
-          fi
-        else
-          IMAGE="${{ inputs.base_image_registry }}/ansible-prod:latest"
-        fi
-
+        # --- 3. Execute Ansible ---
         docker run --rm "${DOCKER_ARGS[@]}" -w /workspace \
           "$IMAGE" \
           bash -c "
-            # Write SSH key from environment variable to file
+            # Write SSH key
             mkdir -p ~/.ssh
             echo \"\$SSH_PRIVATE_KEY\" > ~/.ssh/id_rsa
             chmod 600 ~/.ssh/id_rsa
@@ -101,6 +84,7 @@ runs:
               exit 1
             fi
             
+            # Run Playbooks
             ansible-playbook templates/ansible/playbooks/generate_inventory.yml
             ansible-playbook -i ansible/inventory.ini $PLAYBOOK_PATH
           "
