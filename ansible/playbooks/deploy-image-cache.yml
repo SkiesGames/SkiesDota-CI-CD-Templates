@@ -93,11 +93,11 @@
                             mountPath: /var/lib/registry
                         resources:
                           requests:
-                            memory: "256Mi"
-                            cpu: "100m"
-                          limits:
                             memory: "512Mi"
                             cpu: "500m"
+                          limits:
+                            memory: "768Mi"
+                            cpu: "1000m"
                     volumes:
                       - name: registry-storage
                         persistentVolumeClaim:
@@ -181,11 +181,11 @@
                                 readOnly: true
                             resources:
                               requests:
+                                memory: "256Mi"
+                                cpu: "100m"
+                              limits:
                                 memory: "512Mi"
                                 cpu: "500m"
-                              limits:
-                                memory: "768Mi"
-                                cpu: "1000m"
                         volumes:
                           - name: docker-config
                             secret:
