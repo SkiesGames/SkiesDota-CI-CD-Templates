@@ -40,17 +40,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Checkout templates repo
-        uses: actions/checkout@v4
-        with:
-          repository: SkiesGames/SkiesDota-CI-CD-Templates
-          path: templates
-          sparse-checkout: |
-            .github/actions/ansible-run/action.yml
-          sparse-checkout-cone-mode: false
-
       - name: Run Ansible Operation
-        uses: ./templates/.github/actions/ansible-run
+        uses: ./.github/actions/ansible-run
         with:
           ansible_hosts: ${{ secrets.ANSIBLE_HOSTS }}
           ansible_user: ${{ secrets.ANSIBLE_USER || 'root' }}
