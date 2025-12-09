@@ -39,6 +39,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      
+      - name: Checkout templates repository
+        uses: actions/checkout@v4
+        with:
+          repository: SkiesGames/SkiesDota-CI-CD-Templates
+          path: templates
 
       - name: Run Ansible Operation
         uses: ./.github/actions/ansible-run
