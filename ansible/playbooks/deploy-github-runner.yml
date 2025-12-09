@@ -79,7 +79,6 @@
                       emptyDir: {}
                     - name: work
                       emptyDir: {}
-                    # 👇 THE MAGIC: Persist Docker cache on the Host Node
                     - name: dind-storage
                       hostPath:
                         path: /opt/arc-runner-cache
@@ -100,12 +99,10 @@
                           mountPath: /var/run
                         # Work dir is auto-mounted by ARC
                     - name: docker-daemon
-                      # Standard dind is fine now, or use your custom one if you still want it
-                      image: ghcr.io/skiesgames/custom-arc-dind:latest
+                      image: docker:dind
                       securityContext:
                         privileged: true
-                      # Optimized command: 1400 MTU + using the persistent storage
-                      command: ["dockerd", "--host=unix:///var/run/docker.sock", "--group=1001", "--mtu=1400"]
+                      command: ["dockerd", "--host=unix:///var/run/docker.sock", "--group=1001"]
                       volumeMounts:
                         - name: docker-sock
                           mountPath: /var/run
