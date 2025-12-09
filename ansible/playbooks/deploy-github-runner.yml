@@ -85,11 +85,13 @@
                       command: ["/home/runner/run.sh"]
                       env:
                         - name: DOCKER_HOST
-                          value: unix:///var/run/docker.sock
+                          value: unix:///var/run/docker.sock           
                         - name: ACTIONS_RUNNER_REQUIRE_JOB_CONTAINER
-                          value: "false"
+                          value: "false"            
                         - name: ACTIONS_RUNNER_CONTAINER_HOOKS
-                          value: ""
+                          value: ""        
+                        - name: LOCAL_REGISTRY_ENDPOINT
+                          value: "registry.image-cache.svc.cluster.local:5000"
                       volumeMounts:
                         - name: docker-sock
                           mountPath: /var/run
