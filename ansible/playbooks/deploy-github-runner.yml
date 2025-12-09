@@ -77,6 +77,8 @@
                   volumes:
                     - name: docker-sock
                       emptyDir: {}
+                    - name: work
+                      emptyDir: {}
                   containers:
                     - name: runner
                       image: ghcr.io/actions/actions-runner:latest
@@ -86,3 +88,13 @@
                       volumeMounts:
                         - name: docker-sock
                           mountPath: /var/run
+                    - name: docker-daemon
+                      image: ghcr.io/skiesgames/custom-arc-dind:latest
+                      securityContext:
+                        privileged: true
+                      command: ["dockerd", "--host=unix:///var/run/docker.sock", "--group=1001"]
+                      volumeMounts:
+                        - name: docker-sock
+                          mountPath: /var/run
+                        - name: work
+                          mountPath: /home/runner/_work
