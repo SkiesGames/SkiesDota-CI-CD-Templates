@@ -74,6 +74,8 @@
                 type: kubernetes
               template:
                 spec:
+                  nodeSelector:
+                    role: ci-runner
                   volumes:
                     - name: docker-sock
                       emptyDir: {}
