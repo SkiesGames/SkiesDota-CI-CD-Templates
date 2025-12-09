@@ -101,7 +101,7 @@
                       image: ghcr.io/skiesgames/custom-arc-dind:latest
                       securityContext:
                         privileged: true
-                      command: ["dockerd", "--host=unix:///var/run/docker.sock", "--group=1001"]
+                      command: ["dockerd", "--host=unix:///var/run/docker.sock", "--group=1001", "--mtu=1400"]
                       volumeMounts:
                         - name: docker-sock
                           mountPath: /var/run
