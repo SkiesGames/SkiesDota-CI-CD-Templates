@@ -89,7 +89,7 @@
                         - name: docker-sock
                           mountPath: /var/run
                         - name: work-dir
-                          mountPath: /home/runner/_work
+                          mountPath: /home/runner/_work               
                     - name: docker-daemon
                       image: ghcr.io/skiesgames/custom-arc-dind:latest
                       securityContext:
