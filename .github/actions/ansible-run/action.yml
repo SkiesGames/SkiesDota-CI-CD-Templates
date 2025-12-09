@@ -69,13 +69,15 @@ runs:
           [ -n "$line" ] && DOCKER_ARGS+=(-e "$line")
         done < <(echo "$MERGED_JSON" | jq -r 'to_entries[] | "\(.key)=\(.value)"')
 
+        echo "DEBUG: LOCAL_REGISTRY_ENDPOINT is: '$LOCAL_REGISTRY_ENDPOINT'"
         # Determine image to use - prefer local registry if LOCAL_REGISTRY_ENDPOINT is set
         if [ -n "$LOCAL_REGISTRY_ENDPOINT" ]; then
           LOCAL_IMAGE="$LOCAL_REGISTRY_ENDPOINT/ansible-prod:latest"
           PUBLIC_IMAGE="${{ inputs.base_image_registry }}/ansible-prod:latest"
 
+          echo "DEBUG: Trying to pull from: $LOCAL_IMAGE"
           # Try local registry first, fall back to public if not available
-          if docker pull "$LOCAL_IMAGE" 2>/dev/null; then
+          if docker pull "$LOCAL_IMAGE"; then
             IMAGE="$LOCAL_IMAGE"
             echo "Using cached image from local registry"
           else
