@@ -45,6 +45,11 @@ jobs:
         with:
           repository: SkiesGames/SkiesDota-CI-CD-Templates
           path: templates
+      
+      - name: Check Storage Driver
+        run: |
+          echo "Checking Docker Info..."
+          docker info | grep "Storage Driver"
 
       - name: Run Ansible Operation
         uses: ./templates/.github/actions/ansible-run
