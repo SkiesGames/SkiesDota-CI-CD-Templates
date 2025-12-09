@@ -40,16 +40,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Checkout templates repo for local actions
+      - name: Checkout templates repo
         uses: actions/checkout@v4
         with:
           repository: SkiesGames/SkiesDota-CI-CD-Templates
           path: templates
-
-      - name: Setup Docker
-        uses: ./templates/.github/actions/setup-docker
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          sparse-checkout: |
+            .github/actions/ansible-run/action.yml
+          sparse-checkout-cone-mode: false
 
       - name: Run Ansible Operation
         uses: ./templates/.github/actions/ansible-run

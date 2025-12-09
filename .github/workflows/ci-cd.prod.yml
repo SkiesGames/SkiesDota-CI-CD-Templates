@@ -117,11 +117,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Docker
-        uses: ./.github/actions/setup-docker
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Run linting
         run: |
           docker run --rm \

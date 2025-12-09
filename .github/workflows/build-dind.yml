@@ -18,25 +18,9 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Log in to Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ghcr.io/SkiesGames/custom-arc-dind
-        tags: |
-          type=raw,value=latest
-
     - name: Build and push Docker image
-      uses: docker/build-push-action@v5
+      uses: ./.github/actions/build-image
       with:
-        context: docker/dind
-        push: true
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
+        image-name: custom-arc-dind
+        dockerfile-path: docker/dind/Dockerfile
+        github-token: ${{ secrets.GITHUB_TOKEN }}
