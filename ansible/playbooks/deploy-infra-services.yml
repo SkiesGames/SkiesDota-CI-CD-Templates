@@ -1,71 +1,39 @@
 ---
 - name: Deploy Core Infrastructure Services
-  hosts: all
+  hosts: localhost
+  connection: local
   gather_facts: false
   tasks:
-    - name: Run Deployment on Controller
-      run_once: true
-      delegate_to: localhost
-      block:
-        - name: Fetch kubeconfig from primary K3s server using cat
-          ansible.builtin.command: cat /etc/rancher/k3s/k3s.yaml
-          register: kubeconfig_raw
-          delegate_to: "{{ groups['all'][0] }}"
-          become: true
-          changed_when: false
-          vars:
-            ansible_python_interpreter: auto_silent
-
-        - name: Get primary server IP
-          ansible.builtin.set_fact:
-            primary_server_ip: "{{ groups['all'][0] }}"
-
-        - name: Fix kubeconfig (replace 127.0.0.1 with server IP)
-          ansible.builtin.set_fact:
-            kubeconfig_content: "{{ kubeconfig_raw.stdout | regex_replace('127.0.0.1', primary_server_ip) }}"
-
-        - name: Save corrected kubeconfig to local file
-          ansible.builtin.copy:
-            content: "{{ kubeconfig_content }}"
-            dest: /tmp/k3s-config.yaml
-            mode: '0600'
-
-        - name: Set KUBECONFIG_PATH fact
-          ansible.builtin.set_fact:
-            kubeconfig_path: /tmp/k3s-config.yaml
-
-        # --- cert-manager Installation ---
-        - name: Install cert-manager
-          kubernetes.core.helm:
-            name: cert-manager
-            chart_ref: cert-manager
-            chart_repo_url: https://charts.jetstack.io
-            chart_version: v1.14.5
-            release_namespace: cert-manager
-            create_namespace: true
-            wait: true
-            timeout: 5m
-            kubeconfig: "{{ kubeconfig_path }}"
-            set_values:
-              - value: installCRDs=true
-                value_type: string
-        
-        - name: Create Let's Encrypt ClusterIssuer
-          kubernetes.core.k8s:
-            state: present
-            kubeconfig: "{{ kubeconfig_path }}"
-            definition:
-              apiVersion: cert-manager.io/v1
-              kind: ClusterIssuer
-              metadata:
-                name: letsencrypt-prod
-              spec:
-                acme:
-                  server: https://acme-v02.api.letsencrypt.org/directory
-                  email: "{{ lookup('env', 'LETS_ENCRYPT_EMAIL') }}"
-                  privateKeySecretRef:
-                    name: letsencrypt-prod-key
-                  solvers:
-                    - http01:
-                        ingress:
-                          class: traefik
+    # --- cert-manager Installation ---
+    - name: Install cert-manager
+      kubernetes.core.helm:
+        name: cert-manager
+        chart_ref: cert-manager
+        chart_repo_url: https://charts.jetstack.io
+        chart_version: v1.14.5
+        release_namespace: cert-manager
+        create_namespace: true
+        wait: true
+        timeout: 5m
+        set_values:
+          - value: installCRDs=true
+            value_type: string
+    
+    - name: Create Let's Encrypt ClusterIssuer
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: cert-manager.io/v1
+          kind: ClusterIssuer
+          metadata:
+            name: letsencrypt-prod
+          spec:
+            acme:
+              server: https://acme-v02.api.letsencrypt.org/directory
+              email: "{{ lookup('env', 'LETS_ENCRYPT_EMAIL') }}"
+              privateKeySecretRef:
+                name: letsencrypt-prod-key
+              solvers:
+                - http01:
+                    ingress:
+                      class: traefik

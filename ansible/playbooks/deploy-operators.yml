@@ -1,107 +1,68 @@
 ---
 - name: Deploy Kubernetes Operators to K3s Cluster
-  hosts: all
+  hosts: localhost
+  connection: local
   gather_facts: false
   tasks:
-    - name: Run Operator Deployment on Controller
-      run_once: true
-      delegate_to: localhost
-      block:
-        - name: Fetch kubeconfig from primary K3s server using cat
-          ansible.builtin.command: cat /etc/rancher/k3s/k3s.yaml
-          register: kubeconfig_raw
-          delegate_to: "{{ groups['all'][0] }}"
-          become: true
-          changed_when: false
-          vars:
-            ansible_python_interpreter: auto_silent
+    - name: Install CloudNativePG CRDs
+      ansible.builtin.command: >
+        kubectl apply --server-side --force-conflicts -f https://github.com/cloudnative-pg/cloudnative-pg/releases/download/v1.27.1/cnpg-1.27.1.yaml
+      register: cnpg_apply_result
+      retries: 3
+      delay: 5
+      until: cnpg_apply_result.rc == 0
+      failed_when: false
+      changed_when: cnpg_apply_result.rc == 0
 
-        - name: Get primary server IP
-          ansible.builtin.set_fact:
-            primary_server_ip: "{{ groups['all'][0] }}"
+    - name: Wait for CloudNativePG operator
+      kubernetes.core.k8s_info:
+        kind: Deployment
+        namespace: cnpg-system
+        name: cnpg-controller-manager
+      register: cnpg_deployment
+      until: cnpg_deployment.resources[0].status.readyReplicas | default(0) >= 1
+      retries: 30
+      delay: 10
 
-        - name: Fix kubeconfig (replace 127.0.0.1 with server IP)
-          ansible.builtin.set_fact:
-            kubeconfig_content: "{{ kubeconfig_raw.stdout | regex_replace('127.0.0.1', primary_server_ip) }}"
+    - name: Install RabbitMQ Cluster Operator
+      ansible.builtin.command: >
+        kubectl apply -f https://github.com/rabbitmq/cluster-operator/releases/latest/download/cluster-operator.yml
+      register: rabbitmq_operator_result
+      retries: 3
+      delay: 5
+      until: rabbitmq_operator_result.rc == 0
+      failed_when: false
+      changed_when: rabbitmq_operator_result.rc == 0
 
-        - name: Save corrected kubeconfig to local file
-          ansible.builtin.copy:
-            content: "{{ kubeconfig_content }}"
-            dest: /tmp/k3s-config.yaml
-            mode: '0600'
+    - name: Wait for RabbitMQ Operator pod
+      kubernetes.core.k8s_info:
+        kind: Pod
+        namespace: rabbitmq-system
+      register: rabbitmq_operator_pods
+      until: >
+        rabbitmq_operator_pods.resources |
+        selectattr('metadata.name', 'match', '.*rabbitmq.*operator.*') |
+        selectattr('status.phase', 'equalto', 'Running') |
+        list | length > 0
+      retries: 30
+      delay: 10
+    
+    - name: Install MinIO Operator
+      ansible.builtin.command: >
+        kubectl apply --kustomize https://github.com/minio/operator.git/resources?ref=v7.1.1
+      register: minio_operator_install
+      retries: 3
+      delay: 5
+      until: minio_operator_install.rc == 0
+      failed_when: false
+      changed_when: minio_operator_install.rc == 0
 
-        - name: Set KUBECONFIG_PATH fact
-          ansible.builtin.set_fact:
-            kubeconfig_path: /tmp/k3s-config.yaml
-
-        - name: Install CloudNativePG CRDs (required for PostgreSQL)
-          ansible.builtin.command: >
-            kubectl apply --server-side --force-conflicts -f https://github.com/cloudnative-pg/cloudnative-pg/releases/download/v1.27.1/cnpg-1.27.1.yaml
-          environment:
-            KUBECONFIG: "{{ kubeconfig_path }}"
-          register: cnpg_apply_result
-          retries: 3
-          delay: 5
-          until: cnpg_apply_result.rc == 0
-          failed_when: false
-          changed_when: cnpg_apply_result.rc == 0
-
-        - name: Wait for CloudNativePG operator to be ready
-          kubernetes.core.k8s_info:
-            kind: Deployment
-            namespace: cnpg-system
-            name: cnpg-controller-manager
-            kubeconfig: "{{ kubeconfig_path }}"
-          register: cnpg_deployment
-          until: cnpg_deployment.resources[0].status.readyReplicas | default(0) >= 1
-          retries: 30
-          delay: 10
-
-        - name: Install RabbitMQ Cluster Operator
-          ansible.builtin.command: >
-            kubectl apply -f https://github.com/rabbitmq/cluster-operator/releases/latest/download/cluster-operator.yml
-          environment:
-            KUBECONFIG: "{{ kubeconfig_path }}"
-          register: rabbitmq_operator_result
-          retries: 3
-          delay: 5
-          until: rabbitmq_operator_result.rc == 0
-          failed_when: false
-          changed_when: rabbitmq_operator_result.rc == 0
-
-        - name: Wait for RabbitMQ Operator pod to be ready
-          kubernetes.core.k8s_info:
-            kind: Pod
-            namespace: rabbitmq-system
-            kubeconfig: "{{ kubeconfig_path }}"
-          register: rabbitmq_operator_pods
-          until: >
-            rabbitmq_operator_pods.resources |
-            selectattr('metadata.name', 'match', '.*rabbitmq.*operator.*') |
-            selectattr('status.phase', 'equalto', 'Running') |
-            list | length > 0
-          retries: 30
-          delay: 10
-        
-        - name: Install MinIO Operator
-          ansible.builtin.command: >
-            kubectl apply --kustomize https://github.com/minio/operator.git/resources?ref=v7.1.1
-          environment:
-            KUBECONFIG: "{{ kubeconfig_path }}"
-          register: minio_operator_install
-          retries: 3
-          delay: 5
-          until: minio_operator_install.rc == 0
-          failed_when: false
-          changed_when: minio_operator_install.rc == 0
-
-        - name: Wait for MinIO Operator deployment to be ready
-          kubernetes.core.k8s_info:
-            kind: Deployment
-            namespace: minio-operator
-            name: minio-operator
-            kubeconfig: "{{ kubeconfig_path }}"
-          register: minio_deployment
-          until: minio_deployment.resources[0].status.readyReplicas | default(0) >= 1
-          retries: 30
-          delay: 10
+    - name: Wait for MinIO Operator deployment
+      kubernetes.core.k8s_info:
+        kind: Deployment
+        namespace: minio-operator
+        name: minio-operator
+      register: minio_deployment
+      until: minio_deployment.resources[0].status.readyReplicas | default(0) >= 1
+      retries: 30
+      delay: 10
