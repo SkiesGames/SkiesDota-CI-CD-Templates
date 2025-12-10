@@ -58,29 +58,13 @@ runs:
           echo "Error: Invalid JSON in ansible_extra_secrets_json" >&2
           exit 1
         fi
-
-        # --- 3. Wait for Docker ---
-        echo "Waiting for Docker Daemon to be ready..."
-        MAX_RETRIES=30
-        COUNT=0
-        # Try to connect to docker info every second until success
-        while ! docker info >/dev/null 2>&1; do
-          if [ $COUNT -ge $MAX_RETRIES ]; then
-            echo "Error: Timed out waiting for Docker Daemon ($MAX_RETRIES seconds)" >&2
-            exit 1
-          fi
-          echo "Docker not ready yet... waiting 1s"
-          sleep 1
-          COUNT=$((COUNT+1))
-        done
-        echo "✅ Docker is ready!"
         
-        # --- 4. Prepare Image ---
+        # --- 3. Prepare Image ---
         IMAGE="${{ inputs.base_image_registry }}/ansible-prod:latest"
         echo "Ensuring image is available: $IMAGE"
         docker pull "$IMAGE" || { echo "Failed to pull image"; exit 1; }
 
-        # --- 5. Prepare Docker Arguments ---
+        # --- 4. Prepare Docker Arguments ---
         MERGED_JSON=$(jq -s '.[0] * .[1]' <(echo "$INPUT_ENV_JSON") <(echo "$INPUT_SECRETS_JSON"))
         
         if [ "$INPUT_USE_TEMPLATE" = "true" ]; then
@@ -109,7 +93,7 @@ runs:
           done < <(echo "$MERGED_JSON" | jq -r 'to_entries[] | "\(.key)=\(.value)"')
         fi
 
-        # --- 6. Execute Ansible ---
+        # --- 5. Execute Ansible ---
         docker run --rm "${DOCKER_ARGS[@]}" -w /workspace \
           "$IMAGE" \
           bash -c "

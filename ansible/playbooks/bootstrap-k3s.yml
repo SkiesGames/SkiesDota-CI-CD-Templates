@@ -2,7 +2,6 @@
 - name: Bootstrap HA K3s Cluster
   hosts: all
   become: true
-
   vars_files:
     - group_vars/k3s.yml
 

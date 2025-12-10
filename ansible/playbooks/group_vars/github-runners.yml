@@ -1,0 +1,6 @@
+# GitHub Runners Configuration Variables
+# These variables are used by the deploy-github-runner.yml playbook
+
+# This controls how many runners can exist total (scaling)
+# AND how many cache slots we create per node.
+arc_runner_max_concurrency: 3
