@@ -61,7 +61,7 @@ runs:
 
         # --- 3. Wait for Docker ---
         echo "Waiting for Docker Daemon to be ready..."
-        MAX_RETRIES=15
+        MAX_RETRIES=30
         COUNT=0
         # Try to connect to docker info every second until success
         while ! docker info >/dev/null 2>&1; do
