@@ -58,7 +58,23 @@
               containers:
                 - name: runner
                   image: ghcr.io/actions/actions-runner:latest
-                  command: ["/home/runner/run.sh"]
+                  command: 
+                    - "sh"
+                    - "-c"
+                    - |
+                      echo "Waiting for Docker Socket at /var/run/docker.sock..."
+                      for i in $(seq 1 10); do
+                        if [ -S /var/run/docker.sock ]; then
+                          echo "✅ Socket found after $i seconds! Starting Runner..."      
+                          # 'exec' replaces the shell with the runner process
+                          # This is important for signal handling (cancelling jobs)
+                          exec /home/runner/run.sh
+                        fi
+                        sleep 1
+                      done                  
+                      echo "❌ Timeout: Docker socket never appeared after 10s."
+                      echo "   (Check the docker-daemon sidecar logs!)"
+                      exit 1
                   env:
                     - name: DOCKER_HOST
                       value: unix:///var/run/docker.sock
