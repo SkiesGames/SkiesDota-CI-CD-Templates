@@ -30,7 +30,6 @@ on:
         required: true
       KUBECONFIG:
         required: false
-      # Additional secrets as JSON object (sensitive)
       ANSIBLE_EXTRA_SECRETS_JSON:
         required: false
 
@@ -56,5 +55,5 @@ jobs:
           kubeconfig: ${{ secrets.KUBECONFIG }}
           playbook: ${{ inputs.playbook }}
           use_template_playbook: ${{ inputs.use_template_playbook }}
-          ansible_extra_env_json: ${{ inputs.ansible_extra_env_json }}
-          ansible_extra_secrets_json: ${{ secrets.ANSIBLE_EXTRA_SECRETS_JSON}}
+          ansible_extra_env_json: ${{ inputs.ANSIBLE_EXTRA_ENV_JSON }}
+          ansible_extra_secrets_json: ${{ secrets.ANSIBLE_EXTRA_SECRETS_JSON }}
