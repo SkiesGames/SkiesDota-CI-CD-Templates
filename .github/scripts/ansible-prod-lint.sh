@@ -17,8 +17,6 @@ elif [ -f "/workspace/ansible/.ansible-lint" ]; then
     LINT_CONFIG="/workspace/ansible/.ansible-lint"
 else
     echo "Warning: No .ansible-lint config found, using defaults"
-    echo "pwd: $(pwd)"
-    ls -la
     LINT_CONFIG=""
 fi
 
