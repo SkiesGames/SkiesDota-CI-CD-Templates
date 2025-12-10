@@ -87,6 +87,7 @@ runs:
           -e "ANSIBLE_SSH_PRIVATE_KEY_FILE=/root/.ssh/id_rsa"
           -e "SSH_PRIVATE_KEY=${{ inputs.ssh_private_key }}"
           -e "ANSIBLE_SSH_ARGS=-o StrictHostKeyChecking=no"
+          -e "PLAYBOOK_PATH=$PLAYBOOK_PATH"
         )
 
         # Inject Kubeconfig ONLY if provided (not empty)
