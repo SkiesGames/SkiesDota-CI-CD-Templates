@@ -7,12 +7,13 @@ inputs:
     required: true
   ansible_user:
     description: 'Ansible SSH username'
-    required: true
+    required: false
+    default: 'root'
   ssh_private_key:
     description: 'SSH private key for authentication'
     required: true
   kubeconfig:
-    description: 'Kubeconfig content'
+    description: 'Kubeconfig content (optional)'
     required: false
   playbook:
     description: 'Path to the Ansible playbook to run (relative to ansible/ directory)'
@@ -20,6 +21,7 @@ inputs:
   use_template_playbook:
     description: 'If true, use playbook from templates repo instead of calling repo'
     required: false
+    default: 'false'
   ansible_extra_env_json:
     description: 'Additional environment variables as JSON object (non-sensitive)'
     required: false
@@ -36,7 +38,6 @@ runs:
   steps:
     - name: Run Ansible Playbooks in Docker
       env:
-        # Pass inputs to env vars to safely handle special chars and nulls
         INPUT_ENV_JSON: ${{ inputs.ansible_extra_env_json }}
         INPUT_SECRETS_JSON: ${{ inputs.ansible_extra_secrets_json }}
         INPUT_KUBECONFIG: ${{ inputs.kubeconfig }}
@@ -44,7 +45,6 @@ runs:
         INPUT_USE_TEMPLATE: ${{ inputs.use_template_playbook }}
       run: |
         # --- 1. Sanitize Inputs (Handle Null/Empty) ---
-        # If input is empty string or null, default to empty JSON object '{}'
         [ -z "$INPUT_ENV_JSON" ] && INPUT_ENV_JSON="{}"
         [ -z "$INPUT_SECRETS_JSON" ] && INPUT_SECRETS_JSON="{}"
 
@@ -59,19 +59,28 @@ runs:
           exit 1
         fi
 
-        echo "DEBUG: Checking Docker Socket..."
-        ls -l /var/run/docker.sock || echo "Socket not found at /var/run/docker.sock"
-        echo "DEBUG: Current User:"
-        id
-        echo "DEBUG: Environment DOCKER_HOST: $DOCKER_HOST"
+        # --- 3. Wait for Docker ---
+        echo "Waiting for Docker Daemon to be ready..."
+        MAX_RETRIES=10
+        COUNT=0
+        # Try to connect to docker info every second until success
+        while ! docker info >/dev/null 2>&1; do
+          if [ $COUNT -ge $MAX_RETRIES ]; then
+            echo "Error: Timed out waiting for Docker Daemon ($MAX_RETRIES seconds)" >&2
+            exit 1
+          fi
+          echo "Docker not ready yet... waiting 1s"
+          sleep 1
+          COUNT=$((COUNT+1))
+        done
+        echo "✅ Docker is ready!"
         
-        # --- 3. Prepare Image ---
+        # --- 4. Prepare Image ---
         IMAGE="${{ inputs.base_image_registry }}/ansible-prod:latest"
         echo "Ensuring image is available: $IMAGE"
         docker pull "$IMAGE" || { echo "Failed to pull image"; exit 1; }
 
-        # --- 4. Prepare Docker Arguments ---
-        # Merge the two JSON objects
+        # --- 5. Prepare Docker Arguments ---
         MERGED_JSON=$(jq -s '.[0] * .[1]' <(echo "$INPUT_ENV_JSON") <(echo "$INPUT_SECRETS_JSON"))
         
         if [ "$INPUT_USE_TEMPLATE" = "true" ]; then
@@ -90,20 +99,17 @@ runs:
           -e "PLAYBOOK_PATH=$PLAYBOOK_PATH"
         )
 
-        # Inject Kubeconfig ONLY if provided (not empty)
         if [ -n "$INPUT_KUBECONFIG" ]; then
           DOCKER_ARGS+=(-e "KUBECONFIG_CONTENT=$INPUT_KUBECONFIG")
         fi
         
-        # Add merged environment variables to Docker args
-        # We check against "{}" to avoid looping over an empty object
         if [ "$MERGED_JSON" != "{}" ]; then
           while IFS= read -r line; do
             [ -n "$line" ] && DOCKER_ARGS+=(-e "$line")
           done < <(echo "$MERGED_JSON" | jq -r 'to_entries[] | "\(.key)=\(.value)"')
         fi
 
-        # --- 5. Execute Ansible ---
+        # --- 6. Execute Ansible ---
         docker run --rm "${DOCKER_ARGS[@]}" -w /workspace \
           "$IMAGE" \
           bash -c "
@@ -117,7 +123,7 @@ runs:
               exit 1
             fi
 
-            # Setup Kubeconfig (if injected)
+            # Setup Kubeconfig
             if [ -n \"\$KUBECONFIG_CONTENT\" ]; then
               mkdir -p ~/.kube
               echo \"\$KUBECONFIG_CONTENT\" > ~/.kube/config
