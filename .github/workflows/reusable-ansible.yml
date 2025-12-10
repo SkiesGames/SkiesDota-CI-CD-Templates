@@ -13,10 +13,9 @@ on:
         type: boolean
         default: false
       ANSIBLE_EXTRA_ENV_JSON:
-        description: 'JSON object with non-sensitive environment variables'
+        description: 'Additional environment variables as JSON object (non-sensitive)'
         required: false
         type: string
-        default: '{}'
       runner:
         description: 'Runner to use. Options: "ubuntu-latest" or "self-hosted"'
         required: false
@@ -29,7 +28,9 @@ on:
         required: false
       SSH_PRIVATE_KEY:
         required: true
-      # Optional project-specific secrets (sensitive)
+      KUBECONFIG:
+        required: false
+      # Additional secrets as JSON object (sensitive)
       ANSIBLE_EXTRA_SECRETS_JSON:
         required: false
 
@@ -52,7 +53,8 @@ jobs:
           ansible_hosts: ${{ secrets.ANSIBLE_HOSTS }}
           ansible_user: ${{ secrets.ANSIBLE_USER || 'root' }}
           ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
+          kubeconfig: ${{ secrets.KUBECONFIG }}
           playbook: ${{ inputs.playbook }}
           use_template_playbook: ${{ inputs.use_template_playbook }}
           ansible_extra_env_json: ${{ inputs.ansible_extra_env_json }}
-          ansible_extra_secrets_json: ${{ secrets.ANSIBLE_EXTRA_SECRETS_JSON || '{}' }}
+          ansible_extra_secrets_json: ${{ secrets.ANSIBLE_EXTRA_SECRETS_JSON}}

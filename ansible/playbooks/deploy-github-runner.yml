@@ -1,115 +1,82 @@
 ---
 - name: Deploy GitHub Actions Runner for Organization
-  hosts: all
+  hosts: localhost
+  connection: local
   gather_facts: false
   tasks:
-    - name: Run Deployment on Controller
-      run_once: true
-      delegate_to: localhost
-      block:
-        - name: Fetch kubeconfig from primary K3s server using cat
-          ansible.builtin.command: cat /etc/rancher/k3s/k3s.yaml
-          register: kubeconfig_raw
-          delegate_to: "{{ groups['all'][0] }}"
-          become: true
-          changed_when: false
-          vars:
-            ansible_python_interpreter: auto_silent
+    # --- Runner Scale Set Deployment ---
+    - name: Get organization name and GitHub App credentials from environment
+      ansible.builtin.set_fact:
+        runner_organization: "{{ lookup('env', 'GITHUB_ORGANIZATION') }}"
+        github_app_id: "{{ lookup('env', 'GITHUB_APP_ID') }}"
+        github_app_installation_id: "{{ lookup('env', 'GITHUB_APP_INSTALLATION_ID') }}"
+        github_app_private_key: "{{ lookup('env', 'GITHUB_APP_PRIVATE_KEY') | b64decode }}"
+      no_log: true
 
-        - name: Get primary server IP
-          ansible.builtin.set_fact:
-            primary_server_ip: "{{ groups['all'][0] }}"
+    - name: Install Actions Runner Controller
+      kubernetes.core.helm:
+        name: arc
+        chart_ref: oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set-controller
+        release_namespace: "arc-runners"
+        create_namespace: true
+        wait: true
+        timeout: 5m
 
-        - name: Fix kubeconfig (replace 127.0.0.1 with server IP)
-          ansible.builtin.set_fact:
-            kubeconfig_content: "{{ kubeconfig_raw.stdout | regex_replace('127.0.0.1', primary_server_ip) }}"
-
-        - name: Save corrected kubeconfig to local file
-          ansible.builtin.copy:
-            content: "{{ kubeconfig_content }}"
-            dest: /tmp/k3s-config.yaml
-            mode: '0600'
-
-        - name: Set KUBECONFIG_PATH fact
-          ansible.builtin.set_fact:
-            kubeconfig_path: /tmp/k3s-config.yaml
-
-        # --- Runner Scale Set Deployment ---
-        - name: Get organization name and GitHub App credentials from environment
-          ansible.builtin.set_fact:
-            runner_organization: "{{ lookup('env', 'GITHUB_ORGANIZATION') }}"
-            github_app_id: "{{ lookup('env', 'GITHUB_APP_ID') }}"
-            github_app_installation_id: "{{ lookup('env', 'GITHUB_APP_INSTALLATION_ID') }}"
-            github_app_private_key: "{{ lookup('env', 'GITHUB_APP_PRIVATE_KEY') | b64decode }}"
-          no_log: true
-
-        - name: Install Actions Runner Controller
-          kubernetes.core.helm:
-            name: arc
-            chart_ref: oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set-controller
-            release_namespace: "arc-runners"
-            create_namespace: true
-            wait: true
-            timeout: 5m
-            kubeconfig: "{{ kubeconfig_path }}"
-
-        - name: Install Runner Scale Set
-          kubernetes.core.helm:
-            name: arc-runner-set
-            chart_ref: oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set
-            release_namespace: "arc-runners"
-            create_namespace: true
-            wait: true
-            timeout: 5m
-            kubeconfig: "{{ kubeconfig_path }}"
-            values:
-              githubConfigUrl: "https://github.com/{{ runner_organization }}"
-              githubConfigSecret:
-                github_app_id: "{{ github_app_id }}"
-                github_app_installation_id: "{{ github_app_installation_id }}"
-                github_app_private_key: "{{ github_app_private_key }}"
-              minRunners: 1
-              maxRunners: 3
-              containerMode:
-                type: kubernetes
-              template:
-                spec:
-                  nodeSelector:
-                    role: ci-runner
-                  volumes:
+    - name: Install Runner Scale Set
+      kubernetes.core.helm:
+        name: arc-runner-set
+        chart_ref: oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set
+        release_namespace: "arc-runners"
+        create_namespace: true
+        wait: true
+        timeout: 5m
+        values:
+          githubConfigUrl: "https://github.com/{{ runner_organization }}"
+          githubConfigSecret:
+            github_app_id: "{{ github_app_id }}"
+            github_app_installation_id: "{{ github_app_installation_id }}"
+            github_app_private_key: "{{ github_app_private_key }}"
+          minRunners: 1
+          maxRunners: 3
+          containerMode:
+            type: kubernetes
+          template:
+            spec:
+              nodeSelector:
+                role: ci-runner
+              volumes:
+                - name: docker-sock
+                  emptyDir: {}
+                - name: work
+                  emptyDir: {}
+                - name: dind-storage
+                  hostPath:
+                    path: /opt/arc-runner-cache
+                    type: DirectoryOrCreate
+              containers:
+                - name: runner
+                  image: ghcr.io/actions/actions-runner:latest
+                  command: ["/home/runner/run.sh"]
+                  env:
+                    - name: DOCKER_HOST
+                      value: unix:///var/run/docker.sock
+                    - name: ACTIONS_RUNNER_REQUIRE_JOB_CONTAINER
+                      value: "false"
+                    - name: ACTIONS_RUNNER_CONTAINER_HOOKS
+                      value: ""
+                  volumeMounts:
                     - name: docker-sock
-                      emptyDir: {}
+                      mountPath: /var/run
+                - name: docker-daemon
+                  image: docker:dind
+                  securityContext:
+                    privileged: true
+                  command: ["dockerd", "--host=unix:///var/run/docker.sock", "--group=1001"]
+                  volumeMounts:
+                    - name: docker-sock
+                      mountPath: /var/run
                     - name: work
-                      emptyDir: {}
+                      mountPath: /home/runner/_work
                     - name: dind-storage
-                      hostPath:
-                        path: /opt/arc-runner-cache
-                        type: DirectoryOrCreate
-                  containers:
-                    - name: runner
-                      image: ghcr.io/actions/actions-runner:latest
-                      command: ["/home/runner/run.sh"]
-                      env:
-                        - name: DOCKER_HOST
-                          value: unix:///var/run/docker.sock
-                        - name: ACTIONS_RUNNER_REQUIRE_JOB_CONTAINER
-                          value: "false"
-                        - name: ACTIONS_RUNNER_CONTAINER_HOOKS
-                          value: ""
-                      volumeMounts:
-                        - name: docker-sock
-                          mountPath: /var/run
-                        # Work dir is auto-mounted by ARC
-                    - name: docker-daemon
-                      image: docker:dind
-                      securityContext:
-                        privileged: true
-                      command: ["dockerd", "--host=unix:///var/run/docker.sock", "--group=1001"]
-                      volumeMounts:
-                        - name: docker-sock
-                          mountPath: /var/run
-                        - name: work
-                          mountPath: /home/runner/_work
-                        - name: dind-storage
-                          mountPath: /var/lib/docker
-          no_log: true
+                      mountPath: /var/lib/docker
+      no_log: true

@@ -12,6 +12,10 @@ inputs:
   ssh_private_key:
     description: 'SSH private key for authentication'
     required: true
+  kubeconfig:
+    description: 'Kubeconfig content (optional)'
+    required: false
+    default: ''
   playbook:
     description: 'Path to the Ansible playbook to run (relative to ansible/ directory)'
     required: true
@@ -36,25 +40,39 @@ runs:
   using: composite
   steps:
     - name: Run Ansible Playbooks in Docker
+      env:
+        INPUT_ENV_JSON: ${{ inputs.ansible_extra_env_json }}
+        INPUT_SECRETS_JSON: ${{ inputs.ansible_extra_secrets_json }}
+        INPUT_KUBECONFIG: ${{ inputs.kubeconfig }}
+        INPUT_PLAYBOOK: ${{ inputs.playbook }}
+        INPUT_USE_TEMPLATE: ${{ inputs.use_template_playbook }}
       run: |
-        # --- 1. Parse and validate JSON inputs ---
-        ENV_JSON_RAW='${{ inputs.ansible_extra_env_json }}'
-        SECRETS_JSON_RAW='${{ inputs.ansible_extra_secrets_json }}'
-        
-        if ! ENV_JSON=$(echo "$ENV_JSON_RAW" | jq . 2>/dev/null); then
-          echo "Error: Invalid JSON in ansible_extra_env_json" >&2
+        # --- 1. Validating JSON Inputs ---
+        if ! ENV_JSON=$(echo "$INPUT_ENV_JSON" | jq . 2>/dev/null); then
+          echo "Error: Invalid JSON in $INPUT_ENV_JSON" >&2
           exit 1
         fi
         
-        if ! SECRETS_JSON=$(echo "$SECRETS_JSON_RAW" | jq . 2>/dev/null); then
-          echo "Error: Invalid JSON in ansible_extra_secrets_json" >&2
+        if ! SECRETS_JSON=$(echo "$INPUT_SECRETS_JSON" | jq . 2>/dev/null); then
+          echo "Error: Invalid JSON in $INPUT_SECRETS_JSON" >&2
           exit 1
         fi
         
-        # --- 2. Prepare Docker Arguments ---
-        MERGED_JSON=$(jq -s '.[0] * .[1]' <(echo "$ENV_JSON") <(echo "$SECRETS_JSON"))
-        PLAYBOOK_PATH="$([ "${{ inputs.use_template_playbook }}" = "true" ] && echo "templates/ansible/${{ inputs.playbook }}" || echo "ansible/${{ inputs.playbook }}")"
+        # --- 2. Prepare Image ---
         IMAGE="${{ inputs.base_image_registry }}/ansible-prod:latest"
+        echo "Ensuring image is available: $IMAGE"
+        # Explicit pull prevents race conditions on cold runners
+        docker pull "$IMAGE" || { echo "Failed to pull image"; exit 1; }
+
+        # --- 3. Prepare Docker Arguments ---
+        MERGED_JSON=$(jq -s '.[0] * .[1]' <(echo "$ENV_JSON") <(echo "$SECRETS_JSON"))
+        
+        # Logic for playbook path
+        if [ "$INPUT_USE_TEMPLATE" = "true" ]; then
+          PLAYBOOK_PATH="templates/ansible/$INPUT_PLAYBOOK"
+        else
+          PLAYBOOK_PATH="ansible/$INPUT_PLAYBOOK"
+        fi
 
         DOCKER_ARGS=(
           -v "$GITHUB_WORKSPACE:/workspace"
@@ -64,13 +82,20 @@ runs:
           -e "SSH_PRIVATE_KEY=${{ inputs.ssh_private_key }}"
           -e "ANSIBLE_SSH_ARGS=-o StrictHostKeyChecking=no"
         )
+
+        # Inject Kubeconfig if provided
+        if [ -n "$INPUT_KUBECONFIG" ]; then
+          DOCKER_ARGS+=(-e "KUBECONFIG_CONTENT=$INPUT_KUBECONFIG")
+        fi
         
         # Add merged environment variables
-        [ "$MERGED_JSON" != "{}" ] && while IFS= read -r line; do
-          [ -n "$line" ] && DOCKER_ARGS+=(-e "$line")
-        done < <(echo "$MERGED_JSON" | jq -r 'to_entries[] | "\(.key)=\(.value)"')
+        if [ "$MERGED_JSON" != "{}" ]; then
+          while IFS= read -r line; do
+            [ -n "$line" ] && DOCKER_ARGS+=(-e "$line")
+          done < <(echo "$MERGED_JSON" | jq -r 'to_entries[] | "\(.key)=\(.value)"')
+        fi
 
-        # --- 3. Execute Ansible ---
+        # --- 4. Execute Ansible ---
         docker run --rm "${DOCKER_ARGS[@]}" -w /workspace \
           "$IMAGE" \
           bash -c "
@@ -83,9 +108,21 @@ runs:
               echo 'Error: Failed to create SSH key file' >&2
               exit 1
             fi
+
+            # Write Kubeconfig if present
+            if [ -n \"\$KUBECONFIG_CONTENT\" ]; then
+              mkdir -p ~/.kube
+              echo \"\$KUBECONFIG_CONTENT\" > ~/.kube/config
+              chmod 600 ~/.kube/config
+              export KUBECONFIG=~/.kube/config
+              echo '✅ Kubeconfig injected successfully'
+            fi
             
             # Run Playbooks
+            echo 'Running generate_inventory.yml...'
             ansible-playbook templates/ansible/playbooks/generate_inventory.yml
-            ansible-playbook -i ansible/inventory.ini $PLAYBOOK_PATH
+            
+            echo \"Running \$PLAYBOOK_PATH...\"
+            ansible-playbook -i ansible/inventory.ini \"\$PLAYBOOK_PATH\"
           "
       shell: bash
