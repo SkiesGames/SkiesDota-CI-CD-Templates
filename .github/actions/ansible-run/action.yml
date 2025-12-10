@@ -58,6 +58,12 @@ runs:
           echo "Error: Invalid JSON in ansible_extra_secrets_json" >&2
           exit 1
         fi
+
+        echo "DEBUG: Checking Docker Socket..."
+        ls -l /var/run/docker.sock || echo "Socket not found at /var/run/docker.sock"
+        echo "DEBUG: Current User:"
+        id
+        echo "DEBUG: Environment DOCKER_HOST: $DOCKER_HOST"
         
         # --- 3. Prepare Image ---
         IMAGE="${{ inputs.base_image_registry }}/ansible-prod:latest"
