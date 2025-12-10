@@ -72,7 +72,7 @@
                 - name: docker-daemon
                   env:
                     - name: MAX_CACHE_SLOTS
-                      value: "{{ arc_runner_max_concurrency }}"
+                      value: "{{ arc_runner_max_concurrency | string }}"
                   image: docker:dind
                   securityContext:
                     privileged: true
