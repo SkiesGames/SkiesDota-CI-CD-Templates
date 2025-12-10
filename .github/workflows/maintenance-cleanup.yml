@@ -1,4 +1,4 @@
-name: Cluster Cache Maintenance
+name: Cluster CI/CD Cache Maintenance
 on:
   schedule:
     - cron: '0 4 * * 0' # Every Sunday at 4:00 AM
