@@ -38,7 +38,7 @@
             github_app_id: "{{ github_app_id }}"
             github_app_installation_id: "{{ github_app_installation_id }}"
             github_app_private_key: "{{ github_app_private_key }}"
-          minRunners: 1
+          minRunners: 0
           maxRunners: "{{ arc_runner_max_concurrency }}"
           containerMode:
             type: kubernetes
