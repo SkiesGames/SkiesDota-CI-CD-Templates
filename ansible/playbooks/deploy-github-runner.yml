@@ -100,34 +100,34 @@
                     - name: dind-storage
                       mountPath: /mnt/runner-cache
                   command:
-                  - sh
-                  - -c
-                  - |
-                    echo "Initializing Docker with slot limit: ${MAX_CACHE_SLOTS:-1}"
+                    - sh
+                    - -c
+                    - |
+                      echo "Initializing Docker with slot limit: ${MAX_CACHE_SLOTS:-1}"
 
-                    # Loop through slots 1 to N
-                    for i in $(seq 1 "${MAX_CACHE_SLOTS:-1}"); do
-                      SLOT_DIR="/mnt/runner-cache/slot-$i"
-                      LOCK_FILE="/mnt/runner-cache/slot-$i.lock"
-                      
-                      mkdir -p "$SLOT_DIR"
-                      
-                      # Check if we can acquire the lock (non-blocking test)
-                      if flock -n "$LOCK_FILE" true; then
-                        echo "✅ Found free slot: $i"
+                      # Loop through slots 1 to N
+                      for i in $(seq 1 "${MAX_CACHE_SLOTS:-1}"); do
+                        SLOT_DIR="/mnt/runner-cache/slot-$i"
+                        LOCK_FILE="/mnt/runner-cache/slot-$i.lock"
                         
-                        # We found a free slot! 
-                        # Now EXEC replaces the shell process with flock -> dockerd.
-                        # The lock is held as long as dockerd runs.
-                        exec flock "$LOCK_FILE" dockerd \
-                          --host=unix:///var/run/docker.sock \
-                          --group=1001 \
-                          --data-root="$SLOT_DIR"
-                      fi
+                        mkdir -p "$SLOT_DIR"
+                        
+                        # Check if we can acquire the lock (non-blocking test)
+                        if flock -n "$LOCK_FILE" true; then
+                          echo "✅ Found free slot: $i"
+                          
+                          # We found a free slot! 
+                          # Now EXEC replaces the shell process with flock -> dockerd.
+                          # The lock is held as long as dockerd runs.
+                          exec flock "$LOCK_FILE" dockerd \
+                            --host=unix:///var/run/docker.sock \
+                            --group=1001 \
+                            --data-root="$SLOT_DIR"
+                        fi
+                        
+                        echo "Slot $i is busy, checking next..."
+                      done
                       
-                      echo "Slot $i is busy, checking next..."
-                    done
-                    
-                    echo "❌ CRITICAL: All cache slots are busy!"
-                    exit 1
+                      echo "❌ CRITICAL: All cache slots are busy!"
+                      exit 1
       no_log: true
