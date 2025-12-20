@@ -1,0 +1,141 @@
+# Grafana Tempo Configuration - Distributed/Microservices Mode
+
+# -----------------------------------------------------------------------------
+# 1. APPLICATION CONFIGURATION
+# -----------------------------------------------------------------------------
+tempo:
+  mode: microservices
+  repository: grafana/tempo
+  tag: 2.3.1
+
+  # Structured Config (The App Logic)
+  structuredConfig:
+    server:
+      http_listen_port: 3200
+      grpc_listen_port: 9095
+
+    # Distributor: Forward to Ingesters. 
+    distributor:
+      receivers:
+        otlp:
+          protocols:
+            grpc:
+              endpoint: "0.0.0.0:4317"
+
+    # Ingester: Sets the Replication Factor for the whole cluster.
+    ingester:
+      max_block_duration: 5m
+      max_block_bytes: 1073741824
+      lifecycler:
+        ring:
+          replication_factor: 1
+          kvstore:
+            store: memberlist
+
+    # Storage: S3 configuration
+    storage:
+      trace:
+        backend: s3
+        s3:
+          endpoint: tempo-minio-hl.tempo.svc.cluster.local:9000
+          bucket: tempo-traces
+          access_key: ""
+          secret_key: ""
+          insecure: true
+
+    compactor:
+      compaction:
+        block_retention: 720h
+        compacted_block_retention: 1h
+
+    querier:
+      frontend_worker:
+        frontend_address: "tempo-query-frontend-discovery.tempo.svc.cluster.local:9095"
+    
+    overrides:
+      defaults:
+        metrics_generator:
+          processors: [service-graphs, span-metrics]
+
+# -----------------------------------------------------------------------------
+# 2. INFRASTRUCTURE CONFIGURATION
+# -----------------------------------------------------------------------------
+
+traces:
+  otlp:
+    grpc:
+      enabled: true
+
+# We inject the secret into every component so they can access S3
+
+distributor:
+  replicas: 1
+  envFrom:
+    - secretRef:
+        name: tempo-minio-creds
+  extraPorts:
+    - name: grpc-otlp
+      port: 4317
+      targetPort: 4317
+      protocol: TCP
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+ingester:
+  replicas: 1
+  envFrom:
+    - secretRef:
+        name: tempo-minio-creds
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClassName: local-path
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+querier:
+  replicas: 1
+  envFrom:
+    - secretRef:
+        name: tempo-minio-creds
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      cpu: 200m
+      memory: 512Mi
+
+compactor:
+  replicas: 1
+  envFrom:
+    - secretRef:
+        name: tempo-minio-creds
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+memcached:
+  replicas: 1
+
+metaMonitoring:
+  serviceMonitor:
+    enabled: false
+
+serviceAccount:
+  create: true
+

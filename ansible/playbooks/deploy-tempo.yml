@@ -1,0 +1,100 @@
+---
+- name: Deploy Tempo with MinIO
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Create Tempo namespace
+      kubernetes.core.k8s:
+        kind: Namespace
+        name: tempo
+        state: present
+        
+    - name: Create Unified Tempo MinIO Credentials Secret
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: tempo-minio-creds
+            namespace: tempo
+          stringData:
+            # 1. FOR MINIO OPERATOR 
+            accesskey: "{{ lookup('env', 'TEMPO_MINIO_ACCESS_KEY') }}"
+            secretkey: "{{ lookup('env', 'TEMPO_MINIO_SECRET_KEY') }}"
+            # 2. FOR TEMPO
+            MINIO_ROOT_USER: "{{ lookup('env', 'TEMPO_MINIO_ACCESS_KEY') }}"
+            MINIO_ROOT_PASSWORD: "{{ lookup('env', 'TEMPO_MINIO_SECRET_KEY') }}"
+            # 3. FOR MINIO CONFIG
+            config.env: |
+              export MINIO_ROOT_USER="{{ lookup('env', 'TEMPO_MINIO_ACCESS_KEY') }}"
+              export MINIO_ROOT_PASSWORD="{{ lookup('env', 'TEMPO_MINIO_SECRET_KEY') }}"
+              export MINIO_BROWSER=on
+      no_log: true
+
+    - name: Deploy MinIO Tenant for Tempo
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: minio.min.io/v2
+          kind: Tenant
+          metadata:
+            name: tempo-minio
+            namespace: tempo
+          spec:
+            credsSecret:
+              name: tempo-minio-creds
+            configuration:
+              name: tempo-minio-creds
+            pools:
+              - name: main-pool
+                servers: 1
+                volumesPerServer: 1
+                volumeClaimTemplate:
+                  metadata:
+                    name: data
+                  spec:
+                    storageClassName: local-path
+                    accessModes:
+                      - ReadWriteOnce
+                    resources:
+                      requests:
+                        storage: 20Gi
+            requestAutoCert: false
+
+    - name: Wait for MinIO Tenant to be ready
+      kubernetes.core.k8s_info:
+        kind: StatefulSet
+        namespace: tempo
+        name: tempo-minio-main-pool
+      register: minio_ss
+      until:
+        - minio_ss.resources | length > 0
+        - minio_ss.resources[0].status.readyReplicas | default(0) >= 1
+      retries: 30
+      delay: 10
+      
+    - name: Create Tempo traces bucket in MinIO
+      ansible.builtin.command: >
+        kubectl exec -n tempo tempo-minio-main-pool-0 -- sh -c "
+        mc alias set local http://localhost:9000 {{ lookup('env', 'TEMPO_MINIO_ACCESS_KEY') | quote }} {{ lookup('env', 'TEMPO_MINIO_SECRET_KEY') | quote }} &&
+        mc mb local/tempo-traces --ignore-existing"
+      changed_when: false
+      no_log: true
+      
+    - name: Deploy Tempo
+      kubernetes.core.helm:
+        name: tempo
+        chart_ref: oci://ghcr.io/grafana/helm-charts/tempo-distributed
+        release_namespace: tempo
+        wait: true
+        timeout: 5m
+        values_files:
+          - "{{ lookup('env', 'HELM_CHARTS_PATH') }}/tempo/values.yml"
+        set_values:
+          - value: tempo.structuredConfig.storage.trace.s3.access_key={{ lookup('env', 'TEMPO_MINIO_ACCESS_KEY') }}
+            value_type: string
+          - value: tempo.structuredConfig.storage.trace.s3.secret_key={{ lookup('env', 'TEMPO_MINIO_SECRET_KEY') }}
+            value_type: string
+

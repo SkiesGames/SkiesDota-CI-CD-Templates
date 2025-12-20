@@ -12,6 +12,11 @@ on:
         required: false
         type: boolean
         default: false
+      use_template_helm_charts:
+        description: 'If true, use helm-charts from templates repo instead of calling repo'
+        required: false
+        type: boolean
+        default: false
       ANSIBLE_EXTRA_ENV_JSON:
         description: 'Additional environment variables as JSON object (non-sensitive)'
         required: false
@@ -55,5 +60,6 @@ jobs:
           kubeconfig: ${{ secrets.KUBECONFIG }}
           playbook: ${{ inputs.playbook }}
           use_template_playbook: ${{ inputs.use_template_playbook }}
+          use_template_helm_charts: ${{ inputs.use_template_helm_charts }}
           ansible_extra_env_json: ${{ inputs.ANSIBLE_EXTRA_ENV_JSON }}
           ansible_extra_secrets_json: ${{ secrets.ANSIBLE_EXTRA_SECRETS_JSON }}

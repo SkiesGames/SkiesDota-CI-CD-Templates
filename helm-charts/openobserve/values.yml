@@ -1,0 +1,125 @@
+# This is the main configuration for the OpenObserve Helm chart
+# We will enable all the sub-charts to create a self-contained cluster.
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 1Gi 
+  limits:
+    cpu: 300m
+    memory: 2Gi 
+
+# OpenObserve Application Configuration
+config:
+  # Tells OpenObserve to run in HA mode
+  ZO_LOCAL_MODE: "false"
+  
+  # --- Metadata Store (PostgreSQL) ---
+  # We are using the built-in PostgreSQL sub-chart.
+  # The chart is smart and will automatically configure the
+  # DSN (connection string) when postgresql.enabled is true.
+  ZO_META_STORE: "postgres"
+
+  # --- Cluster Coordinator (NATS) ---
+  # We are using the built-in NATS sub-chart.
+  # The chart will automatically configure the NATS server URLs.
+  ZO_CLUSTER_COORDINATOR: "nats"
+
+  # --- Object Storage (MinIO) ---
+  # We are using the built-in MinIO sub-chart.
+  # The chart will automatically configure the S3 endpoint and keys.
+  ZO_S3_BUCKET_NAME: "openobserve-logs" # You can change this if you want
+
+# --- Admin User Placeholders ---
+# We set dummy placeholders here. Our Ansible playbook
+# will securely override these with your secrets.
+auth:
+  ZO_ROOT_USER_EMAIL: ""
+  ZO_ROOT_USER_PASSWORD: ""
+
+# --- Sub-chart Configurations ---
+
+# PostgreSQL sub-chart settings
+postgresql:
+  enabled: true
+  architecture: "replication"
+  replicas: 3
+  persistence:
+    size: 1Gi 
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  
+ingester:
+  persistence:
+    size: 10Gi
+
+querier:
+  persistence:
+    size: 10Gi
+
+alertmanager:
+  persistence:
+    size: 1Gi
+
+# NATS sub-chart settings
+nats:
+  enabled: true
+  replicas: 3 
+  persistence:
+    size: 1Gi
+  resources:
+    requests:
+      cpu: 25m
+      memory: 128Mi
+    limits:
+      cpu: 100m
+      memory: 256Mi
+
+# MinIO sub-chart settings
+minio:
+  enabled: true
+  replicas: 3
+  persistence:
+    size: 40Gi
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+ingress:
+  enabled: true
+  
+  className: traefik
+  
+  # This tells cert-manager to create a certificate
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+
+    # Nullify the chart's conflicting defaults
+    kubernetes.io/tls-acme: null
+    cert-manager.io/issuer: null
+    nginx.ingress.kubernetes.io/enable-cors: null
+    nginx.ingress.kubernetes.io/enable-websocket: null
+    nginx.ingress.kubernetes.io/proxy-http-version: null
+    nginx.ingress.kubernetes.io/proxy-set-headers: null
+  
+  hosts:
+    - host: "openobserve.skiesdota.ru"
+      paths:
+        - path: /
+          pathType: Prefix          
+  # This tells the Ingress to use the new certificate
+  tls:
+    - hosts:
+        - "openobserve.skiesdota.ru"
+      # cert-manager will create this secret for you
+      secretName: openobserve-tls-secret
+

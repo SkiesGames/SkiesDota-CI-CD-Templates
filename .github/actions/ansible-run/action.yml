@@ -22,6 +22,10 @@ inputs:
     description: 'If true, use playbook from templates repo instead of calling repo'
     required: false
     default: 'false'
+  use_template_helm_charts:
+    description: 'If true, use helm-charts from templates repo instead of calling repo'
+    required: false
+    default: 'false'
   ansible_extra_env_json:
     description: 'Additional environment variables as JSON object (non-sensitive)'
     required: false
@@ -42,7 +46,8 @@ runs:
         INPUT_SECRETS_JSON: ${{ inputs.ansible_extra_secrets_json }}
         INPUT_KUBECONFIG: ${{ inputs.kubeconfig }}
         INPUT_PLAYBOOK: ${{ inputs.playbook }}
-        INPUT_USE_TEMPLATE: ${{ inputs.use_template_playbook }}
+        INPUT_USE_TEMPLATE_PLAYBOOK: ${{ inputs.use_template_playbook }}
+        INPUT_USE_TEMPLATE_HELM_CHARTS: ${{ inputs.use_template_helm_charts }}
       run: |
         # --- 1. Sanitize Inputs (Handle Null/Empty) ---
         [ -z "$INPUT_ENV_JSON" ] && INPUT_ENV_JSON="{}"
@@ -67,10 +72,16 @@ runs:
         # --- 4. Prepare Docker Arguments ---
         MERGED_JSON=$(jq -s '.[0] * .[1]' <(echo "$INPUT_ENV_JSON") <(echo "$INPUT_SECRETS_JSON"))
         
-        if [ "$INPUT_USE_TEMPLATE" = "true" ]; then
+        if [ "$INPUT_USE_TEMPLATE_PLAYBOOK" = "true" ]; then
           PLAYBOOK_PATH="templates/ansible/$INPUT_PLAYBOOK"
         else
           PLAYBOOK_PATH="ansible/$INPUT_PLAYBOOK"
+        fi
+
+        if [ "$INPUT_USE_TEMPLATE_HELM_CHARTS" = "true" ]; then
+          HELM_CHARTS_PATH="/workspace/templates/helm-charts"
+        else
+          HELM_CHARTS_PATH="/workspace/helm-charts"
         fi
 
         DOCKER_ARGS=(
@@ -81,6 +92,7 @@ runs:
           -e "SSH_PRIVATE_KEY=${{ inputs.ssh_private_key }}"
           -e "ANSIBLE_SSH_ARGS=-o StrictHostKeyChecking=no"
           -e "PLAYBOOK_PATH=$PLAYBOOK_PATH"
+          -e "HELM_CHARTS_PATH=$HELM_CHARTS_PATH"
         )
 
         if [ -n "$INPUT_KUBECONFIG" ]; then

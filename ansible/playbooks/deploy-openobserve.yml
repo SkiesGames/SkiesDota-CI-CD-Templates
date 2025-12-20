@@ -1,0 +1,55 @@
+---
+- name: Deploy OpenObserve
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Deploy OpenObserve
+      kubernetes.core.helm:
+        name: o2
+        chart_ref: openobserve
+        chart_repo_url: https://charts.openobserve.ai
+        release_namespace: openobserve
+        create_namespace: true
+        wait: false
+        values_files:
+          - "{{ lookup('env', 'HELM_CHARTS_PATH') }}/openobserve/values.yml"
+        set_values:
+          - value: auth.ZO_ROOT_USER_EMAIL={{ lookup('env', 'ZO_ROOT_USER_EMAIL') }}
+            value_type: string
+          - value: auth.ZO_ROOT_USER_PASSWORD={{ lookup('env', 'ZO_ROOT_USER_PASSWORD') }}
+            value_type: string
+
+    - name: Wait for OpenObserve StatefulSets
+      kubernetes.core.k8s_info:
+        kind: StatefulSet
+        namespace: openobserve
+        name: "{{ item }}"
+      register: ss_status_item
+      until: ss_status_item.resources | length == 1 and
+             (ss_status_item.resources[0].status.readyReplicas | default(0)) == (ss_status_item.resources[0].spec.replicas | default(0))
+      retries: 30
+      delay: 10
+      loop:
+        - o2-openobserve-querier
+        - o2-openobserve-ingester
+        - o2-openobserve-actions
+        - o2-openobserve-alertmanager
+        - o2-minio
+        - o2-nats
+
+    - name: Wait for OpenObserve Deployments
+      kubernetes.core.k8s_info:
+        kind: Deployment
+        namespace: openobserve
+        name: "{{ item }}"
+      register: deploy_status_item
+      until: deploy_status_item.resources | length == 1 and
+             (deploy_status_item.resources[0].status.readyReplicas | default(0)) == (deploy_status_item.resources[0].spec.replicas | default(0))
+      retries: 30
+      delay: 10
+      loop:
+        - o2-openobserve-router
+        - o2-openobserve-compactor
+        - o2-openobserve-openfga
+        - o2-nats-box

@@ -1,0 +1,103 @@
+---
+- name: Deploy Grafana with PostgreSQL
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Create the 'grafana' namespace
+      kubernetes.core.k8s:
+        kind: Namespace
+        name: grafana
+        state: present
+
+    - name: Create PostgreSQL cluster for Grafana
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('file', lookup('env', 'HELM_CHARTS_PATH') + '/grafana/postgres-cluster.yml') | from_yaml }}"
+
+    - name: Wait for Grafana PostgreSQL cluster to be ready
+      kubernetes.core.k8s_info:
+        kind: Cluster
+        namespace: grafana
+        name: grafana-postgres
+      register: grafana_postgres_cluster
+      until: grafana_postgres_cluster.resources[0].status.readyInstances | default(0) >= 3
+      retries: 30
+      delay: 10
+
+    - name: Get Grafana PostgreSQL primary pod
+      ansible.builtin.command: >
+        kubectl get pod
+        --selector=cnpg.io/cluster=grafana-postgres
+        --namespace=grafana
+        --output=jsonpath='{.items[0].metadata.name}'
+      register: grafana_postgres_pod
+      changed_when: false
+
+    - name: Initialize Grafana database
+      ansible.builtin.command: >
+        kubectl exec
+        {{ grafana_postgres_pod.stdout }}
+        --namespace=grafana
+        -- psql -U postgres -c "CREATE DATABASE grafana;"
+      changed_when: false
+      failed_when: false
+
+    - name: Create or update Grafana user with password
+      ansible.builtin.command: >
+        kubectl exec
+        {{ grafana_postgres_pod.stdout }}
+        --namespace=grafana
+        -- psql -U postgres -c "
+        DO $$
+        BEGIN
+           IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'grafana') THEN
+              CREATE USER grafana WITH PASSWORD '{{ lookup('env', 'GRAFANA_DB_PASSWORD') }}';
+           ELSE
+              ALTER USER grafana WITH PASSWORD '{{ lookup('env', 'GRAFANA_DB_PASSWORD') }}';
+           END IF;
+        END
+        $$;
+        "
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    - name: Grant privileges to Grafana user
+      ansible.builtin.command: >
+        kubectl exec
+        {{ grafana_postgres_pod.stdout }}
+        --namespace=grafana
+        -- psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE grafana TO grafana;"
+      changed_when: false
+
+    - name: Grant schema privileges to Grafana user
+      ansible.builtin.command: >
+        kubectl exec
+        {{ grafana_postgres_pod.stdout }}
+        --namespace=grafana
+        -- psql -U postgres -d grafana -c "GRANT ALL ON SCHEMA public TO grafana; ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO grafana;"
+      changed_when: false
+
+    - name: Deploy Grafana
+      kubernetes.core.helm:
+        name: grafana
+        chart_ref: oci://ghcr.io/grafana/helm-charts/grafana
+        release_namespace: grafana
+        create_namespace: true
+        wait: true
+        timeout: 10m
+        values_files:
+          - "{{ lookup('env', 'HELM_CHARTS_PATH') }}/grafana/values.yml"
+        set_values:
+          - value: "env.GF_DATABASE_PASSWORD={{ lookup('env', 'GRAFANA_DB_PASSWORD') }}"
+            value_type: string
+          - value: "env.GF_SECURITY_ADMIN_USER={{ lookup('env', 'GRAFANA_ADMIN_USER') | default('admin') }}"
+            value_type: string
+          - value: "env.GF_SECURITY_ADMIN_PASSWORD={{ lookup('env', 'GRAFANA_ADMIN_PASSWORD') }}"
+            value_type: string
+          - value: adminUser={{ lookup('env', 'GRAFANA_ADMIN_USER') | default('admin') }}
+            value_type: string
+          - value: adminPassword={{ lookup('env', 'GRAFANA_ADMIN_PASSWORD') }}
+            value_type: string
+

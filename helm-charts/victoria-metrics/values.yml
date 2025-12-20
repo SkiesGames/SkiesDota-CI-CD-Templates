@@ -1,0 +1,55 @@
+# Victoria Metrics Cluster Configuration
+# Based on https://github.com/VictoriaMetrics/helm-charts/tree/master/charts/victoria-metrics-cluster
+
+# Use shorter names to avoid K8s naming limits
+fullnameOverride: "vm"
+nameOverride: "vm"
+
+# Cluster components configuration
+vminsert:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  extraArgs:
+    envflag.enable: "true"
+    envflag.prefix: VM_
+    loggerFormat: json
+
+vmselect:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  extraArgs:
+    envflag.enable: "true"
+    envflag.prefix: VM_
+    loggerFormat: json
+
+vmstorage:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      cpu: 200m
+      memory: 512Mi
+  extraArgs:
+    envflag.enable: "true"
+    envflag.prefix: VM_
+    loggerFormat: json
+    retentionPeriod: "30d"
+  persistentVolume:
+    enabled: true
+    storageClassName: local-path
+    size: 20Gi
+

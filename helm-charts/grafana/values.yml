@@ -1,0 +1,94 @@
+# Grafana HA Configuration
+# Admin credentials and database password will be set via Ansible playbook
+
+replicas: 3
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits: 
+    cpu: 300m
+    memory: 256Mi
+
+# External PostgreSQL database configuration (required for HA)
+# Configured via environment variables
+env:
+  GF_DATABASE_TYPE: postgres
+  GF_DATABASE_HOST: grafana-postgres-rw.grafana.svc.cluster.local  # Read-write service from CloudNativePG
+  GF_DATABASE_NAME: grafana
+  GF_DATABASE_USER: grafana
+  # GF_DATABASE_PASSWORD will be set via Ansible set_values
+  GF_DATABASE_SSL_MODE: disable  # Internal cluster communication, no SSL needed
+  # Session storage (MUST use database for HA)
+  GF_SESSION_PROVIDER: database  # Critical: enables HA by storing sessions in database
+  # Session settings
+  GF_SESSION_COOKIE_MAX_AGE: "2592000"  # 30 days in seconds
+  GF_SECURITY_LOGIN_REMEMBER_DAYS: "30"
+  GF_SECURITY_COOKIE_SECURE: "true"
+  GF_SECURITY_COOKIE_SAMESITE: "lax"
+  # Logging
+  GF_LOG_LEVEL: "warn"
+
+# Admin credentials (will be overridden by Ansible)
+adminUser: ""
+adminPassword: ""
+
+# Ingress configuration
+ingress:
+  enabled: true
+  ingressClassName: traefik
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  path: /
+  pathType: Prefix
+  hosts:
+    - grafana.skiesdota.ru
+  tls:
+    - secretName: grafana-tls-secret
+      hosts:
+        - grafana.skiesdota.ru
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 80
+
+# Persistence (for plugins and provisioning)
+persistence:
+  enabled: true
+  size: 1Gi
+  storageClass: local-path
+
+initChownData:
+  enabled: false
+
+# Service account
+serviceAccount:
+  create: true
+  name: ""
+
+# Readiness and liveness probes for better stability
+readinessProbe:
+  httpGet:
+    path: /api/health
+    port: 3000
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 30
+  failureThreshold: 3
+
+livenessProbe:
+  httpGet:
+    path: /api/health
+    port: 3000
+  initialDelaySeconds: 60
+  periodSeconds: 30
+  timeoutSeconds: 30
+  failureThreshold: 3
+
+# Pod disruption budget for HA
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2  # Ensure at least 2 pods are available during disruptions
+

@@ -1,0 +1,17 @@
+---
+- name: Deploy Victoria Metrics
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Deploy Victoria Metrics
+      kubernetes.core.helm:
+        name: victoria-metrics
+        chart_ref: oci://ghcr.io/victoriametrics/helm-charts/victoria-metrics-cluster
+        release_namespace: victoria-metrics
+        create_namespace: true
+        wait: true
+        timeout: 5m
+        values_files:
+          - "{{ lookup('env', 'HELM_CHARTS_PATH') }}/victoria-metrics/values.yml"
+
