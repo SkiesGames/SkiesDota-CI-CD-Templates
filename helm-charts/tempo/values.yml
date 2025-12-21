@@ -79,12 +79,12 @@ distributor:
       targetPort: 4317
       protocol: TCP
   resources:
-    requests:
-      cpu: 50m
-      memory: 128Mi
     limits:
       cpu: 200m
       memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
 
 ingester:
   replicas: 1
@@ -96,12 +96,12 @@ ingester:
     size: 1Gi
     storageClassName: local-path
   resources:
-    requests:
-      cpu: 50m
-      memory: 128Mi
     limits:
       cpu: 200m
       memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
 
 querier:
   replicas: 1
@@ -109,12 +109,12 @@ querier:
     - secretRef:
         name: tempo-minio-creds
   resources:
-    requests:
-      cpu: 50m
-      memory: 256Mi
     limits:
       cpu: 200m
       memory: 512Mi
+    requests:
+      cpu: 50m
+      memory: 256Mi
 
 compactor:
   replicas: 1
@@ -122,12 +122,12 @@ compactor:
     - secretRef:
         name: tempo-minio-creds
   resources:
-    requests:
-      cpu: 50m
-      memory: 128Mi
     limits:
       cpu: 200m
       memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
 
 memcached:
   replicas: 1

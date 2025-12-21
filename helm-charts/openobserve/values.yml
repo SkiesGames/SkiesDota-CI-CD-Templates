@@ -2,12 +2,12 @@
 # We will enable all the sub-charts to create a self-contained cluster.
 
 resources:
-  requests:
-    cpu: 100m
-    memory: 1Gi 
   limits:
     cpu: 300m
     memory: 2Gi 
+  requests:
+    cpu: 100m
+    memory: 1Gi 
 
 # OpenObserve Application Configuration
 config:
@@ -47,12 +47,12 @@ postgresql:
   persistence:
     size: 1Gi 
   resources:
-    requests:
-      cpu: 50m
-      memory: 128Mi
     limits:
       cpu: 200m
       memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
   
 ingester:
   persistence:
@@ -73,12 +73,12 @@ nats:
   persistence:
     size: 1Gi
   resources:
-    requests:
-      cpu: 25m
-      memory: 128Mi
     limits:
       cpu: 100m
       memory: 256Mi
+    requests:
+      cpu: 25m
+      memory: 128Mi
 
 # MinIO sub-chart settings
 minio:
@@ -87,12 +87,12 @@ minio:
   persistence:
     size: 40Gi
   resources:
-    requests:
-      cpu: 50m
-      memory: 128Mi
     limits:
       cpu: 200m
       memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
 
 ingress:
   enabled: true

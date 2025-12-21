@@ -9,12 +9,12 @@ nameOverride: "vm"
 vminsert:
   replicaCount: 1
   resources:
-    requests:
-      cpu: 50m
-      memory: 128Mi
     limits:
       cpu: 200m
       memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
   extraArgs:
     envflag.enable: "true"
     envflag.prefix: VM_
@@ -23,12 +23,12 @@ vminsert:
 vmselect:
   replicaCount: 1
   resources:
-    requests:
-      cpu: 50m
-      memory: 128Mi
     limits:
       cpu: 200m
       memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
   extraArgs:
     envflag.enable: "true"
     envflag.prefix: VM_
@@ -37,12 +37,12 @@ vmselect:
 vmstorage:
   replicaCount: 1
   resources:
-    requests:
-      cpu: 50m
-      memory: 256Mi
     limits:
       cpu: 200m
       memory: 512Mi
+    requests:
+      cpu: 50m
+      memory: 256Mi
   extraArgs:
     envflag.enable: "true"
     envflag.prefix: VM_

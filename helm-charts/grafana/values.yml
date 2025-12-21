@@ -4,12 +4,12 @@
 replicas: 3
 
 resources:
-  requests:
-    cpu: 50m
-    memory: 128Mi
   limits: 
     cpu: 300m
     memory: 256Mi
+  requests:
+    cpu: 50m
+    memory: 128Mi
 
 # External PostgreSQL database configuration (required for HA)
 # Configured via environment variables
