@@ -6,12 +6,12 @@
   tasks:
     - name: Set namespace variable
       ansible.builtin.set_fact:
-        namespace: "{{ lookup('env', 'NAMESPACE') | default('skiesdota-tg-bot') }}"
+        target_namespace: "{{ lookup('env', 'NAMESPACE') }}"
 
     - name: Create namespace
       kubernetes.core.k8s:
         kind: Namespace
-        name: "{{ namespace }}"
+        name: "{{ target_namespace }}"
         state: present
 
     - name: Create Redis secrets
@@ -22,7 +22,7 @@
           kind: Secret
           metadata:
             name: redis-secrets
-            namespace: "{{ namespace }}"
+            namespace: "{{ target_namespace }}"
           type: Opaque
           stringData:
             redis-password: "{{ lookup('env', 'REDIS_PASSWORD') }}"
@@ -32,7 +32,7 @@
       kubernetes.core.helm:
         name: redis
         chart_ref: oci://registry-1.docker.io/bitnamicharts/redis
-        release_namespace: "{{ namespace }}"
+        release_namespace: "{{ target_namespace }}"
         create_namespace: false
         wait: true
         timeout: 5m

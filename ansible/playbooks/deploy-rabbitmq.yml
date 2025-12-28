@@ -9,14 +9,14 @@
   tasks:
     - name: Set namespace variable
       ansible.builtin.set_fact:
-        namespace: "{{ lookup('env', 'NAMESPACE') }}"
+        target_namespace: "{{ lookup('env', 'NAMESPACE') }}"
         rabbitmq_hostname_suffix: ".rabbitmq-cluster.{{ lookup('env', 'NAMESPACE') }}.svc.cluster.local"
         rabbitmq_ingress_host: "{{ lookup('env', 'RABBITMQ_INGRESS_HOST') | default('') }}"
 
     - name: Create namespace
       kubernetes.core.k8s:
         kind: Namespace
-        name: "{{ namespace }}"
+        name: "{{ target_namespace }}"
         state: present
     
     - name: Deploy RabbitMQ cluster
@@ -27,7 +27,7 @@
           kind: RabbitmqCluster
           metadata:
             name: rabbitmq-cluster
-            namespace: "{{ namespace }}"
+            namespace: "{{ target_namespace }}"
           spec:
             replicas: 3
             image: rabbitmq:3.13.0
@@ -62,9 +62,9 @@
         definition:
           apiVersion: networking.k8s.io/v1
           kind: Ingress
-          metadata:
+            metadata:
             name: rabbitmq-management-ingress
-            namespace: "{{ namespace }}"
+            namespace: "{{ target_namespace }}"
             annotations:
               cert-manager.io/cluster-issuer: "letsencrypt-prod"
           spec:

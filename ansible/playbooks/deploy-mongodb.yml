@@ -6,19 +6,19 @@
   tasks:
     - name: Set namespace variable
       ansible.builtin.set_fact:
-        namespace: "{{ lookup('env', 'NAMESPACE') | default('skiesdota-tg-bot') }}"
+        target_namespace: "{{ lookup('env', 'NAMESPACE') }}"
 
     - name: Create namespace
       kubernetes.core.k8s:
         kind: Namespace
-        name: "{{ namespace }}"
+        name: "{{ target_namespace }}"
         state: present
 
     - name: Check if MongoDB admin secret exists
       kubernetes.core.k8s_info:
         kind: Secret
         name: mongodb-admin-password
-        namespace: "{{ namespace }}"
+        namespace: "{{ target_namespace }}"
       register: mongodb_secret_check
 
     - name: Generate MongoDB replica set key (only if secret doesn't exist)
@@ -32,7 +32,7 @@
       kubernetes.core.k8s_info:
         kind: Secret
         name: mongodb-admin-password
-        namespace: "{{ namespace }}"
+        namespace: "{{ target_namespace }}"
       register: existing_mongodb_secret
       when: mongodb_secret_check.resources | length > 0
 
@@ -50,7 +50,7 @@
           kind: Secret
           metadata:
             name: mongodb-admin-password
-            namespace: "{{ namespace }}"
+            namespace: "{{ target_namespace }}"
           type: Opaque
           stringData:
             mongodb-root-password: "{{ lookup('env', 'MONGO_INITDB_ROOT_PASSWORD') }}"
@@ -62,7 +62,7 @@
       kubernetes.core.helm:
         name: mongodb
         chart_ref: oci://registry-1.docker.io/bitnamicharts/mongodb
-        release_namespace: "{{ namespace }}"
+        release_namespace: "{{ target_namespace }}"
         create_namespace: false
         wait: true
         timeout: 10m
