@@ -62,7 +62,7 @@
         definition:
           apiVersion: networking.k8s.io/v1
           kind: Ingress
-            metadata:
+          metadata:
             name: rabbitmq-management-ingress
             namespace: "{{ target_namespace }}"
             annotations:
