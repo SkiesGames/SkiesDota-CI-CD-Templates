@@ -1,0 +1,45 @@
+---
+- name: Deploy Redis HA
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Set namespace variable
+      ansible.builtin.set_fact:
+        namespace: "{{ lookup('env', 'NAMESPACE') | default('skiesdota-tg-bot') }}"
+
+    - name: Create namespace
+      kubernetes.core.k8s:
+        kind: Namespace
+        name: "{{ namespace }}"
+        state: present
+
+    - name: Create Redis secrets
+      kubernetes.core.k8s:
+        apply: true
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: redis-secrets
+            namespace: "{{ namespace }}"
+          type: Opaque
+          stringData:
+            redis-password: "{{ lookup('env', 'REDIS_PASSWORD') }}"
+      no_log: true
+
+    - name: Deploy Redis HA
+      kubernetes.core.helm:
+        name: redis
+        chart_ref: oci://registry-1.docker.io/bitnamicharts/redis
+        release_namespace: "{{ namespace }}"
+        create_namespace: false
+        wait: true
+        timeout: 5m
+        values_files:
+          - "{{ lookup('env', 'HELM_CHARTS_PATH') }}/redis/values.yml"
+        set_values:
+          - value: auth.existingSecret=redis-secrets
+            value_type: string
+          - value: auth.existingSecretPasswordKey=redis-password
+            value_type: string

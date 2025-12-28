@@ -1,0 +1,77 @@
+---
+- name: Deploy MongoDB HA
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Set namespace variable
+      ansible.builtin.set_fact:
+        namespace: "{{ lookup('env', 'NAMESPACE') | default('skiesdota-tg-bot') }}"
+
+    - name: Create namespace
+      kubernetes.core.k8s:
+        kind: Namespace
+        name: "{{ namespace }}"
+        state: present
+
+    - name: Check if MongoDB admin secret exists
+      kubernetes.core.k8s_info:
+        kind: Secret
+        name: mongodb-admin-password
+        namespace: "{{ namespace }}"
+      register: mongodb_secret_check
+
+    - name: Generate MongoDB replica set key (only if secret doesn't exist)
+      ansible.builtin.command: openssl rand -base64 756
+      register: mongodb_replica_set_key
+      changed_when: false
+      when: mongodb_secret_check.resources | length == 0
+      no_log: true
+
+    - name: Get existing MongoDB replica set key
+      kubernetes.core.k8s_info:
+        kind: Secret
+        name: mongodb-admin-password
+        namespace: "{{ namespace }}"
+      register: existing_mongodb_secret
+      when: mongodb_secret_check.resources | length > 0
+
+    - name: Set existing replica set key
+      ansible.builtin.set_fact:
+        mongodb_replica_set_key:
+          stdout: "{{ existing_mongodb_secret.resources[0].data['mongodb-replica-set-key'] | b64decode }}"
+      when: mongodb_secret_check.resources | length > 0
+
+    - name: Create MongoDB admin password secret
+      kubernetes.core.k8s:
+        apply: true
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: mongodb-admin-password
+            namespace: "{{ namespace }}"
+          type: Opaque
+          stringData:
+            mongodb-root-password: "{{ lookup('env', 'MONGO_INITDB_ROOT_PASSWORD') }}"
+            mongodb-replica-set-key: "{{ mongodb_replica_set_key.stdout }}"
+            mongodb-metrics-password: "{{ lookup('env', 'MONGO_INITDB_ROOT_PASSWORD') }}"
+      no_log: true
+
+    - name: Deploy MongoDB HA
+      kubernetes.core.helm:
+        name: mongodb
+        chart_ref: oci://registry-1.docker.io/bitnamicharts/mongodb
+        release_namespace: "{{ namespace }}"
+        create_namespace: false
+        wait: true
+        timeout: 10m
+        values_files:
+          - "{{ lookup('env', 'HELM_CHARTS_PATH') }}/mongodb/values.yml"
+        set_values:
+          - value: auth.existingSecret=mongodb-admin-password
+            value_type: string
+          - value: auth.existingSecretPasswordKey=mongodb-root-password
+            value_type: string
+          - value: auth.existingSecretReplicaSetKey=mongodb-replica-set-key
+            value_type: string

@@ -1,0 +1,66 @@
+# Bitnami Redis with Sentinel (HA)
+# Chart version: 19.4.0
+# Redis version: 7.2.5
+
+architecture: replication
+auth:
+  enabled: true
+  # Password will be set from secret
+  existingSecret: ""
+  existingSecretPasswordKey: ""
+
+master:
+  count: 1
+
+replica:
+  replicaCount: 3
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: local-path
+  resources:
+    limits:
+      cpu: 300m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+  nodeSelector: {}
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: redis
+                app.kubernetes.io/component: node  # Updated for sentinel mode
+            topologyKey: kubernetes.io/hostname
+
+sentinel:
+  enabled: true
+  quorum: 2
+  resources:
+    limits:
+      cpu: 100m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+# Redis Exporter for Prometheus metrics
+# Exposes metrics on port 9121
+metrics:
+  enabled: true
+  resources:
+    limits:
+      cpu: 50m
+      memory: 128Mi
+    requests:
+      cpu: 25m
+      memory: 64Mi
+  service:
+    annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "9121"
+      prometheus.io/path: "/metrics"

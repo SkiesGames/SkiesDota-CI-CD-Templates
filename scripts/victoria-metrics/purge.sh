@@ -16,7 +16,7 @@ kubectl delete vmsingle --all --all-namespaces --wait=true --timeout=30s
 echo "⏳ Waiting for operator cleanup..."
 sleep 30
 
-# 3. Force delete namespace if it exists (as last resort)
+# 3. Force delete namespace if it exists (as last resort)``
 if kubectl get ns victoria-metrics &>/dev/null; then
     echo "🗑️  Force deleting namespace..."
     kubectl delete ns victoria-metrics --timeout=60s || {

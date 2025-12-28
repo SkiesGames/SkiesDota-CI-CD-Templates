@@ -1,0 +1,91 @@
+# Bitnami MongoDB with Replica Set (HA)
+# Chart: bitnami/mongodb
+# MongoDB version: 7.0.11
+
+architecture: replicaset
+
+# Authentication
+auth:
+  enabled: true
+  # Password will be set from secret
+  existingSecret: ""
+  existingSecretPasswordKey: ""
+  # Replica set key for inter-node authentication
+  replicaSetKey: ""
+  existingSecretReplicaSetKey: ""
+
+# Replica set configuration
+replicaSet:
+  enabled: true
+  name: rs0
+  useHostnames: true
+  pdb:
+    enabled: true
+    minAvailable: 2
+
+# Number of nodes in replica set
+replicaCount: 3
+
+# Persistence
+persistence:
+  enabled: true
+  size: 20Gi
+  storageClass: local-path
+
+# Resources
+resources:
+  limits:
+    cpu: 500m
+    memory: 1Gi
+  requests:
+    cpu: 200m
+    memory: 256Mi
+
+# Pod anti-affinity (spread across nodes)
+podAntiAffinity: preferred
+affinity: {}
+
+# Service configuration
+service:
+  type: ClusterIP
+  ports:
+    mongodb: 27017
+
+# MongoDB Exporter for Prometheus metrics
+# Exposes metrics on port 9216
+metrics:
+  enabled: true
+  
+  # Use default Bitnami exporter (Percona is incompatible with Bitnami's secret handling)
+  # Key: Keep ONLY diagnosticdata enabled, disable everything else
+  
+  # Exporter username (root user has clusterMonitor role by default)
+  username: root
+  # Exporter connects to MongoDB using the same credentials
+  existingSecret: ""
+  # Bitnami chart expects 'mongodb-metrics-password' key in the secret
+  existingSecretPasswordKey: ""
+  
+  collector:
+    # diagnosticdata: connections, memory, network, opcounters, asserts
+    diagnosticdata: true
+    # replicasetstatus: replica set health and status
+    replicasetstatus: true
+    # Disable the truly expensive per-collection/index stats
+    collstats: false
+    indexstats: false
+    dbstats: false
+    topmetrics: false
+  
+  resources:
+    limits:
+      cpu: 50m
+      memory: 128Mi
+    requests:
+      cpu: 25m
+      memory: 64Mi
+  service:
+    annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "9216"
+      prometheus.io/path: "/metrics"

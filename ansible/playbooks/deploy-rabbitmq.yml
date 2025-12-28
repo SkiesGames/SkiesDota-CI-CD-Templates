@@ -1,0 +1,87 @@
+---
+# Required env vars (set via ANSIBLE_EXTRA_ENV_JSON):
+#   - NAMESPACE: Kubernetes namespace (required)
+#   - RABBITMQ_INGRESS_HOST: Ingress hostname (optional, omit to skip ingress)
+- name: Deploy RabbitMQ Cluster (using Cluster Operator)
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Set namespace variable
+      ansible.builtin.set_fact:
+        namespace: "{{ lookup('env', 'NAMESPACE') }}"
+        rabbitmq_hostname_suffix: ".rabbitmq-cluster.{{ lookup('env', 'NAMESPACE') }}.svc.cluster.local"
+        rabbitmq_ingress_host: "{{ lookup('env', 'RABBITMQ_INGRESS_HOST') | default('') }}"
+
+    - name: Create namespace
+      kubernetes.core.k8s:
+        kind: Namespace
+        name: "{{ namespace }}"
+        state: present
+    
+    - name: Deploy RabbitMQ cluster
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: rabbitmq.com/v1beta1
+          kind: RabbitmqCluster
+          metadata:
+            name: rabbitmq-cluster
+            namespace: "{{ namespace }}"
+          spec:
+            replicas: 3
+            image: rabbitmq:3.13.0
+            persistence:
+              storageClassName: local-path
+              storage: 10Gi
+            resources:
+              limits:
+                cpu: 300m
+                memory: 768Mi
+              requests:
+                cpu: 100m
+                memory: 256Mi
+            service:
+              type: ClusterIP
+            rabbitmq:
+              additionalConfig: |
+                cluster_formation.peer_discovery_backend = k8s
+                cluster_formation.k8s.host = kubernetes.default.svc
+                cluster_formation.k8s.address_type = hostname
+                cluster_formation.k8s.hostname_suffix = {{ rabbitmq_hostname_suffix }}
+                default_user = {{ lookup('env', 'RABBITMQ_DEFAULT_USER') }}
+                default_pass = {{ lookup('env', 'RABBITMQ_DEFAULT_PASS') }}
+              additionalPlugins:
+                - rabbitmq_prometheus
+                - rabbitmq_management
+      no_log: true
+
+    - name: Create RabbitMQ Management Ingress
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress
+          metadata:
+            name: rabbitmq-management-ingress
+            namespace: "{{ namespace }}"
+            annotations:
+              cert-manager.io/cluster-issuer: "letsencrypt-prod"
+          spec:
+            ingressClassName: traefik
+            rules:
+              - host: "{{ rabbitmq_ingress_host }}"
+                http:
+                  paths:
+                    - path: /
+                      pathType: Prefix
+                      backend:
+                        service:
+                          name: rabbitmq-cluster
+                          port:
+                            number: 15672
+            tls:
+              - hosts:
+                  - "{{ rabbitmq_ingress_host }}"
+                secretName: rabbitmq-tls-secret
+      when: rabbitmq_ingress_host | length > 0
