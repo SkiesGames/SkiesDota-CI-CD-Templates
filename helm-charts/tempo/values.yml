@@ -55,9 +55,8 @@ tempo:
           processors: [service-graphs, span-metrics]
         # Search configuration: Index resource attributes for filtering
         # By default, Tempo only indexes span attributes. This enables resource attribute indexing.
-        # Resource attributes must be prefixed with "resource." in tag_keys
-        search:
-          tag_keys:
+        read:
+          search_tag_keys:
             # Resource attributes added by OTel Collector resource processor
             - resource.service.name
             - resource.service.version
