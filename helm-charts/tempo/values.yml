@@ -53,23 +53,6 @@ tempo:
 # 2. INFRASTRUCTURE CONFIGURATION
 # -----------------------------------------------------------------------------
 
-# Extra Overrides: Configure search tags allow list for resource attributes
-# This enables resource attributes added by OTel Collector resource processor 
-# to be indexed and searchable in Tempo
-extraOverrides: |
-  overrides:
-    defaults:
-      search_tags_allow_list:
-        - resource.service.name
-        - resource.service.version
-        - resource.cluster.id
-        - resource.cell.id
-        - resource.region
-        - resource.env
-        - resource.k8s.pod.name
-        - resource.k8s.namespace.name
-        - resource.k8s.node.name
-
 traces:
   otlp:
     grpc:
