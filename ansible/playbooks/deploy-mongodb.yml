@@ -62,6 +62,7 @@
       kubernetes.core.helm:
         name: mongodb
         chart_ref: oci://registry-1.docker.io/bitnamicharts/mongodb
+        chart_version: "18.1.20"
         release_namespace: "{{ target_namespace }}"
         create_namespace: false
         wait: true

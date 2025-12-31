@@ -3,7 +3,7 @@
 # These variables are used by the bootstrap-k3s.yml playbook
 
 # K3s version to install (use specific stable release)
-k3s_release_version: v1.28.5+k3s1
+k3s_release_version: v1.35.0+k3s1
 
 # This is the secret token for the cluster.
 # We read it from the environment variable that your

@@ -83,6 +83,7 @@
       kubernetes.core.helm:
         name: grafana
         chart_ref: oci://ghcr.io/grafana/helm-charts/grafana
+        chart_version: "10.4.3"
         release_namespace: grafana
         create_namespace: true
         wait: true

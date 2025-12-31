@@ -87,6 +87,7 @@
       kubernetes.core.helm:
         name: tempo
         chart_ref: oci://ghcr.io/grafana/helm-charts/tempo-distributed
+        chart_version: "1.60.0"
         release_namespace: tempo
         wait: true
         timeout: 5m

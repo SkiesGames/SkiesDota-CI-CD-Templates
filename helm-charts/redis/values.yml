@@ -1,6 +1,4 @@
 # Bitnami Redis with Sentinel (HA)
-# Chart version: 19.4.0
-# Redis version: 7.2.5
 
 architecture: replication
 auth:

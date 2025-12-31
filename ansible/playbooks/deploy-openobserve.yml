@@ -9,6 +9,7 @@
         name: o2
         chart_ref: openobserve
         chart_repo_url: https://charts.openobserve.ai
+        chart_version: "0.20.1"
         release_namespace: openobserve
         create_namespace: true
         wait: false

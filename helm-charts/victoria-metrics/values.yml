@@ -1,5 +1,4 @@
 # Victoria Metrics Cluster Configuration
-# Based on https://github.com/VictoriaMetrics/helm-charts/tree/master/charts/victoria-metrics-cluster
 
 # Use shorter names to avoid K8s naming limits
 fullnameOverride: "vm"

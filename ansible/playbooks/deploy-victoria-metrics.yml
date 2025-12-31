@@ -8,6 +8,7 @@
       kubernetes.core.helm:
         name: victoria-metrics
         chart_ref: oci://ghcr.io/victoriametrics/helm-charts/victoria-metrics-cluster
+        chart_version: "0.31.0"
         release_namespace: victoria-metrics
         create_namespace: true
         wait: true

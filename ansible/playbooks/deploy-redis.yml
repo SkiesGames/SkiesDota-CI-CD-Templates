@@ -32,6 +32,7 @@
       kubernetes.core.helm:
         name: redis
         chart_ref: oci://registry-1.docker.io/bitnamicharts/redis
+        chart_version: "24.1.0"
         release_namespace: "{{ target_namespace }}"
         create_namespace: false
         wait: true

@@ -19,6 +19,7 @@
       kubernetes.core.helm:
         name: arc
         chart_ref: oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set-controller
+        chart_version: "0.13.1"
         release_namespace: "arc-runners"
         create_namespace: true
         wait: true
@@ -28,6 +29,7 @@
       kubernetes.core.helm:
         name: arc-runner-set
         chart_ref: oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set
+        chart_version: "0.13.1"
         release_namespace: "arc-runners"
         create_namespace: true
         wait: true

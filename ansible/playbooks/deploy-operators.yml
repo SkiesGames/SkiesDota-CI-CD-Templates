@@ -6,7 +6,7 @@
   tasks:
     - name: Install CloudNativePG CRDs
       ansible.builtin.command: >
-        kubectl apply --server-side --force-conflicts -f https://github.com/cloudnative-pg/cloudnative-pg/releases/download/v1.27.1/cnpg-1.27.1.yaml
+        kubectl apply --server-side --force-conflicts -f https://github.com/cloudnative-pg/cloudnative-pg/releases/download/v1.28.0/cnpg-1.28.0.yaml
       register: cnpg_apply_result
       retries: 3
       delay: 5
@@ -26,7 +26,7 @@
 
     - name: Install RabbitMQ Cluster Operator
       ansible.builtin.command: >
-        kubectl apply -f https://github.com/rabbitmq/cluster-operator/releases/latest/download/cluster-operator.yml
+        kubectl apply -f https://github.com/rabbitmq/cluster-operator/releases/download/v2.18.0/cluster-operator.yml
       register: rabbitmq_operator_result
       retries: 3
       delay: 5

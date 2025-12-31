@@ -1,6 +1,4 @@
 # Bitnami MongoDB with Replica Set (HA)
-# Chart: bitnami/mongodb
-# MongoDB version: 7.0.11
 
 architecture: replicaset
 

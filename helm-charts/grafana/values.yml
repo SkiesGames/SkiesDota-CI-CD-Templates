@@ -1,5 +1,4 @@
 # Grafana HA Configuration
-# Admin credentials and database password will be set via Ansible playbook
 
 replicas: 3
 
