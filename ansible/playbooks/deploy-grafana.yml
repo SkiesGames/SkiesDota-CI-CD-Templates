@@ -34,6 +34,16 @@
       register: grafana_postgres_pod
       changed_when: false
 
+    - name: Check if Grafana is already deployed
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Pod
+        namespace: grafana
+        label_selectors:
+          - app.kubernetes.io/name=grafana
+      register: grafana_check
+      ignore_errors: true
+
     - name: Initialize Grafana database
       ansible.builtin.command: >
         kubectl exec
@@ -42,6 +52,7 @@
         -- psql -U postgres -c "CREATE DATABASE grafana;"
       changed_when: false
       failed_when: false
+      when: grafana_check.resources | length == 0
 
     - name: Create or update Grafana user with password
       ansible.builtin.command: >
@@ -62,6 +73,7 @@
       changed_when: false
       failed_when: false
       no_log: true
+      when: grafana_check.resources | length == 0
 
     - name: Grant privileges to Grafana user
       ansible.builtin.command: >
@@ -70,6 +82,8 @@
         --namespace=grafana
         -- psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE grafana TO grafana;"
       changed_when: false
+      failed_when: false
+      when: grafana_check.resources | length == 0
 
     - name: Grant schema privileges to Grafana user
       ansible.builtin.command: >
@@ -78,6 +92,8 @@
         --namespace=grafana
         -- psql -U postgres -d grafana -c "GRANT ALL ON SCHEMA public TO grafana; ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO grafana;"
       changed_when: false
+      failed_when: false
+      when: grafana_check.resources | length == 0
 
     - name: Deploy Grafana
       kubernetes.core.helm:
