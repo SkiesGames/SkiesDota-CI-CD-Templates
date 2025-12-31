@@ -49,24 +49,19 @@ tempo:
       frontend_worker:
         frontend_address: "tempo-query-frontend-discovery.tempo.svc.cluster.local:9095"
     
-    overrides:
-      defaults:
-        metrics_generator:
-          processors: [service-graphs, span-metrics]
-        # Search configuration: Index resource attributes for filtering
-        # By default, Tempo only indexes span attributes. This enables resource attribute indexing.
-        read:
-          search_tag_keys:
-            # Resource attributes added by OTel Collector resource processor
-            - resource.service.name
-            - resource.service.version
-            - resource.cluster.id
-            - resource.cell.id
-            - resource.region
-            - resource.env
-            - resource.k8s.pod.name
-            - resource.k8s.namespace.name
-            - resource.k8s.node.name
+    # Search configuration: Index resource attributes for filtering
+    # By default, Tempo only indexes span attributes. This enables resource attribute indexing.
+    search_tag_keys:
+      # Resource attributes added by OTel Collector resource processor
+      - resource.service.name
+      - resource.service.version
+      - resource.cluster.id
+      - resource.cell.id
+      - resource.region
+      - resource.env
+      - resource.k8s.pod.name
+      - resource.k8s.namespace.name
+      - resource.k8s.node.name
 
 # -----------------------------------------------------------------------------
 # 2. INFRASTRUCTURE CONFIGURATION
