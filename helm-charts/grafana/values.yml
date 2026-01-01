@@ -2,10 +2,6 @@
 
 replicas: 3
 
-plugins:
-  - yesoreyeram-infinity-datasource
-  - victoriametrics-datasource
-
 resources:
   limits: 
     cpu: 300m
@@ -25,6 +21,8 @@ env:
   GF_DATABASE_SSL_MODE: disable
   # Session storage (MUST use database for HA)
   GF_SESSION_PROVIDER: database
+  # Plugin installation (synchronous - ensures plugins are ready before Grafana starts)
+  GF_PLUGINS_PREINSTALL_SYNC: "yesoreyeram-infinity-datasource,victoriametrics-metrics-datasource"
   # Session settings
   GF_SESSION_COOKIE_MAX_AGE: "2592000"  # 30 days
   GF_SECURITY_LOGIN_REMEMBER_DAYS: "30"
