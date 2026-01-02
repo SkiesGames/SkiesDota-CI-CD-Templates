@@ -2,6 +2,10 @@
 
 replicas: 3
 
+grafana.ini:
+  plugins:
+    allow_loading_unsigned_plugins: openobserve
+
 resources:
   limits: 
     cpu: 300m
@@ -22,14 +26,46 @@ env:
   # Session storage (MUST use database for HA)
   GF_SESSION_PROVIDER: database
   # Plugin installation (synchronous - ensures plugins are ready before Grafana starts)
-  GF_PLUGINS_PREINSTALL_SYNC: "yesoreyeram-infinity-datasource,victoriametrics-metrics-datasource"
+  GF_PLUGINS_PREINSTALL_SYNC: "victoriametrics-metrics-datasource"
   # Session settings
   GF_SESSION_COOKIE_MAX_AGE: "2592000"  # 30 days
   GF_SECURITY_LOGIN_REMEMBER_DAYS: "30"
-  GF_SECURITY_COOKIE_SECURE: "true"
+  GF_SECURITY_COOKIE_SECURE: "true" 
   GF_SECURITY_COOKIE_SAMESITE: "lax"
   # Logging
   GF_LOG_LEVEL: "warn"
+
+# SHARED VOLUME FOR MANUAL PLUGINS
+extraVolumes:
+  - name: openobserve-plugin-storage
+    emptyDir: {}
+
+# INIT CONTAINER TO DOWNLOAD PLUGIN
+extraInitContainers:
+  - name: download-openobserve-plugin
+    image: curlimages/curl:latest
+    # We use a simple curl image instead of the heavy 'network-multitool'
+    command: ["/bin/sh", "-c"]
+    args:
+      - |
+        echo "Downloading OpenObserve Plugin..."
+        # Download to tmp first
+        curl -L -o /tmp/zo_gp.tar.gz https://zincsearch-releases.s3.us-west-2.amazonaws.com/zo_gp/zo_gp.tar.gz
+        
+        # Ensure target dir exists
+        mkdir -p /var/lib/grafana/plugins
+        
+        # Extract. The tarball usually contains the folder structure, so we extract to plugins root
+        tar -zxvf /tmp/zo_gp.tar.gz -C /var/lib/grafana/plugins
+        echo "OpenObserve Plugin installed."
+    volumeMounts:
+      - name: openobserve-plugin-storage
+        mountPath: /var/lib/grafana/plugins
+
+# Mount shared volume to main container
+extraVolumeMounts:
+  - name: openobserve-plugin-storage
+    mountPath: /var/lib/grafana/plugins
 
 # Admin credentials (will be overridden by Ansible)
 adminUser: ""
