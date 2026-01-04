@@ -4,7 +4,7 @@ replicas: 3
 
 grafana.ini:
   plugins:
-    allow_loading_unsigned_plugins: openobserve
+    allow_loading_unsigned_plugins: grafana-openobserve-datasource
 
 resources:
   limits: 
@@ -43,21 +43,25 @@ extraVolumes:
 # INIT CONTAINER TO DOWNLOAD PLUGIN
 extraInitContainers:
   - name: download-openobserve-plugin
-    image: curlimages/curl:latest
-    # We use a simple curl image instead of the heavy 'network-multitool'
+    image: alpine:latest
     command: ["/bin/sh", "-c"]
     args:
       - |
-        echo "Downloading OpenObserve Plugin..."
-        # Download to tmp first
-        curl -L -o /tmp/zo_gp.tar.gz https://zincsearch-releases.s3.us-west-2.amazonaws.com/zo_gp/zo_gp.tar.gz
+        echo "Installing Community OpenObserve Plugin..."
+        WORKDIR="/var/lib/grafana/plugins"
+        mkdir -p $WORKDIR
         
-        # Ensure target dir exists
-        mkdir -p /var/lib/grafana/plugins
+        # Download v1.2.0 from the community repo
+        # Note: We use the GitHub Releases URL
+        wget -O /tmp/plugin.zip https://github.com/LinPr/grafana-openobserve-datasource/releases/download/v1.2.0/grafana-openobserve-datasource-1.2.0.zip
         
-        # Extract. The tarball usually contains the folder structure, so we extract to plugins root
-        tar -zxvf /tmp/zo_gp.tar.gz -C /var/lib/grafana/plugins
-        echo "OpenObserve Plugin installed."
+        # Unzip into the plugins directory
+        # -d specifies the target directory
+        unzip -o /tmp/plugin.zip -d $WORKDIR
+        
+        # Cleanup
+        rm /tmp/plugin.zip
+        echo "Plugin installed successfully."
     volumeMounts:
       - name: openobserve-plugin-storage
         mountPath: /var/lib/grafana/plugins
