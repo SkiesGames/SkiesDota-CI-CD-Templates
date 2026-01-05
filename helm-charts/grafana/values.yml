@@ -47,13 +47,13 @@ extraInitContainers:
     command: ["/bin/sh", "-c"]
     args:
       - |
-        echo "Installing Community OpenObserve Plugin..."
+        echo "Installing Custom OpenObserve Plugin from fork..."
         WORKDIR="/var/lib/grafana/plugins"
         mkdir -p $WORKDIR
         
-        # Download v1.2.0 from the community repo
-        # Note: We use the GitHub Releases URL
-        wget -O /tmp/plugin.zip https://github.com/LinPr/grafana-openobserve-datasource/releases/download/v1.2.0/grafana-openobserve-datasource-1.2.0.zip
+        # Download v1.2.1-hotfix.2 from your fork
+        # Note: Update the version tag after you create the release
+        wget -O /tmp/plugin.zip https://github.com/bmsj5/grafana-openobserve-datasource/releases/download/v1.2.1-hotfix.2/grafana-openobserve-datasource-1.2.1-hotfix.2.zip
         
         # Unzip into the plugins directory
         # -d specifies the target directory
