@@ -51,9 +51,9 @@ extraInitContainers:
         WORKDIR="/var/lib/grafana/plugins"
         mkdir -p $WORKDIR
         
-        # Download v1.2.1-hotfix.2 from your fork
+        # Download v1.2.1-hotfix.3 from your fork
         # Note: Update the version tag after you create the release
-        wget -O /tmp/plugin.zip https://github.com/bmsj5/grafana-openobserve-datasource/releases/download/v1.2.1-hotfix.2/grafana-openobserve-datasource-1.2.1-hotfix.2.zip
+        wget -O /tmp/plugin.zip https://github.com/bmsj5/grafana-openobserve-datasource/releases/download/v1.2.1-hotfix.3/grafana-openobserve-datasource-1.2.1-hotfix.3.zip
         
         # Unzip into the plugins directory
         # -d specifies the target directory
