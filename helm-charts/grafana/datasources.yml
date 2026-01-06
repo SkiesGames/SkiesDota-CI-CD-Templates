@@ -12,7 +12,7 @@ datasources:
 
   # VictoriaMetrics datasource for metrics (Prometheus-compatible)
   - name: VictoriaMetrics
-    type: prometheus
+    type: VictoriaMetrics
     uid: victoriametrics
     url: http://vm-vmselect.victoria-metrics.svc.cluster.local:8481/select/0/prometheus
     access: proxy
