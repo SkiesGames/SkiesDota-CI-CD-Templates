@@ -1,0 +1,36 @@
+apiVersion: 1
+datasources:
+  # Tempo datasource for distributed tracing
+  - name: Tempo
+    type: tempo
+    uid: tempo
+    url: http://tempo-query-frontend.tempo.svc.cluster.local:3200
+    jsonData:
+      dataLinks:
+        - title: "View Logs"
+          url: "/d/0VGCw7OR21Y9yAb/logs?var-trace_id=${__trace.traceId}&var-search_term="
+
+  # VictoriaMetrics datasource for metrics (Prometheus-compatible)
+  - name: VictoriaMetrics
+    type: prometheus
+    uid: victoriametrics
+    url: http://vm-vmselect.victoria-metrics.svc.cluster.local:8481/select/0/prometheus
+    access: proxy
+    isDefault: false
+    jsonData:
+      httpMethod: POST
+      timeInterval: 15s
+
+  # OpenObserve datasource for logs, metrics, and traces
+  # Note: user and secureJsonData.password will be injected by Ansible from environment variables
+  - name: OpenObserve
+    type: grafana-openobserve-datasource
+    uid: openobserve
+    url: http://o2-openobserve-router.openobserve.svc:5080
+    access: proxy
+    isDefault: false
+    user: "{{ openobserve_user | default('') }}"  # Injected by Ansible: lookup('env', 'ZO_ROOT_USER_EMAIL')
+    jsonData:
+      database: "SkiesDota"  # Organization name
+    secureJsonData:
+      password: "{{ openobserve_password | default('') }}"  # Injected by Ansible: lookup('env', 'ZO_ROOT_USER_PASSWORD')

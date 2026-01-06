@@ -129,3 +129,12 @@ livenessProbe:
 podDisruptionBudget:
   enabled: true
   minAvailable: 2
+
+# Datasources provisioning via ConfigMap (separate file)
+# The datasources.yml file is mounted as a ConfigMap
+# See helm-charts/grafana/datasources.yml for the datasource definitions
+extraConfigmapMounts:
+  - name: grafana-datasources
+    mountPath: /etc/grafana/provisioning/datasources
+    configMap: grafana-datasources
+    readOnly: true

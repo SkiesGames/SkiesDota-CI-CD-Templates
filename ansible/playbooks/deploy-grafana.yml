@@ -95,6 +95,22 @@
       failed_when: false
       when: grafana_check.resources | length == 0
 
+    - name: Create Grafana datasources ConfigMap
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: grafana-datasources
+            namespace: grafana
+          data:
+            datasources.yaml: "{{ lookup('template', lookup('env', 'HELM_CHARTS_PATH') + '/grafana/datasources.yml') }}"
+      vars:
+        openobserve_user: "{{ lookup('env', 'ZO_ROOT_USER_EMAIL') }}"
+        openobserve_password: "{{ lookup('env', 'ZO_ROOT_USER_PASSWORD') }}"
+      no_log: true
+
     - name: Deploy Grafana
       kubernetes.core.helm:
         name: grafana
