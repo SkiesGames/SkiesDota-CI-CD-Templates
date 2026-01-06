@@ -1,6 +1,6 @@
 apiVersion: 1
 datasources:
-  # Tempo datasource for distributed tracing
+  # Tempo datasource for distributed traces
   - name: Tempo
     type: tempo
     uid: tempo
@@ -21,8 +21,7 @@ datasources:
       httpMethod: POST
       timeInterval: 15s
 
-  # OpenObserve datasource for logs, metrics, and traces
-  # Note: user and secureJsonData.password will be injected by Ansible from environment variables
+  # OpenObserve datasource for logs
   - name: OpenObserve
     type: grafana-openobserve-datasource
     uid: openobserve
