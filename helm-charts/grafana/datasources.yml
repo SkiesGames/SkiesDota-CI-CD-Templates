@@ -10,7 +10,7 @@ datasources:
         - title: "View Logs"
           url: "/d/0VGCw7OR21Y9yAb/logs?var-trace_id=${__trace.traceId}&var-search_term="
 
-  # VictoriaMetrics datasource for metrics (Prometheus-compatible)
+  # VictoriaMetrics datasource for metrics
   - name: VictoriaMetrics
     type: VictoriaMetrics
     uid: victoriametrics
