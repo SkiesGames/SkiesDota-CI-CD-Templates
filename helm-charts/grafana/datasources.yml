@@ -5,10 +5,6 @@ datasources:
     type: tempo
     uid: tempo
     url: http://tempo-query-frontend.tempo.svc.cluster.local:3200
-    jsonData:
-      dataLinks:
-        - title: "View Logs"
-          url: "/d/0VGCw7OR21Y9yAb/logs?var-trace_id=${__trace.traceId}&var-search_term="
 
   # VictoriaMetrics datasource for metrics
   - name: VictoriaMetrics
