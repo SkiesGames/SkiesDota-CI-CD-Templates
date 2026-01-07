@@ -33,7 +33,7 @@ env:
   GF_SECURITY_COOKIE_SECURE: "true" 
   GF_SECURITY_COOKIE_SAMESITE: "lax"
   # Logging
-  GF_LOG_LEVEL: "debug"
+  GF_LOG_LEVEL: "warn"
 
 # SHARED VOLUME FOR MANUAL PLUGINS
 extraVolumes:
