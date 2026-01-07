@@ -12,7 +12,7 @@ datasources:
 
   # VictoriaMetrics datasource for metrics
   - name: VictoriaMetrics
-    type: VictoriaMetrics
+    type: victoriametrics-metrics-datasource
     uid: victoriametrics
     url: http://vm-vmselect.victoria-metrics.svc.cluster.local:8481/select/0/prometheus
     access: proxy
@@ -28,8 +28,8 @@ datasources:
     url: http://o2-openobserve-router.openobserve.svc:5080
     access: proxy
     isDefault: false
-    user: "{{ openobserve_user | default('') }}"  # Injected by Ansible: lookup('env', 'ZO_ROOT_USER_EMAIL')
+    user: "{{ openobserve_user }}"  # Injected by Ansible: lookup('env', 'ZO_ROOT_USER_EMAIL')
     jsonData:
       database: "SkiesDota"  # Organization name
     secureJsonData:
-      password: "{{ openobserve_password | default('') }}"  # Injected by Ansible: lookup('env', 'ZO_ROOT_USER_PASSWORD')
+      password: "{{ openobserve_password }}"
