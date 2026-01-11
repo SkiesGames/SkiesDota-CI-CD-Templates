@@ -35,7 +35,7 @@ inputs:
   base_image_registry:
     description: 'Base registry URL for the ansible-prod image'
     required: false
-    default: 'ghcr.io/skiesgames/skiesdota-ci-cd-templates'
+    default: 'ghcr.io/bmsj5/ci-cd-templates'
 
 runs:
   using: composite

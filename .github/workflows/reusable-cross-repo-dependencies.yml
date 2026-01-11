@@ -7,7 +7,7 @@ on:
       template-repo:
         required: true
         type: string
-        default: 'SkiesGames/SkiesDota-CI-CD-Templates'
+        default: 'bmsj5/CI-CD-Templates'
       check-files:
         required: false
         type: string

@@ -26,5 +26,5 @@ jobs:
           docker run --rm \
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
-            ghcr.io/skiesgames/skiesdota-ci-cd-templates/ansible-prod-lint:latest \
+            ghcr.io/bmsj5/ci-cd-templates/ansible-prod-lint:latest \
             bash .github/scripts/ansible-prod-lint.sh
