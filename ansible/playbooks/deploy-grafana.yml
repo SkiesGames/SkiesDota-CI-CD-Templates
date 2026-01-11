@@ -10,6 +10,28 @@
         name: grafana
         state: present
 
+    - name: Check if Grafana database password secret exists
+      kubernetes.core.k8s_info:
+        kind: Secret
+        name: grafana-db-pass-secret
+        namespace: grafana
+      register: grafana_db_secret_check
+      ignore_errors: true
+
+    - name: Create Grafana database password secret
+      kubernetes.core.k8s:
+        apply: true
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: grafana-db-pass-secret
+            namespace: grafana
+          type: Opaque
+          stringData:
+            password: "{{ lookup('env', 'GRAFANA_DB_PASSWORD') }}"
+      no_log: true
+
     - name: Create PostgreSQL cluster for Grafana
       kubernetes.core.k8s:
         state: present
@@ -24,76 +46,6 @@
       until: grafana_postgres_cluster.resources[0].status.readyInstances | default(0) >= 3
       retries: 30
       delay: 10
-
-    - name: Get Grafana PostgreSQL primary pod
-      ansible.builtin.command: >
-        kubectl get pod
-        --selector=cnpg.io/cluster=grafana-postgres
-        --namespace=grafana
-        --output=jsonpath='{.items[0].metadata.name}'
-      register: grafana_postgres_pod
-      changed_when: false
-
-    - name: Check if Grafana is already deployed
-      kubernetes.core.k8s_info:
-        api_version: v1
-        kind: Pod
-        namespace: grafana
-        label_selectors:
-          - app.kubernetes.io/name=grafana
-      register: grafana_check
-      ignore_errors: true
-
-    - name: Initialize Grafana database
-      ansible.builtin.command: >
-        kubectl exec
-        {{ grafana_postgres_pod.stdout }}
-        --namespace=grafana
-        -- psql -U postgres -c "CREATE DATABASE grafana;"
-      changed_when: false
-      failed_when: false
-      when: grafana_check.resources | length == 0
-
-    - name: Create or update Grafana user with password
-      ansible.builtin.command: >
-        kubectl exec
-        {{ grafana_postgres_pod.stdout }}
-        --namespace=grafana
-        -- psql -U postgres -c "
-        DO $$
-        BEGIN
-           IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'grafana') THEN
-              CREATE USER grafana WITH PASSWORD '{{ lookup('env', 'GRAFANA_DB_PASSWORD') }}';
-           ELSE
-              ALTER USER grafana WITH PASSWORD '{{ lookup('env', 'GRAFANA_DB_PASSWORD') }}';
-           END IF;
-        END
-        $$;
-        "
-      changed_when: false
-      failed_when: false
-      no_log: true
-      when: grafana_check.resources | length == 0
-
-    - name: Grant privileges to Grafana user
-      ansible.builtin.command: >
-        kubectl exec
-        {{ grafana_postgres_pod.stdout }}
-        --namespace=grafana
-        -- psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE grafana TO grafana;"
-      changed_when: false
-      failed_when: false
-      when: grafana_check.resources | length == 0
-
-    - name: Grant schema privileges to Grafana user
-      ansible.builtin.command: >
-        kubectl exec
-        {{ grafana_postgres_pod.stdout }}
-        --namespace=grafana
-        -- psql -U postgres -d grafana -c "GRANT ALL ON SCHEMA public TO grafana; ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO grafana;"
-      changed_when: false
-      failed_when: false
-      when: grafana_check.resources | length == 0
 
     - name: Create Grafana datasources ConfigMap
       kubernetes.core.k8s:

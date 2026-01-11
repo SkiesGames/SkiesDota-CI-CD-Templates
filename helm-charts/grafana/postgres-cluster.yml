@@ -18,3 +18,10 @@ spec:
       cpu: 50m
       memory: 128Mi
 
+  bootstrap:
+    initdb:
+      database: grafana
+      owner: grafana
+      secret:
+        name: grafana-db-pass-secret
+
